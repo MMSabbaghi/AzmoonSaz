@@ -8,14 +8,13 @@ function toPersianDigits(str) {
 }
 
 function createRangeItem(rangeData = null) {
-  const fileId = crypto.randomUUID();
   const div = document.createElement("div");
   div.className = "range-item";
   div.innerHTML = `
   <div class="range-header my-2">
     <div class="flex gap-2">
-      <input type="text" class="border rounded p-1 w-36 range-name" placeholder="عنوان مبحث">
-      <input data-number-input="true" data-float="false" class="border rounded p-1 range-count" placeholder="تعداد سوال از مبحث">
+      <input type="text" class="border rounded p-1 range-name" placeholder="عنوان مبحث">
+      <input data-number-input="true" data-float="false" class="w-36 border rounded p-1 range-count" placeholder="تعداد سوال از مبحث">
       <div class="file-input">
       <input type="file" id="file" accept="image/*" multiple class="file range-images">
       <label for="file" class="btn px-4 py-2 rounded">
@@ -95,6 +94,7 @@ function createRangeItem(rangeData = null) {
 document.getElementById("addRange").onclick = () => {
   rangesContainer.appendChild(createRangeItem());
 };
+
 modal.addEventListener("click", () => {
   modal.style.display = "none";
   modalImg.src = "";
@@ -106,23 +106,20 @@ document.getElementById("generate").onclick = (e) => {
 };
 
 function generateTable() {
-  const names = document
-    .getElementById("names")
-    .value.trim()
-    .split("\n")
-    .filter((n) => n);
+  const namesNumber = document.getElementById("names").value;
   const rangeDivs = document.querySelectorAll(".range-item");
-  if (!names.length || !rangeDivs.length) {
+  if (!namesNumber || !rangeDivs.length) {
     alert("لطفا همه‌ی فیلدها را پر کنید");
     return;
   }
+  const names = Array.from({ length: +namesNumber }, (_, i) => i + 1);
 
   const ranges = [];
   rangeDivs.forEach((div) => {
     const rangeName = div.querySelector(".range-name").value.trim();
     const count = parseInt(div.querySelector(".range-count").value);
     const imgs = Array.from(div.querySelectorAll(".preview img")).map(
-      (i) => i.src
+      (i) => i.src,
     );
     if (!rangeName || !count || imgs.length === 0) {
       alert("لطفا محدوده‌ها کامل باشد");
@@ -136,7 +133,6 @@ function generateTable() {
 
   ranges.forEach((r) => {
     const shuffled = [...r.images].sort(() => Math.random() - 0.5);
-    const numStudents = names.length;
     const numQuestions = r.count;
 
     if (numQuestions >= shuffled.length) {
@@ -166,20 +162,22 @@ function generateTable() {
     }
   });
 
-  let html = `<table><thead><tr><th>نام دانش‌آموز</th><th>سوال‌ها</th></tr></thead><tbody>`;
+  let html = ``;
   names.forEach((student) => {
     let questionHtml = "<table>";
+    questionHtml += `<tr style="background-color:#e5e7eb"><td style="width:40px;text-align:center;font-weight:bold;">-</td><td> نام و نام خانوادگی: </td></tr>`;
     let qNum = 1;
     finalData[student].forEach((r) => {
       r.images.forEach((img) => {
         questionHtml += `<tr><td style="width:40px;text-align:center;font-weight:bold;">${toPersianDigits(
-          qNum
-        )}</td><td><img src="${img}" alt="${r.rangeName}"></td></tr>`;
+          qNum,
+        )}</td><td><img style="margin-right: auto;margin-left: 0;width: 100%; max-height: 100px;" 
+        src="${img}" alt="${r.rangeName}"></td></tr>`;
         qNum++;
       });
     });
     questionHtml += "</table>";
-    html += `<tr><td class="student">${student}</td><td class="questions">${questionHtml}</td></tr>`;
+    html += `<tr><td class="questions">${questionHtml}</td></tr>`;
   });
   html += "</tbody></table>";
   document.getElementById("printable").innerHTML = html;
@@ -187,23 +185,24 @@ function generateTable() {
 
 // Export JSON
 document.getElementById("exportJson").onclick = () => {
-  const names = document
-    .getElementById("names")
-    .value.trim()
-    .split("\n")
-    .filter((n) => n);
+  const namesNumber = document.getElementById("names").value;
+  if (!namesNumber) {
+    alert("تعداد را مشخص کنید.");
+    return;
+  }
   const ranges = Array.from(document.querySelectorAll(".range-item")).map(
     (div) => {
       return {
         rangeName: div.querySelector(".range-name").value,
         count: parseInt(div.querySelector(".range-count").value),
         images: Array.from(div.querySelectorAll(".preview img")).map(
-          (i) => i.src
+          (i) => i.src,
         ),
       };
-    }
+    },
   );
-  const data = { names, ranges };
+
+  const data = { names: namesNumber, ranges };
   const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -219,10 +218,47 @@ document.getElementById("importJson").addEventListener("change", (e) => {
   const reader = new FileReader();
   reader.onload = (ev) => {
     const data = JSON.parse(ev.target.result);
-    document.getElementById("names").value = data.names.join("\n");
+    document.getElementById("names").value = +data.names;
     rangesContainer.innerHTML = "";
     data.ranges.forEach((r) => rangesContainer.appendChild(createRangeItem(r)));
   };
   reader.readAsText(file);
   e.target.value = "";
+});
+
+//sticky box
+const sticky = document.getElementById("sticky");
+const container = document.getElementById("app-container");
+const sentinel = document.getElementById("sentinel");
+
+const observer = new IntersectionObserver(
+  ([entry]) => {
+    if (!entry.isIntersecting) {
+      sticky.classList.add("stuck");
+    } else {
+      sticky.classList.remove("stuck");
+      sticky.style.setProperty("--offset", "0px");
+    }
+  },
+  { threshold: 0 },
+);
+
+observer.observe(sentinel);
+
+// حرکت نرم همراه اسکرول (GPU only)
+window.addEventListener("scroll", () => {
+  if (!sticky.classList.contains("stuck")) return;
+
+  const offset = window.scrollY - window.innerHeight + 10;
+
+  const max =
+    container.offsetTop +
+    container.offsetHeight -
+    sticky.offsetHeight -
+    window.innerHeight;
+
+  sticky.style.setProperty(
+    "--offset",
+    Math.max(0, Math.min(offset, max)) + "px",
+  );
 });

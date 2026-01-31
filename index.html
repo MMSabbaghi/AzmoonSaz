@@ -11,9 +11,9 @@
 
 <body class="bg-gray-100 p-6">
 
-  <div class="max-w-6xl mx-auto bg-white p-6 pb-0 rounded shadow">
+  <div class="max-w-6xl mx-auto bg-white p-6 pb-0 rounded shadow app-container" id="app-container">
     <div class="flex items-center justify-between mb-2">
-      <h1 class="text-2xl font-bold">ساخت کوییز(با سوالات تصادفی) </h1>
+      <h1 class="text-2xl font-bold">کوئیز ساز</h1>
       <div>
         <button id="exportJson" class="btn px-4 py-2">
           <i class="bi bi-floppy"></i>
@@ -27,9 +27,6 @@
       </div>
     </div>
 
-    <textarea id="names" rows="5" class="w-full border rounded p-2"
-      placeholder="نام دانش‌آموزان هر کدام در یک خط"></textarea>
-
     <div id="ranges"></div>
     <button id="addRange" style="width: 100%;" class="btn add-btn my-2">
       <i class="bi bi-plus-lg"></i>
@@ -39,25 +36,37 @@
       </span>
     </button>
 
-    <div class="flex gap-1 my-1  export-btns">
+    <div id="sentinel"></div>
+    <div class="flex items-center justify-between gap-1 my-1 bg-white export-btns sticky-box" id="sticky">
 
+      <div>
+        <label> تعداد دانش آموزان: </label>
+        <input data-number-input="true" data-float="false" type="text" id="names" class="border rounded p-2"
+          placeholder="تعداد ">
+      </div>
 
-      <button id="generate" class="btn px-4 py-2 rounded mt-2 mb-2">
-        <i class="bi bi-clipboard2-check"></i>
-        <span>
-          تولید آزمون
-        </span>
-      </button>
+      <div>
+        <button id="generate" class="btn px-4 py-2 rounded mt-2 mb-2">
+          <i class="bi bi-clipboard2-check"></i>
+          <span>
+            تولید آزمون
+          </span>
+        </button>
 
-      <button onclick="window.print()" class="btn px-4 py-2 rounded mt-2 mb-2">
-        <i class="bi bi-printer"></i>
-        <span>
-          چاپ خروجی
-        </span>
-      </button>
+        <button onclick="window.print()" class="btn px-4 py-2 rounded mt-2 mb-2">
+          <i class="bi bi-printer"></i>
+          <span>
+            چاپ خروجی
+          </span>
+        </button>
+      </div>
 
     </div>
-    <div id="printable" class="overflow-auto"></div>
+    <div id="printable" class="overflow-auto">
+      <div class="flex items-center justify-center">
+        <img src="images/no_data.jpg" alt="no_data" style="max-height: 400px;">
+      </div>
+    </div>
   </div>
 
   <!-- Modal برای نمایش بزرگ تصویر -->

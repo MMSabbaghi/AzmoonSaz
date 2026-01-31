@@ -11,6 +11,11 @@ body {
   --transition: 0.3s ease;
 }
 
+.app-container {
+  min-height: 90vh;
+  position: relative;
+}
+
 input,
 .btn {
   color: white;
@@ -115,6 +120,7 @@ input:focus {
     width: 100%;
   }
 }
+
 #printable table {
   border-collapse: collapse;
   width: 100%;
@@ -142,9 +148,8 @@ input:focus {
 #printable td.questions img {
   margin: 2px;
   display: block;
-  margin-left: auto;
-  margin-right: auto;
 }
+
 /* Modal */
 .modal {
   display: none;
@@ -189,4 +194,14 @@ input:focus + label {
   padding: 0 8px;
   border-radius: var(--radius);
   justify-content: center;
+}
+
+/* sticky-box */
+.sticky-box {
+  position: relative;
+}
+
+.sticky-box.stuck {
+  transform: translateY(var(--offset));
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
