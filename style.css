@@ -83,9 +83,9 @@ input:focus {
   position: relative;
 }
 .preview img {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
+  width: 150px;
+  height: 30px;
+  object-fit: fill;
   border: 1px solid #ccc;
   border-radius: 4px;
   cursor: pointer;
