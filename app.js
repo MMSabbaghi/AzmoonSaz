@@ -14,7 +14,8 @@ function createRangeItem(rangeData = null) {
   <div class="range-header my-2">
     <div class="flex gap-2">
       <input type="text" class="border rounded p-1 range-name" placeholder="عنوان مبحث">
-      <input data-number-input="true" data-float="false" class="w-36 border rounded p-1 range-count" placeholder="تعداد سوال از مبحث">
+      <input data-number-input="true" data-float="false" class="w-20 border rounded p-1 range-count" placeholder="تعداد سوال از مبحث">
+      <input data-number-input="true" class="w-20 border rounded p-1 range-score" placeholder="نمره">
       <div class="file-input">
       <input type="file" id="file" accept="image/*" multiple class="file range-images">
       <label for="file" class="btn px-4 py-2 rounded">
@@ -44,6 +45,7 @@ function createRangeItem(rangeData = null) {
   if (rangeData) {
     div.querySelector(".range-name").value = rangeData.rangeName;
     div.querySelector(".range-count").value = rangeData.count;
+    div.querySelector(".range-score").value = rangeData.score;
     rangeData.images.forEach((imgSrc) => addImage(imgSrc));
   }
 
@@ -118,14 +120,15 @@ function generateTable() {
   rangeDivs.forEach((div) => {
     const rangeName = div.querySelector(".range-name").value.trim();
     const count = parseInt(div.querySelector(".range-count").value);
+    const score = div.querySelector(".range-score").value;
     const imgs = Array.from(div.querySelectorAll(".preview img")).map(
       (i) => i.src,
     );
     if (!rangeName || !count || imgs.length === 0) {
-      alert("لطفا محدوده‌ها کامل باشد");
+      alert("لطفا محدوده‌ها را کامل کنید!");
       return;
     }
-    ranges.push({ rangeName: rangeName, count: count, images: imgs });
+    ranges.push({ rangeName, count, images: imgs, score });
   });
 
   let finalData = {};
@@ -145,7 +148,11 @@ function generateTable() {
           selection.push(pool[idx]);
           pool.splice(idx, 1);
         }
-        finalData[student].push({ rangeName: r.rangeName, images: selection });
+        finalData[student].push({
+          rangeName: r.rangeName,
+          images: selection,
+          score: r.score,
+        });
       });
     } else {
       const pool = [...shuffled];
@@ -157,7 +164,11 @@ function generateTable() {
           selection.push(pool[idx]);
           pool.splice(idx, 1);
         }
-        finalData[student].push({ rangeName: r.rangeName, images: selection });
+        finalData[student].push({
+          rangeName: r.rangeName,
+          images: selection,
+          score: r.score,
+        });
       });
     }
   });
@@ -171,8 +182,16 @@ function generateTable() {
       r.images.forEach((img) => {
         questionHtml += `<tr><td style="width:40px;text-align:center;font-weight:bold;">${toPersianDigits(
           qNum,
-        )}</td><td><img style="margin-right: auto;margin-left: 0;width: 100%; max-height: 100px;" 
-        src="${img}" alt="${r.rangeName}"></td></tr>`;
+        )}
+        <span style="font-weight: normal;font-size: small;">
+         ${+r.score > 0 ? `(${toPersianDigits(r.score)}نمره)` : ``}
+        </span> 
+        </td>
+        <td>
+        <img style="margin-right: auto;margin-left: 0;width: 100%; max-height: 100px;" 
+        src="${img}" alt="${r.rangeName}">
+        </td>
+        </tr>`;
         qNum++;
       });
     });
@@ -195,6 +214,7 @@ document.getElementById("exportJson").onclick = () => {
       return {
         rangeName: div.querySelector(".range-name").value,
         count: parseInt(div.querySelector(".range-count").value),
+        score: div.querySelector(".range-score").value,
         images: Array.from(div.querySelectorAll(".preview img")).map(
           (i) => i.src,
         ),
