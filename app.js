@@ -245,3 +245,23 @@ const observer = new IntersectionObserver(
 );
 
 observer.observe(sentinel);
+
+// move to top
+const btn = document.getElementById("toTop");
+
+window.addEventListener("scroll", () => {
+  if (window.scrollY > 300) {
+    btn.classList.remove("opacity-0", "invisible", "translate-y-6");
+    btn.classList.add("opacity-100", "visible", "translate-y-0");
+  } else {
+    btn.classList.add("opacity-0", "invisible", "translate-y-6");
+    btn.classList.remove("opacity-100", "visible", "translate-y-0");
+  }
+});
+
+btn.addEventListener("click", () => {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+});
