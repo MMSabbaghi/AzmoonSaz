@@ -11,11 +11,20 @@ function createRangeItem(rangeData = null) {
   const div = document.createElement("div");
   div.className = "range-item";
   div.innerHTML = `
-  <div class="range-header my-2">
-    <div class="flex gap-2">
-      <input type="text" class="border rounded p-1 range-name" placeholder="عنوان مبحث">
-      <input data-number-input="true" data-float="false" class="w-20 border rounded p-1 range-count" placeholder="تعداد سوال از مبحث">
-      <input data-number-input="true" class="w-20 border rounded p-1 range-score" placeholder="نمره">
+  <div class="range-header my-1">
+    <div class="flex items-center gap-2">
+      <div>
+      <label class="font-normal text-[#777]"> مبحث: </label>
+      <input type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
+      </div>
+      <div>
+      <label class="font-normal text-[#777]"> تعداد: </label>
+      <input value="1" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
+      </div>
+      <div>
+      <label class="font-normal text-[#777]" > نمره: </label>
+      <input value="1" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
+      </div>
       <div class="file-input">
       <input type="file" id="file" accept="image/*" multiple class="file range-images">
       <label for="file" class="btn px-4 py-2 rounded">
