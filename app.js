@@ -190,19 +190,20 @@ function generateTable() {
   let html = ``;
   names.forEach((student) => {
     let questionHtml = "<table>";
-    questionHtml += `<tr style="background-color:#e5e7eb"><td style="width:40px;text-align:center;font-weight:bold;">-</td><td> نام و نام خانوادگی: </td></tr>`;
+    questionHtml += `<tr style="background-color:#e5e7eb"><td style="width:40px;"></td><td style="padding: 1px;"> نام و نام خانوادگی: </td></tr>`;
     let qNum = 1;
     finalData[student].forEach((r) => {
       r.images.forEach((img) => {
-        questionHtml += `<tr><td style="width:40px;text-align:center;font-weight:bold;">${toPersianDigits(
+        questionHtml += `<tr>
+        <td style="width:40px;text-align:center;font-weight:bold;">${toPersianDigits(
           qNum,
         )}
         <span style="font-weight: normal;font-size: small;">
          ${+r.score > 0 ? `(${toPersianDigits(r.score)}نمره)` : ``}
         </span> 
         </td>
-        <td style="padding:0px ; padding-top:3px">
-        <img style="max-height: 100px;object-fit: contain;" 
+        <td style="padding:0px ; padding-top:3px;">
+        <img style="height: 75px;object-fit: contain;" 
         src="${img}" alt="${r.rangeName}">
         </td>
         </tr>`;
