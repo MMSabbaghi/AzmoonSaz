@@ -102,21 +102,24 @@ modal.addEventListener("click", () => {
   modalImg.src = "";
 });
 
+function validateRanges() {}
+
 document.getElementById("generate").onclick = (e) => {
-  generateTable();
-  e.target.scrollIntoView({ behavior: "smooth" });
+  const isGenerated = generateTable();
+  if (isGenerated) e.target.scrollIntoView({ behavior: "smooth" });
 };
 
 function generateTable() {
   const namesNumber = document.getElementById("names").value;
   const rangeDivs = document.querySelectorAll(".range-item");
   if (!namesNumber || !rangeDivs.length) {
-    alert("لطفا همه‌ی فیلدها را پر کنید");
-    return;
+    showToast("لطفا فیلدها را کامل کنید", "error");
+    return false;
   }
   const names = Array.from({ length: +namesNumber }, (_, i) => i + 1);
 
   const ranges = [];
+
   rangeDivs.forEach((div) => {
     const rangeName = div.querySelector(".range-name").value.trim();
     const count = parseInt(div.querySelector(".range-count").value);
@@ -124,12 +127,14 @@ function generateTable() {
     const imgs = Array.from(div.querySelectorAll(".preview img")).map(
       (i) => i.src,
     );
-    if (!rangeName || !count || imgs.length === 0) {
-      alert("لطفا محدوده‌ها را کامل کنید!");
-      return;
-    }
+    if (imgs.length === 0 || !count) return;
     ranges.push({ rangeName, count, images: imgs, score });
   });
+
+  if (!ranges.length) {
+    showToast("حداقل یک فیلد معتبر تعریف کنید.", "error");
+    return false;
+  }
 
   let finalData = {};
   names.forEach((n) => (finalData[n] = []));
@@ -200,15 +205,12 @@ function generateTable() {
   });
   html += "</tbody></table>";
   document.getElementById("printable").innerHTML = html;
+  return true;
 }
 
 // Export JSON
 document.getElementById("exportJson").onclick = () => {
-  const namesNumber = document.getElementById("names").value;
-  if (!namesNumber) {
-    alert("تعداد را مشخص کنید.");
-    return;
-  }
+  const namesNumber = document.getElementById("names").value || 0;
   const ranges = Array.from(document.querySelectorAll(".range-item")).map(
     (div) => {
       return {
