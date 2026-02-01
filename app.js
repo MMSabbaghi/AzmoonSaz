@@ -192,8 +192,8 @@ function generateTable() {
          ${+r.score > 0 ? `(${toPersianDigits(r.score)}نمره)` : ``}
         </span> 
         </td>
-        <td>
-        <img style="margin-right: auto;margin-left: 0;width: 100%; max-height: 100px;" 
+        <td style="padding:0px ; padding-top:3px">
+        <img style="max-height: 100px;object-fit: contain;" 
         src="${img}" alt="${r.rangeName}">
         </td>
         </tr>`;
