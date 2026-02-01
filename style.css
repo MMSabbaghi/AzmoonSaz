@@ -118,6 +118,10 @@ input:focus {
     left: 0;
     width: 100%;
   }
+
+  #toTop {
+    visibility: hidden;
+  }
 }
 
 #printable table {
