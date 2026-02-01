@@ -228,37 +228,20 @@ document.getElementById("importJson").addEventListener("change", (e) => {
 
 //sticky box
 const sticky = document.getElementById("sticky");
-const container = document.getElementById("app-container");
 const sentinel = document.getElementById("sentinel");
 
 const observer = new IntersectionObserver(
   ([entry]) => {
-    if (!entry.isIntersecting) {
-      sticky.classList.add("stuck");
+    if (!entry.isIntersecting && entry.boundingClientRect.top < 0) {
+      sticky.classList.add("is-sticky");
     } else {
-      sticky.classList.remove("stuck");
-      sticky.style.setProperty("--offset", "0px");
+      sticky.classList.remove("is-sticky");
     }
   },
-  { threshold: 0 },
+  {
+    root: null,
+    threshold: 0,
+  },
 );
 
 observer.observe(sentinel);
-
-// حرکت نرم همراه اسکرول (GPU only)
-window.addEventListener("scroll", () => {
-  if (!sticky.classList.contains("stuck")) return;
-
-  const offset = window.scrollY - window.innerHeight + 10;
-
-  const max =
-    container.offsetTop +
-    container.offsetHeight -
-    sticky.offsetHeight -
-    window.innerHeight;
-
-  sticky.style.setProperty(
-    "--offset",
-    Math.max(0, Math.min(offset, max)) + "px",
-  );
-});

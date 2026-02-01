@@ -13,7 +13,6 @@ body {
 
 .app-container {
   min-height: 90vh;
-  position: relative;
 }
 
 input,
@@ -198,10 +197,16 @@ input:focus + label {
 
 /* sticky-box */
 .sticky-box {
-  position: relative;
+  will-change: position;
 }
 
-.sticky-box.stuck {
-  transform: translateY(var(--offset));
+.sticky-box.is-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+#sentinel {
+  height: 1px;
 }
