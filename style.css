@@ -55,11 +55,6 @@ input:focus {
   transition: var(--transition);
 }
 
-#ranges {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
 .range-item {
   border: 1px solid #ccc;
   padding: 8px;
@@ -213,4 +208,12 @@ input:focus + label {
 
 #sentinel {
   height: 1px;
+}
+
+/* Drag and drop */
+.placeholder {
+  height: 52px;
+  border: 2px dashed #94a3b8;
+  border-radius: 0.75rem;
+  background: #f1f5f9;
 }

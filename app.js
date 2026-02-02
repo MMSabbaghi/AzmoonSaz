@@ -9,7 +9,9 @@ function toPersianDigits(str) {
 
 function createRangeItem(rangeData = null) {
   const div = document.createElement("div");
-  div.className = "range-item";
+  div.draggable = true;
+  div.className =
+    "range-item transition-all duration-200 cursor-grab touch-none select-none";
   div.innerHTML = `
   <div class="range-header my-1">
     <div class="flex items-center gap-2">
@@ -297,3 +299,89 @@ btn.addEventListener("click", () => {
     behavior: "smooth",
   });
 });
+
+//Drag and Drop Range Items
+const ranges_list = document.getElementById("ranges");
+const placeholder = document.createElement("div");
+placeholder.className = "placeholder";
+
+let draggedItem = null;
+let isTouch = false;
+
+/* ---------- DESKTOP ---------- */
+ranges_list.addEventListener("dragstart", (e) => {
+  if (!e.target.classList.contains("range-item")) return;
+
+  draggedItem = e.target;
+  draggedItem.classList.add("opacity-50");
+  setTimeout(() => draggedItem.classList.add("hidden"), 0);
+});
+
+ranges_list.addEventListener("dragend", cleanup);
+
+ranges_list.addEventListener("dragover", (e) => {
+  if (isTouch || !draggedItem) return;
+  e.preventDefault();
+  handleMove(e.clientY);
+});
+
+ranges_list.addEventListener("drop", (e) => {
+  e.preventDefault();
+  if (placeholder.parentNode) {
+    ranges_list.insertBefore(draggedItem, placeholder);
+  }
+});
+
+/* ---------- MOBILE ---------- */
+ranges_list.addEventListener(
+  "touchstart",
+  (e) => {
+    const target = e.target.closest(".range-item");
+    if (!target) return;
+
+    isTouch = true;
+    draggedItem = target;
+    draggedItem.classList.add("opacity-50");
+  },
+  { passive: true },
+);
+
+ranges_list.addEventListener(
+  "touchmove",
+  (e) => {
+    if (!draggedItem) return;
+    handleMove(e.touches[0].clientY);
+  },
+  { passive: true },
+);
+
+ranges_list.addEventListener("touchend", () => {
+  if (placeholder.parentNode) {
+    ranges_list.insertBefore(draggedItem, placeholder);
+  }
+  cleanup();
+});
+
+/* ---------- SHARED ---------- */
+function handleMove(pointerY) {
+  const items = [
+    ...ranges_list.querySelectorAll(".range-item:not(.opacity-50)"),
+  ];
+
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    if (pointerY < rect.top + rect.height / 2) {
+      item.before(placeholder);
+      return;
+    }
+  }
+  ranges_list.appendChild(placeholder);
+}
+
+function cleanup() {
+  if (!draggedItem) return;
+  draggedItem.classList.remove("opacity-50", "hidden");
+  placeholder.remove();
+  draggedItem = null;
+  isTouch = false;
+}
