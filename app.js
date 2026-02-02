@@ -11,7 +11,7 @@ function createRangeItem(rangeData = null) {
   const div = document.createElement("div");
   div.draggable = true;
   div.className =
-    "range-item transition-all duration-200 cursor-grab touch-none select-none";
+    "range-item cursor-grab touch-none select-none  transition-transform duration-200 ease-out";
   div.innerHTML = `
   <div class="range-header my-1">
     <div class="flex items-center gap-2">
@@ -363,7 +363,38 @@ ranges_list.addEventListener("touchend", () => {
 });
 
 /* ---------- SHARED ---------- */
+function animateReorder() {
+  const items = [...ranges_list.querySelectorAll(".range-item")];
+
+  const first = new Map();
+  items.forEach((el) => {
+    first.set(el, el.getBoundingClientRect());
+  });
+
+  requestAnimationFrame(() => {
+    items.forEach((el) => {
+      const last = el.getBoundingClientRect();
+      const prev = first.get(el);
+
+      const dx = prev.left - last.left;
+      const dy = prev.top - last.top;
+
+      if (dx || dy) {
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        el.style.transition = "none";
+
+        requestAnimationFrame(() => {
+          el.style.transform = "";
+          el.style.transition = "";
+        });
+      }
+    });
+  });
+}
+
 function handleMove(pointerY) {
+  animateReorder();
+
   const items = [
     ...ranges_list.querySelectorAll(".range-item:not(.opacity-50)"),
   ];
