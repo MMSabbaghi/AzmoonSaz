@@ -7,11 +7,45 @@ function toPersianDigits(str) {
   return (str + "").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 }
 
+function addImage(imgSrc, target) {
+  const images = [];
+  images.push(imgSrc);
+  const imgContainer = document.createElement("div");
+  imgContainer.innerHTML = `<img src="${imgSrc}" alt=""><button>&times;</button>`;
+  imgContainer.querySelector("button").onclick = () => {
+    const index = images.indexOf(imgSrc);
+    if (index > -1) images.splice(index, 1);
+    imgContainer.remove();
+    target.querySelector(".range-total").textContent =
+      `${toPersianDigits(images.length)} سوال`;
+  };
+  imgContainer.querySelector("img").onclick = () => {
+    modalImg.src = imgSrc;
+    modal.style.display = "flex";
+  };
+  target.querySelector(".preview").appendChild(imgContainer);
+  target.querySelector(".range-total").textContent =
+    `${toPersianDigits(images.length)} سوال`;
+}
+
+let selectedRange = null;
+document.addEventListener("paste", (e) => {
+  const items = e.clipboardData.items;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf("image") !== -1) {
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = (ev) => addImage(ev.target.result, selectedRange);
+      reader.readAsDataURL(blob);
+    }
+  }
+});
+
 function createRangeItem(rangeData = null) {
   const div = document.createElement("div");
+  const fileID = crypto.randomUUID();
   div.draggable = true;
-  div.className =
-    "range-item cursor-grab touch-none select-none  transition-transform duration-200 ease-out";
+  div.className = "range-item transition-transform duration-200 ease-out";
   div.innerHTML = `
   <div class="range-header my-1">
     <div class="flex items-center gap-2">
@@ -28,8 +62,8 @@ function createRangeItem(rangeData = null) {
       <input value="1" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
       </div>
       <div class="file-input">
-      <input type="file" id="file" accept="image/*" multiple class="file range-images">
-      <label for="file" class="btn px-4 py-2 rounded">
+      <input type="file" id="file-${fileID}" accept="image/*" multiple class="file range-images">
+      <label for="file-${fileID}" class="btn px-4 py-2 rounded">
       <i class="bi bi-image"></i>
       </label>
       </div>
@@ -53,7 +87,7 @@ function createRangeItem(rangeData = null) {
       </div>
     </div>
 
-    <div id="textareaBox" class="mt-4 overflow-hidden
+    <div id="textareaBox" class="overflow-hidden
          max-h-0 opacity-0 blur-sm -translate-y-3
          transition-all duration-500 ease-out">
         <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید."></textarea>
@@ -61,16 +95,13 @@ function createRangeItem(rangeData = null) {
     <div class="preview"></div>
   `;
 
-  const previewDiv = div.querySelector(".preview");
-  const fileInput = div.querySelector(".range-images");
-  const totalSpan = div.querySelector(".range-total");
   const sw = div.querySelector("#switch");
   const knob = div.querySelector("#knob");
   const textareaBox = div.querySelector("#textareaBox");
 
-  const images = [];
-  let on = false;
+  div.addEventListener("click", (e) => (selectedRange = div));
 
+  let on = false;
   sw.addEventListener("click", () => {
     on = !on;
 
@@ -100,47 +131,16 @@ function createRangeItem(rangeData = null) {
     div.querySelector(".range-count").value = rangeData.count;
     div.querySelector(".range-score").value = rangeData.score;
     div.querySelector(".range-desc").value = rangeData.desc;
-    rangeData.images.forEach((imgSrc) => addImage(imgSrc));
+    rangeData.images.forEach((imgSrc) => addImage(imgSrc, div));
   }
 
-  function addImage(imgSrc) {
-    images.push(imgSrc);
-    const imgContainer = document.createElement("div");
-    imgContainer.innerHTML = `<img src="${imgSrc}" alt=""><button>&times;</button>`;
-    imgContainer.querySelector("button").onclick = () => {
-      const index = images.indexOf(imgSrc);
-      if (index > -1) images.splice(index, 1);
-      imgContainer.remove();
-      totalSpan.textContent = `${toPersianDigits(images.length)} سوال`;
-    };
-    imgContainer.querySelector("img").onclick = () => {
-      modalImg.src = imgSrc;
-      modal.style.display = "flex";
-    };
-    previewDiv.appendChild(imgContainer);
-    totalSpan.textContent = `${toPersianDigits(images.length)} سوال`;
-  }
-
-  fileInput.addEventListener("change", (e) => {
+  div.querySelector(".range-images").addEventListener("change", (e) => {
     Array.from(e.target.files).forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (ev) => addImage(ev.target.result);
+      reader.onload = (ev) => addImage(ev.target.result, div);
       reader.readAsDataURL(file);
     });
     e.target.value = "";
-  });
-
-  // پشتیبانی از Paste
-  div.addEventListener("paste", (e) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image") !== -1) {
-        const blob = items[i].getAsFile();
-        const reader = new FileReader();
-        reader.onload = (ev) => addImage(ev.target.result);
-        reader.readAsDataURL(blob);
-      }
-    }
   });
 
   div.querySelector(".remove-range").onclick = () => {
