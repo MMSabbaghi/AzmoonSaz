@@ -8,7 +8,7 @@ function toPersianDigits(str) {
 }
 
 function addImage(imgSrc, target) {
-  const images = [];
+  const images = [...target.querySelector(".preview").children];
   images.push(imgSrc);
   const imgContainer = document.createElement("div");
   imgContainer.innerHTML = `<img src="${imgSrc}" alt=""><button>&times;</button>`;
