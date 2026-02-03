@@ -259,9 +259,11 @@ function generateTable() {
         </span> 
         </td>
         <td style="padding:0px ; padding-top:3px;">
+        <div style="height: 75px; overflow: hidden; " >   
         <p> ${r.desc.length > 0 ? r.desc : ``} </p>
-        <img style="height: 75px;object-fit: contain;" 
+        <img style="max-height: 60px; width: auto; object-fit: contain;" 
         src="${img}" alt="${r.rangeName}">
+        </div>
         </td>
         </tr>`;
         qNum++;
