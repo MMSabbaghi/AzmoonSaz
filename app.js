@@ -30,12 +30,20 @@ function createRangeItem(rangeData = null) {
       <div class="file-input">
       <input type="file" id="file" accept="image/*" multiple class="file range-images">
       <label for="file" class="btn px-4 py-2 rounded">
-      <i class="bi bi-upload"></i>
-      <span class="mx-2">
-      آپلود تصویر سوال
-      </span>
+      <i class="bi bi-image"></i>
       </label>
       </div>
+        <!-- Switch -->
+      <label class="font-normal text-[#777]" > متن سوال: </label>
+      <div id="switch" class="relative w-[60px] h-[34px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
+         transition-all duration-300 ease-out
+         shadow-inner">
+
+        <div id="knob" class="absolute top-1 left-1 w-[28px] h-[26px] bg-white rounded-[var(--radius)]
+           transition-all duration-500
+           shadow-md">
+      </div>
+    </div>
     </div>
     <div class="flex items-center gap-2">
     <span class="range-total"></span>
@@ -43,20 +51,55 @@ function createRangeItem(rangeData = null) {
     <i class="bi bi-trash3"></i>
     </button>
       </div>
-    </div>   
+    </div>
 
+    <div id="textareaBox" class="mt-4 overflow-hidden
+         max-h-0 opacity-0 blur-sm -translate-y-3
+         transition-all duration-500 ease-out">
+        <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید."></textarea>
+    </div>
     <div class="preview"></div>
   `;
 
   const previewDiv = div.querySelector(".preview");
   const fileInput = div.querySelector(".range-images");
   const totalSpan = div.querySelector(".range-total");
+  const sw = div.querySelector("#switch");
+  const knob = div.querySelector("#knob");
+  const textareaBox = div.querySelector("#textareaBox");
+
   const images = [];
+  let on = false;
+
+  sw.addEventListener("click", () => {
+    on = !on;
+
+    const stateClasses = {
+      on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+      off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+    };
+
+    function setState(state) {
+      textareaBox.classList.remove(...stateClasses.on, ...stateClasses.off);
+      textareaBox.classList.add(...stateClasses[state]);
+    }
+
+    if (on) {
+      sw.classList.add("bg-[#333]");
+      knob.classList.add("translate-x-6", "scale-105");
+      setState("on");
+    } else {
+      sw.classList.remove("bg-[#333]");
+      knob.classList.remove("translate-x-6", "scale-105");
+      setState("off");
+    }
+  });
 
   if (rangeData) {
     div.querySelector(".range-name").value = rangeData.rangeName;
     div.querySelector(".range-count").value = rangeData.count;
     div.querySelector(".range-score").value = rangeData.score;
+    div.querySelector(".range-desc").value = rangeData.desc;
     rangeData.images.forEach((imgSrc) => addImage(imgSrc));
   }
 
@@ -140,11 +183,12 @@ function generateTable() {
     const rangeName = div.querySelector(".range-name").value.trim();
     const count = parseInt(div.querySelector(".range-count").value);
     const score = div.querySelector(".range-score").value;
+    const desc = div.querySelector(".range-desc").value;
     const imgs = Array.from(div.querySelectorAll(".preview img")).map(
       (i) => i.src,
     );
     if (imgs.length === 0 || !count) return;
-    ranges.push({ rangeName, count, images: imgs, score });
+    ranges.push({ rangeName, count, images: imgs, score, desc });
   });
 
   if (!ranges.length) {
@@ -173,6 +217,7 @@ function generateTable() {
           rangeName: r.rangeName,
           images: selection,
           score: r.score,
+          desc: r.desc,
         });
       });
     } else {
@@ -189,6 +234,7 @@ function generateTable() {
           rangeName: r.rangeName,
           images: selection,
           score: r.score,
+          desc: r.desc,
         });
       });
     }
@@ -210,6 +256,7 @@ function generateTable() {
         </span> 
         </td>
         <td style="padding:0px ; padding-top:3px;">
+        <p> ${r.desc.length > 0 ? r.desc : ``} </p>
         <img style="height: 75px;object-fit: contain;" 
         src="${img}" alt="${r.rangeName}">
         </td>
@@ -234,6 +281,7 @@ document.getElementById("exportJson").onclick = () => {
         rangeName: div.querySelector(".range-name").value,
         count: parseInt(div.querySelector(".range-count").value),
         score: div.querySelector(".range-score").value,
+        desc: div.querySelector(".range-desc").value,
         images: Array.from(div.querySelectorAll(".preview img")).map(
           (i) => i.src,
         ),

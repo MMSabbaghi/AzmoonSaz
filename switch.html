@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fa">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Tailwind Pro Switch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --spring: cubic-bezier(.34, 1.56, .64, 1);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white p-12">
+
+    <!-- Switch -->
+    <div id="switch" class="relative w-[72px] h-[34px] bg-slate-700 rounded-[4px] cursor-pointer
+         transition-all duration-300 ease-out
+         shadow-inner">
+
+        <div id="knob" class="absolute top-1 left-1 w-[28px] h-[26px] bg-white rounded-[3px]
+           transition-all duration-500
+           shadow-md">
+        </div>
+    </div>
+
+    <!-- Textarea -->
+    <div id="textareaBox" class="mt-4 overflow-hidden
+         max-h-0 opacity-0 blur-sm -translate-y-3
+         transition-all duration-500 ease-out">
+
+        <textarea class="w-full h-36 bg-slate-950 border border-slate-700 rounded-lg
+           p-3 text-sm resize-none
+           focus:outline-none focus:border-emerald-500
+           focus:ring-4 focus:ring-emerald-500/20" placeholder="اینجا بنویس..."></textarea>
+    </div>
+
+    <script>
+        const sw = document.getElementById('switch');
+        const knob = document.getElementById('knob');
+        const box = document.getElementById('textareaBox');
+
+        let on = false;
+
+        sw.addEventListener('click', () => {
+            on = !on;
+
+            if (on) {
+                sw.classList.add(
+                    'bg-emerald-500',
+                    'shadow-[0_0_0_4px_rgba(16,185,129,0.25)]'
+                );
+
+                knob.classList.add(
+                    'translate-x-9',
+                    'scale-105'
+                );
+
+                box.classList.remove(
+                    'max-h-0', 'opacity-0', 'blur-sm', '-translate-y-3'
+                );
+                box.classList.add(
+                    'max-h-60', 'opacity-100', 'blur-0', 'translate-y-0'
+                );
+            } else {
+                sw.classList.remove(
+                    'bg-emerald-500',
+                    'shadow-[0_0_0_4px_rgba(16,185,129,0.25)]'
+                );
+
+                knob.classList.remove(
+                    'translate-x-9',
+                    'scale-105'
+                );
+
+                box.classList.add(
+                    'max-h-0', 'opacity-0', 'blur-sm', '-translate-y-3'
+                );
+                box.classList.remove(
+                    'max-h-60', 'opacity-100', 'blur-0', 'translate-y-0'
+                );
+            }
+        });
+    </script>
+
+</body>
+
+</html>

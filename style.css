@@ -9,6 +9,7 @@ body {
   --border: #ddd;
   --radius: 6px;
   --transition: 0.3s ease;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .app-container {
@@ -39,6 +40,12 @@ input:focus {
 .btn:hover {
   background-color: var(--primary-dark);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.bi {
+  display: inline-block;
+  position: relative;
+  bottom: -0.125em;
 }
 
 .add-btn,
