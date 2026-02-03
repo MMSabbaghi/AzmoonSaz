@@ -171,8 +171,11 @@ document.getElementById("generate").onclick = (e) => {
 function generateTable() {
   const namesNumber = document.getElementById("names").value;
   const rangeDivs = document.querySelectorAll(".range-item");
-  if (!namesNumber || !rangeDivs.length) {
-    showToast("لطفا فیلدها را کامل کنید", "error");
+  if (!rangeDivs.length) {
+    showToast("لطفا یک مبحث معتبر تعریف کنید", "error");
+    return false;
+  } else if (!namesNumber) {
+    showToast("لطفا تعداد را وارد کنید", "error");
     return false;
   }
   const names = Array.from({ length: +namesNumber }, (_, i) => i + 1);
