@@ -100,7 +100,12 @@ function createRangeItem(rangeData = null) {
     }
   });
 
-  div.querySelector(".remove-range").onclick = () => div.remove();
+  div.querySelector(".remove-range").onclick = () => {
+    showConfirm({
+      msg: "آیا از حذف این مبحث اطمینان دارید؟",
+      on_confirm: () => div.remove(),
+    });
+  };
   return div;
 }
 
