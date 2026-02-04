@@ -7,17 +7,17 @@ function toPersianDigits(str) {
   return (str + "").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 }
 
+function getImgesLength(target) {
+  return target.querySelector(".preview").children.length;
+}
+
 function addImage(imgSrc, target) {
-  const images = [...target.querySelector(".preview").children];
-  images.push(imgSrc);
   const imgContainer = document.createElement("div");
   imgContainer.innerHTML = `<img src="${imgSrc}" alt=""><button>&times;</button>`;
   imgContainer.querySelector("button").onclick = () => {
-    const index = images.indexOf(imgSrc);
-    if (index > -1) images.splice(index, 1);
     imgContainer.remove();
     target.querySelector(".range-total").textContent =
-      `${toPersianDigits(images.length)} سوال`;
+      `${toPersianDigits(getImgesLength(target))} سوال`;
   };
   imgContainer.querySelector("img").onclick = () => {
     modalImg.src = imgSrc;
@@ -25,7 +25,7 @@ function addImage(imgSrc, target) {
   };
   target.querySelector(".preview").appendChild(imgContainer);
   target.querySelector(".range-total").textContent =
-    `${toPersianDigits(images.length)} سوال`;
+    `${toPersianDigits(getImgesLength(target))} سوال`;
 }
 
 let selectedRange = null;
