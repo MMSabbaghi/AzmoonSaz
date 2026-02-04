@@ -11,21 +11,24 @@ function getImgesLength(target) {
   return target.querySelector(".preview").children.length;
 }
 
+function updateRangeTotal(target) {
+  target.querySelector(".range-total").textContent =
+    `${toPersianDigits(getImgesLength(target))}`;
+}
+
 function addImage(imgSrc, target) {
   const imgContainer = document.createElement("div");
-  imgContainer.innerHTML = `<img src="${imgSrc}" alt=""><button>&times;</button>`;
+  imgContainer.innerHTML = `<img src="${imgSrc}" alt=""><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
   imgContainer.querySelector("button").onclick = () => {
     imgContainer.remove();
-    target.querySelector(".range-total").textContent =
-      `${toPersianDigits(getImgesLength(target))} سوال`;
+    updateRangeTotal(target);
   };
   imgContainer.querySelector("img").onclick = () => {
     modalImg.src = imgSrc;
     modal.style.display = "flex";
   };
   target.querySelector(".preview").appendChild(imgContainer);
-  target.querySelector(".range-total").textContent =
-    `${toPersianDigits(getImgesLength(target))} سوال`;
+  updateRangeTotal(target);
 }
 
 let selectedRange = null;
@@ -40,6 +43,20 @@ document.addEventListener("paste", (e) => {
     }
   }
 });
+
+document.addEventListener("paste", async (e) => {
+  try {
+    const text = await navigator.clipboard.readText();
+    const pastedArray = JSON.parse(text);
+    [...pastedArray].forEach((img) => addImage(img, selectedRange));
+  } catch (err) {
+    console.error("خطا در پیست کردن: ", err);
+  }
+});
+
+function getRangeImages(target) {
+  return Array.from(target.querySelectorAll(".preview img")).map((i) => i.src);
+}
 
 function createRangeItem(rangeData = null) {
   const div = document.createElement("div");
@@ -61,16 +78,21 @@ function createRangeItem(rangeData = null) {
       <label class="font-normal text-[#777]" > نمره: </label>
       <input value="1" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
       </div>
+      <div class="relative inline-block">
       <div class="file-input">
       <input type="file" id="file-${fileID}" accept="image/*" multiple class="file range-images">
       <label for="file-${fileID}" class="btn px-4 py-2 rounded">
       <i class="bi bi-image"></i>
       </label>
+      <span class="range-total absolute top-0 left-0 -mt-2 -ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+        ${toPersianDigits(0)}
+      </span>
+    </div>
       </div>
-        <!-- Switch -->
+      <!-- Switch -->
       <label class="font-normal text-[#777]" > متن سوال: </label>
       <div id="switch" class="relative w-[60px] h-[34px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
-         transition-all duration-300 ease-out
+      transition-all duration-300 ease-out
          shadow-inner">
 
         <div id="knob" class="absolute top-1 left-1 w-[28px] h-[26px] bg-white rounded-[var(--radius)]
@@ -80,9 +102,11 @@ function createRangeItem(rangeData = null) {
     </div>
     </div>
     <div class="flex items-center gap-2">
-    <span class="range-total"></span>
-    <button class="btn px-2 py-1 bg-red-500 text-white rounded remove-range">
+    <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out">
     <i class="bi bi-trash3"></i>
+    </button>
+    <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out">
+    <i class="bi bi-copy"></i>
     </button>
       </div>
     </div>
@@ -149,6 +173,23 @@ function createRangeItem(rangeData = null) {
       on_confirm: () => div.remove(),
     });
   };
+
+  div.querySelector(".copy-range").addEventListener("click", async () => {
+    try {
+      const images = getRangeImages(div);
+      if (images.length) {
+        const textToCopy = JSON.stringify(images);
+        await navigator.clipboard.writeText(textToCopy);
+        showToast("کپی شد!");
+      } else {
+        showToast("تصویری برای کپی وجود ندارد.", "error");
+      }
+    } catch (err) {
+      console.error("خطا در کپی کردن: ", err);
+      showToast("خطا در کپی کردن!", "error");
+    }
+  });
+
   return div;
 }
 
@@ -187,9 +228,7 @@ function generateTable() {
     const count = parseInt(div.querySelector(".range-count").value);
     const score = div.querySelector(".range-score").value;
     const desc = div.querySelector(".range-desc").value;
-    const imgs = Array.from(div.querySelectorAll(".preview img")).map(
-      (i) => i.src,
-    );
+    const imgs = getRangeImages(div);
     if (imgs.length === 0 || !count) return;
     ranges.push({ rangeName, count, images: imgs, score, desc });
   });
@@ -287,9 +326,7 @@ document.getElementById("exportJson").onclick = () => {
         count: parseInt(div.querySelector(".range-count").value),
         score: div.querySelector(".range-score").value,
         desc: div.querySelector(".range-desc").value,
-        images: Array.from(div.querySelectorAll(".preview img")).map(
-          (i) => i.src,
-        ),
+        images: getRangeImages(div),
       };
     },
   );
