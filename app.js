@@ -91,11 +91,11 @@ function createRangeItem(rangeData = null) {
       </div>
       <!-- Switch -->
       <label class="font-normal text-[#777]" > متن سوال: </label>
-      <div id="switch" class="relative w-[60px] h-[34px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
+      <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
       transition-all duration-300 ease-out
          shadow-inner">
 
-        <div id="knob" class="absolute top-1 left-1 w-[28px] h-[26px] bg-white rounded-[var(--radius)]
+        <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)]
            transition-all duration-500
            shadow-md">
       </div>
@@ -141,11 +141,11 @@ function createRangeItem(rangeData = null) {
 
     if (on) {
       sw.classList.add("bg-[#333]");
-      knob.classList.add("translate-x-6", "scale-105");
+      knob.classList.add("translate-x-4", "scale-105");
       setState("on");
     } else {
       sw.classList.remove("bg-[#333]");
-      knob.classList.remove("translate-x-6", "scale-105");
+      knob.classList.remove("translate-x-4", "scale-105");
       setState("off");
     }
   });
