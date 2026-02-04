@@ -260,8 +260,8 @@ function generateTable() {
         </td>
         <td style="padding:0px ; padding-top:3px;">
         <div style="height: 75px; overflow: hidden; " >   
-        <p> ${r.desc.length > 0 ? r.desc : ``} </p>
-        <img style="max-height: 60px; width: auto; object-fit: contain;" 
+        <p style="position: absolute"> ${r.desc.length > 0 ? r.desc : ``} </p>
+        <img style="max-height: 75px; width: 100%; object-fit: contain;" 
         src="${img}" alt="${r.rangeName}">
         </div>
         </td>
