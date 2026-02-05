@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>ساخت کوییز</title>
+  <link href="./utils/cropper/cropper.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="./icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="style.css">
   <script src="./utils/3.4.17"></script>
@@ -71,8 +72,19 @@
   </div>
 
   <!-- Modal برای نمایش بزرگ تصویر -->
-  <div id="modal" class="modal flex" style="display: none;">
-    <img id="modal-img" src="">
+  <div id="modal" class="modal" style="display: none;">
+    <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
+    <div class="max-w-3xl flex flex-col z-10">
+      <div class="flex flex-wrap gap-3 mb-1">
+        <button id="editCropBtn" class="btn px-4 py-2 disabled:opacity-50"><i class="bi bi-crop"></i>
+          <span> برش</span>
+        </button>
+        <button id="saveCroppedImageBtn" class="btn px-4 py-2 hidden"><i class="bi bi-floppy"></i>
+          <span> ذخیره</span>
+        </button>
+      </div>
+      <img id="modal-img" src="">
+    </div>
   </div>
 
   <button id="toTop" title="برو بالا" class="
@@ -88,6 +100,7 @@
   ">
     <i class="bi bi-arrow-up"></i>
   </button>
+  <script src="./utils/cropper/cropper.min.js"></script>
   <script src="./utils/persian-inputs.js"></script>
   <script src="./utils/alert.js"></script>
   <script src="./utils/confirm.js"></script>

@@ -1,6 +1,11 @@
 const rangesContainer = document.getElementById("ranges");
 const modal = document.getElementById("modal");
 const modalImg = document.getElementById("modal-img");
+const modalOverlay = document.getElementById("modal-overlay");
+
+//state
+let selectedImg;
+let cropperInstance = null;
 
 // تبدیل اعداد انگلیسی به فارسی
 function toPersianDigits(str) {
@@ -23,8 +28,9 @@ function addImage(imgSrc, target) {
     imgContainer.remove();
     updateRangeTotal(target);
   };
-  imgContainer.querySelector("img").onclick = () => {
-    modalImg.src = imgSrc;
+  imgContainer.querySelector("img").onclick = (e) => {
+    selectedImg = e.target;
+    modalImg.src = e.target.src;
     modal.style.display = "flex";
   };
   target.querySelector(".preview").appendChild(imgContainer);
@@ -197,12 +203,13 @@ document.getElementById("addRange").onclick = () => {
   rangesContainer.appendChild(createRangeItem());
 };
 
-modal.addEventListener("click", () => {
+modalOverlay.addEventListener("click", () => {
+  cropperInstance?.destroy();
+  cropperInstance = null;
+  selectedImg = null;
   modal.style.display = "none";
   modalImg.src = "";
 });
-
-function validateRanges() {}
 
 document.getElementById("generate").onclick = (e) => {
   const isGenerated = generateTable();
@@ -511,3 +518,51 @@ function cleanup() {
   draggedItem = null;
   isTouch = false;
 }
+
+/// Crop Image suppurt
+
+const editCropBtn = document.getElementById("editCropBtn");
+const saveCroppedImageBtn = document.getElementById("saveCroppedImageBtn");
+
+function toggleCropBtns() {
+  editCropBtn.classList.toggle("hidden");
+  saveCroppedImageBtn.classList.toggle("hidden");
+}
+
+// فعال کردن حالت ویرایش و کراپ
+editCropBtn.addEventListener("click", () => {
+  if (cropperInstance) cropperInstance.destroy();
+
+  cropperInstance = new Cropper(modalImg, {
+    aspectRatio: NaN,
+    viewMode: 1,
+    movable: true,
+    zoomable: true,
+    scalable: true,
+    responsive: true,
+    autoCropArea: 1,
+  });
+
+  toggleCropBtns();
+});
+
+// ذخیره تصویر کراپ شده با تایید
+saveCroppedImageBtn.addEventListener("click", () => {
+  if (!cropperInstance) return;
+
+  showConfirm({
+    msg: "آیا از ذخیره تصویر اطمینان دارید؟",
+    on_confirm: () => {
+      const croppedCanvas = cropperInstance.getCroppedCanvas();
+      const croppedImage = new Image();
+      croppedImage.onload = () => {
+        modalImg.src = croppedImage.src;
+        selectedImg.src = croppedImage.src;
+        cropperInstance.destroy();
+        cropperInstance = null;
+        toggleCropBtns();
+      };
+      croppedImage.src = croppedCanvas.toDataURL();
+    },
+  });
+});
