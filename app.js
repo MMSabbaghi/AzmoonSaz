@@ -1,27 +1,95 @@
+//elements
 const rangesContainer = document.getElementById("ranges");
 const modal = document.getElementById("modal");
 const modalImg = document.getElementById("modal-img");
 const modalOverlay = document.getElementById("modal-overlay");
+const editCropBtn = document.getElementById("editCropBtn");
+const saveCroppedImageBtn = document.getElementById("saveCroppedImageBtn");
+const ranges_list = document.getElementById("ranges");
+const moveToTopBtn = document.getElementById("toTop");
+const sticky = document.getElementById("sticky");
+const sentinel = document.getElementById("sentinel");
 
 //state
+let selectedRange;
 let selectedImg;
-let cropperInstance = null;
+let cropperInstance;
+let draggedItem;
+let isTouch = false;
 
-// تبدیل اعداد انگلیسی به فارسی
+//public functions
 function toPersianDigits(str) {
   return (str + "").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 }
 
-function getImgesLength(target) {
-  return target.querySelector(".preview").children.length;
+function handleSwitchElement({ container, onChange }) {
+  const sw = container.querySelector("#switch");
+  const knob = container.querySelector("#knob");
+
+  let on = false;
+
+  sw.addEventListener("click", () => {
+    on = !on;
+    const func = on ? "add" : "remove";
+    sw.classList[func]("bg-[#333]");
+    knob.classList[func]("translate-x-4", "scale-105");
+    onChange(on);
+  });
+}
+
+function setElementState({ target, stateClasses, isActive }) {
+  target.classList.remove(...stateClasses.on, ...stateClasses.off);
+  target.classList.add(...stateClasses[isActive ? "on" : "off"]);
+}
+
+function handleFileUpload({ target, onChange, readAs }) {
+  target.addEventListener("change", (e) => {
+    Array.from(e.target.files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => onChange(ev.target.result);
+      reader[`readAs${readAs}`](file);
+    });
+    e.target.value = "";
+  });
+}
+
+async function copyToClipboard(textToCopy) {
+  try {
+    await navigator.clipboard.writeText(textToCopy);
+    showToast("کپی شد!");
+    return true;
+  } catch (err) {
+    console.error("خطا در کپی کردن: ", err);
+    showToast("خطا در کپی کردن!", "error");
+    return false;
+  }
+}
+
+function shuffleArray(array) {
+  return [...array].sort(() => Math.random() - 0.5);
+}
+
+///// App codes
+function getRangeImages(target) {
+  return Array.from(target.querySelectorAll(".preview img")).map((i) => i.src);
+}
+
+function getRangeData(target) {
+  const rangeName = target.querySelector(".range-name").value.trim();
+  const count = parseInt(target.querySelector(".range-count").value);
+  const score = target.querySelector(".range-score").value;
+  const desc = target.querySelector(".range-desc").value;
+  const imgs = getRangeImages(target);
+  return { rangeName, count, images: imgs, score, desc };
 }
 
 function updateRangeTotal(target) {
+  const imagesCount = target.querySelector(".preview").children.length;
   target.querySelector(".range-total").textContent =
-    `${toPersianDigits(getImgesLength(target))}`;
+    `${toPersianDigits(imagesCount)}`;
 }
 
-function addImage(imgSrc, target) {
+function createImageElement(imgSrc, target) {
   const imgContainer = document.createElement("div");
   imgContainer.innerHTML = `<img src="${imgSrc}" alt=""><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
   imgContainer.querySelector("button").onclick = () => {
@@ -33,13 +101,16 @@ function addImage(imgSrc, target) {
     modalImg.src = e.target.src;
     modal.style.display = "flex";
   };
+  return imgContainer;
+}
+
+function addImage(imgSrc, target) {
+  const imgContainer = createImageElement(imgSrc, target);
   target.querySelector(".preview").appendChild(imgContainer);
   updateRangeTotal(target);
 }
 
-let selectedRange = null;
-document.addEventListener("paste", (e) => {
-  const items = e.clipboardData.items;
+function handlePasteImage(items) {
   for (let i = 0; i < items.length; i++) {
     if (items[i].type.indexOf("image") !== -1) {
       const blob = items[i].getAsFile();
@@ -48,9 +119,9 @@ document.addEventListener("paste", (e) => {
       reader.readAsDataURL(blob);
     }
   }
-});
+}
 
-document.addEventListener("paste", async (e) => {
+async function handlePasteRange() {
   try {
     const text = await navigator.clipboard.readText();
     const pastedArray = JSON.parse(text);
@@ -58,13 +129,18 @@ document.addEventListener("paste", async (e) => {
   } catch (err) {
     console.error("خطا در پیست کردن: ", err);
   }
-});
-
-function getRangeImages(target) {
-  return Array.from(target.querySelectorAll(".preview img")).map((i) => i.src);
 }
 
+document.addEventListener("paste", ({ clipboardData }) =>
+  handlePasteImage(clipboardData.items),
+);
+
+document.addEventListener("paste", handlePasteRange);
+
 function createRangeItem(rangeData = null) {
+  const setFieldValue = (fieldName, defaultValue = "") =>
+    `value="${rangeData ? rangeData[fieldName] : defaultValue}"`;
+
   const div = document.createElement("div");
   const fileID = crypto.randomUUID();
   div.draggable = true;
@@ -74,15 +150,15 @@ function createRangeItem(rangeData = null) {
     <div class="flex items-center gap-2">
       <div>
       <label class="font-normal text-[#777]"> مبحث: </label>
-      <input type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
+      <input ${setFieldValue(`rangeName`)} type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
       </div>
       <div>
       <label class="font-normal text-[#777]"> تعداد: </label>
-      <input value="1" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
+      <input ${setFieldValue(`count`, 1)} data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
       </div>
       <div>
       <label class="font-normal text-[#777]" > نمره: </label>
-      <input value="1" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
+      <input ${setFieldValue(`score`, 1)} data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
       </div>
       <div class="relative inline-block">
       <div class="file-input">
@@ -120,57 +196,31 @@ function createRangeItem(rangeData = null) {
     <div id="textareaBox" class="overflow-hidden
          max-h-0 opacity-0 blur-sm -translate-y-3
          transition-all duration-500 ease-out">
-        <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید."></textarea>
+        <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData?.desc || ``}</textarea>
     </div>
     <div class="preview"></div>
   `;
 
-  const sw = div.querySelector("#switch");
-  const knob = div.querySelector("#knob");
-  const textareaBox = div.querySelector("#textareaBox");
-
+  if (rangeData) rangeData.images.forEach((imgSrc) => addImage(imgSrc, div));
   div.addEventListener("click", (e) => (selectedRange = div));
 
-  let on = false;
-  sw.addEventListener("click", () => {
-    on = !on;
-
-    const stateClasses = {
-      on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-      off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-    };
-
-    function setState(state) {
-      textareaBox.classList.remove(...stateClasses.on, ...stateClasses.off);
-      textareaBox.classList.add(...stateClasses[state]);
-    }
-
-    if (on) {
-      sw.classList.add("bg-[#333]");
-      knob.classList.add("translate-x-4", "scale-105");
-      setState("on");
-    } else {
-      sw.classList.remove("bg-[#333]");
-      knob.classList.remove("translate-x-4", "scale-105");
-      setState("off");
-    }
+  handleSwitchElement({
+    container: div,
+    onChange: (isActive) =>
+      setElementState({
+        target: div.querySelector("#textareaBox"),
+        stateClasses: {
+          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+        },
+        isActive,
+      }),
   });
 
-  if (rangeData) {
-    div.querySelector(".range-name").value = rangeData.rangeName;
-    div.querySelector(".range-count").value = rangeData.count;
-    div.querySelector(".range-score").value = rangeData.score;
-    div.querySelector(".range-desc").value = rangeData.desc;
-    rangeData.images.forEach((imgSrc) => addImage(imgSrc, div));
-  }
-
-  div.querySelector(".range-images").addEventListener("change", (e) => {
-    Array.from(e.target.files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => addImage(ev.target.result, div);
-      reader.readAsDataURL(file);
-    });
-    e.target.value = "";
+  handleFileUpload({
+    target: div.querySelector(".range-images"),
+    onChange: (img) => addImage(img, div),
+    readAs: "DataURL",
   });
 
   div.querySelector(".remove-range").onclick = () => {
@@ -180,19 +230,12 @@ function createRangeItem(rangeData = null) {
     });
   };
 
-  div.querySelector(".copy-range").addEventListener("click", async () => {
-    try {
-      const images = getRangeImages(div);
-      if (images.length) {
-        const textToCopy = JSON.stringify(images);
-        await navigator.clipboard.writeText(textToCopy);
-        showToast("کپی شد!");
-      } else {
-        showToast("تصویری برای کپی وجود ندارد.", "error");
-      }
-    } catch (err) {
-      console.error("خطا در کپی کردن: ", err);
-      showToast("خطا در کپی کردن!", "error");
+  div.querySelector(".copy-range").addEventListener("click", (e) => {
+    const images = getRangeImages(div);
+    if (images.length) {
+      copyToClipboard(JSON.stringify(images));
+    } else {
+      showToast("تصویری برای کپی وجود ندارد.", "error");
     }
   });
 
@@ -203,6 +246,142 @@ document.getElementById("addRange").onclick = () => {
   rangesContainer.appendChild(createRangeItem());
 };
 
+document.getElementById("generate").onclick = (e) => {
+  const isGenerated = generateTable();
+  if (isGenerated) e.target.scrollIntoView({ behavior: "smooth" });
+};
+
+// Random Quiz data generator
+function shuffleUniform(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickUniqueRandom(source, count) {
+  if (!Array.isArray(source) || source.length === 0 || count <= 0) {
+    return [];
+  }
+
+  const shuffled = shuffleUniform(source);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+function generateQuizData(names, ranges) {
+  const finalData = Object.fromEntries(names.map((n) => [n, []]));
+
+  ranges.forEach((r) => {
+    const images = Array.isArray(r.images) ? r.images : [];
+
+    names.forEach((student) => {
+      finalData[student].push({
+        rangeName: r.rangeName,
+        images: pickUniqueRandom(images, r.count),
+        score: r.score,
+        desc: r.desc,
+      });
+    });
+  });
+
+  return finalData;
+}
+
+/* Generate Table */
+
+function getNames(count) {
+  return Array.from({ length: count }, (_, i) => i + 1);
+}
+
+function collectValidRanges(rangeDivs) {
+  return Array.from(rangeDivs)
+    .map(getRangeData)
+    .filter((r) => r.images.length && r.count);
+}
+
+function renderQuestionRow(qNum, img, range) {
+  return `
+ <tr>
+  <td class="w-10 text-center font-bold">
+    ${toPersianDigits(qNum)}
+    <span class="font-normal text-xs">
+      ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
+    </span>
+  </td>
+
+  <td class="p-0">
+    <div class="h-[75px] overflow-hidden relative">
+      ${range.desc ? `<p class="absolute">${range.desc}</p>` : ``}
+      <img
+        class="max-h-[75px] w-full object-contain"
+        src="${img}"
+        alt="${range.rangeName}"
+      >
+    </div>
+  </td>
+</tr>`;
+}
+
+function renderStudentTable(studentQuiz) {
+  let qNum = 1;
+
+  const rows = studentQuiz
+    .flatMap((range) =>
+      range.images.map((img) => renderQuestionRow(qNum++, img, range)),
+    )
+    .join("");
+
+  return `
+<table class="w-full border-collapse">
+  <tr class="bg-gray-200">
+    <td class="w-10"></td>
+    <td class="p-1">نام و نام خانوادگی:</td>
+  </tr>
+  ${rows}
+</table>`;
+}
+
+function generateTable() {
+  const namesNumber = +document.getElementById("names").value;
+  if (!namesNumber) {
+    showToast("لطفا تعداد را وارد کنید", "error");
+    return false;
+  }
+
+  const ranges = collectValidRanges(document.querySelectorAll(".range-item"));
+
+  if (!ranges.length) {
+    showToast("حداقل یک مبحث معتبر تعریف کنید.", "error");
+    return false;
+  }
+
+  const names = getNames(namesNumber);
+  const quizData = generateQuizData(names, ranges);
+
+  const html = names
+    .map(
+      (student) => `
+<tr>
+  <td class="questions">
+    ${renderStudentTable(quizData[student])}
+  </td>
+</tr>`,
+    )
+    .join("");
+
+  document.getElementById("printable").innerHTML = `
+<table class="w-full">
+  <tbody>
+    ${html}
+  </tbody>
+</table>`;
+
+  return true;
+}
+
+/// Image Modal
 modalOverlay.addEventListener("click", () => {
   cropperInstance?.destroy();
   cropperInstance = null;
@@ -210,118 +389,6 @@ modalOverlay.addEventListener("click", () => {
   modal.style.display = "none";
   modalImg.src = "";
 });
-
-document.getElementById("generate").onclick = (e) => {
-  const isGenerated = generateTable();
-  if (isGenerated) e.target.scrollIntoView({ behavior: "smooth" });
-};
-
-function generateTable() {
-  const namesNumber = document.getElementById("names").value;
-  const rangeDivs = document.querySelectorAll(".range-item");
-  if (!rangeDivs.length) {
-    showToast("لطفا یک مبحث معتبر تعریف کنید", "error");
-    return false;
-  } else if (!namesNumber) {
-    showToast("لطفا تعداد را وارد کنید", "error");
-    return false;
-  }
-  const names = Array.from({ length: +namesNumber }, (_, i) => i + 1);
-
-  const ranges = [];
-
-  rangeDivs.forEach((div) => {
-    const rangeName = div.querySelector(".range-name").value.trim();
-    const count = parseInt(div.querySelector(".range-count").value);
-    const score = div.querySelector(".range-score").value;
-    const desc = div.querySelector(".range-desc").value;
-    const imgs = getRangeImages(div);
-    if (imgs.length === 0 || !count) return;
-    ranges.push({ rangeName, count, images: imgs, score, desc });
-  });
-
-  if (!ranges.length) {
-    showToast("حداقل یک فیلد معتبر تعریف کنید.", "error");
-    return false;
-  }
-
-  let finalData = {};
-  names.forEach((n) => (finalData[n] = []));
-
-  ranges.forEach((r) => {
-    const shuffled = [...r.images].sort(() => Math.random() - 0.5);
-    const numQuestions = r.count;
-
-    if (numQuestions >= shuffled.length) {
-      names.forEach((student) => {
-        const selection = [];
-        const pool = [...shuffled];
-        for (let i = 0; i < r.count; i++) {
-          if (pool.length === 0) break;
-          const idx = Math.floor(Math.random() * pool.length);
-          selection.push(pool[idx]);
-          pool.splice(idx, 1);
-        }
-        finalData[student].push({
-          rangeName: r.rangeName,
-          images: selection,
-          score: r.score,
-          desc: r.desc,
-        });
-      });
-    } else {
-      const pool = [...shuffled];
-      names.forEach((student) => {
-        const selection = [];
-        for (let i = 0; i < r.count; i++) {
-          if (pool.length === 0) pool.push(...shuffled);
-          const idx = Math.floor(Math.random() * pool.length);
-          selection.push(pool[idx]);
-          pool.splice(idx, 1);
-        }
-        finalData[student].push({
-          rangeName: r.rangeName,
-          images: selection,
-          score: r.score,
-          desc: r.desc,
-        });
-      });
-    }
-  });
-
-  let html = ``;
-  names.forEach((student) => {
-    let questionHtml = "<table>";
-    questionHtml += `<tr style="background-color:#e5e7eb"><td style="width:40px;"></td><td style="padding: 1px;"> نام و نام خانوادگی: </td></tr>`;
-    let qNum = 1;
-    finalData[student].forEach((r) => {
-      r.images.forEach((img) => {
-        questionHtml += `<tr>
-        <td style="width:40px;text-align:center;font-weight:bold;">${toPersianDigits(
-          qNum,
-        )}
-        <span style="font-weight: normal;font-size: small;">
-         ${+r.score > 0 ? `(${toPersianDigits(r.score)}نمره)` : ``}
-        </span> 
-        </td>
-        <td style="padding:0px ; padding-top:3px;">
-        <div style="height: 75px; overflow: hidden; " >   
-        <p style="position: absolute"> ${r.desc.length > 0 ? r.desc : ``} </p>
-        <img style="max-height: 75px; width: 100%; object-fit: contain;" 
-        src="${img}" alt="${r.rangeName}">
-        </div>
-        </td>
-        </tr>`;
-        qNum++;
-      });
-    });
-    questionHtml += "</table>";
-    html += `<tr><td class="questions">${questionHtml}</td></tr>`;
-  });
-  html += "</tbody></table>";
-  document.getElementById("printable").innerHTML = html;
-  return true;
-}
 
 // Export JSON
 document.getElementById("exportJson").onclick = () => {
@@ -347,32 +414,22 @@ document.getElementById("exportJson").onclick = () => {
 };
 
 // Import JSON
-document.getElementById("importJsonBtn").onclick = () =>
-  document.getElementById("importJson").click();
-document.getElementById("importJson").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const data = JSON.parse(ev.target.result);
+handleFileUpload({
+  target: document.getElementById("importJson"),
+  onChange: (file) => {
+    const data = JSON.parse(file);
     document.getElementById("names").value = +data.names;
     rangesContainer.innerHTML = "";
     data.ranges.forEach((r) => rangesContainer.appendChild(createRangeItem(r)));
-  };
-  reader.readAsText(file);
-  e.target.value = "";
+  },
+  readAs: "Text",
 });
 
 //sticky box
-const sticky = document.getElementById("sticky");
-const sentinel = document.getElementById("sentinel");
-
 const observer = new IntersectionObserver(
   ([entry]) => {
-    if (!entry.isIntersecting && entry.boundingClientRect.top < 0) {
-      sticky.classList.add("is-sticky");
-    } else {
-      sticky.classList.remove("is-sticky");
-    }
+    const isActive = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+    sticky.classList[isActive ? "add" : "remove"]("is-sticky");
   },
   {
     root: null,
@@ -383,19 +440,18 @@ const observer = new IntersectionObserver(
 observer.observe(sentinel);
 
 // move to top
-const btn = document.getElementById("toTop");
-
 window.addEventListener("scroll", () => {
-  if (window.scrollY > 300) {
-    btn.classList.remove("opacity-0", "invisible", "translate-y-6");
-    btn.classList.add("opacity-100", "visible", "translate-y-0");
-  } else {
-    btn.classList.add("opacity-0", "invisible", "translate-y-6");
-    btn.classList.remove("opacity-100", "visible", "translate-y-0");
-  }
+  setElementState({
+    target: moveToTopBtn,
+    stateClasses: {
+      on: ["opacity-100", "visible", "translate-y-0"],
+      off: ["opacity-0", "invisible", "translate-y-6"],
+    },
+    isActive: window.scrollY > 300,
+  });
 });
 
-btn.addEventListener("click", () => {
+moveToTopBtn.addEventListener("click", () => {
   window.scrollTo({
     top: 0,
     behavior: "smooth",
@@ -403,12 +459,8 @@ btn.addEventListener("click", () => {
 });
 
 //Drag and Drop Range Items
-const ranges_list = document.getElementById("ranges");
 const placeholder = document.createElement("div");
 placeholder.className = "placeholder";
-
-let draggedItem = null;
-let isTouch = false;
 
 /* ---------- DESKTOP ---------- */
 ranges_list.addEventListener("dragstart", (e) => {
@@ -520,10 +572,6 @@ function cleanup() {
 }
 
 /// Crop Image suppurt
-
-const editCropBtn = document.getElementById("editCropBtn");
-const saveCroppedImageBtn = document.getElementById("saveCroppedImageBtn");
-
 function toggleCropBtns() {
   editCropBtn.classList.toggle("hidden");
   saveCroppedImageBtn.classList.toggle("hidden");
