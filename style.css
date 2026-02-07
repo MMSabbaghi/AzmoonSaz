@@ -207,3 +207,10 @@ input:focus + label {
   border: 2px dashed var(--primary);
   border-radius: var(--radius);
 }
+
+/*Cropper settings*/
+.cropper-container,
+#modal-img {
+  max-width: 100%;
+  max-height: 80vh;
+}
