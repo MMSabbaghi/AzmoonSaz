@@ -388,6 +388,7 @@ modalOverlay.addEventListener("click", () => {
   selectedImg = null;
   modal.style.display = "none";
   modalImg.src = "";
+  toggleCropBtns();
 });
 
 // Export JSON
