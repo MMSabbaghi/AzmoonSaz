@@ -434,7 +434,8 @@ modalOverlay.addEventListener("click", () => {
   selectedImg = null;
   modal.style.display = "none";
   modalImg.src = "";
-  toggleCropBtns();
+  editCropBtn.classList.remove("hidden");
+  saveCroppedImageBtn.classList.add("hidden");
 });
 
 // Export JSON
