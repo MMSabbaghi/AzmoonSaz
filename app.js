@@ -267,7 +267,7 @@ function getNamesFromTextarea() {
 
 function updateNamesCount() {
   const { length } = getNamesFromTextarea();
-  namesCountEl.disabled = length ? true : false;
+  namesCountEl.disabled = length > 0;
   namesCountEl.value = length;
 }
 
@@ -440,7 +440,7 @@ modalOverlay.addEventListener("click", () => {
 
 // Export JSON
 document.getElementById("exportJson").onclick = () => {
-  const { names } = getNames();
+  const names = getNamesFromTextarea();
   const namesCount = names.length || namesCountEl.value || 0;
   const ranges = Array.from(document.querySelectorAll(".range-item")).map(
     (div) => {
@@ -467,12 +467,14 @@ handleFileUpload({
   target: document.getElementById("importJson"),
   onChange: (file) => {
     const data = JSON.parse(file);
-    namesCountEl.value = +data.namesCount;
     rangesContainer.innerHTML = "";
     data.ranges.forEach((r) => rangesContainer.appendChild(createRangeItem(r)));
 
-    namesTextarea.value = data.names.join("\n");
-    updateNamesCount();
+    const names = data.names.join("\n");
+    namesTextarea.value = names.length ? names : "";
+
+    namesCountEl.value = +data.namesCount;
+    namesCountEl.disabled = names.length > 0;
   },
   readAs: "Text",
 });
