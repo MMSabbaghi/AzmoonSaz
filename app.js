@@ -9,6 +9,9 @@ const ranges_list = document.getElementById("ranges");
 const moveToTopBtn = document.getElementById("toTop");
 const sticky = document.getElementById("sticky");
 const sentinel = document.getElementById("sentinel");
+const namesCountEl = document.getElementById("names-count");
+const namesTextareaContainer = document.getElementById("names-textarea");
+const namesTextarea = namesTextareaContainer.querySelector("textarea");
 
 //state
 let selectedRange;
@@ -251,6 +254,40 @@ document.getElementById("generate").onclick = (e) => {
   if (isGenerated) e.target.scrollIntoView({ behavior: "smooth" });
 };
 
+/// Names Inputs
+function getNamesFromTextarea() {
+  const names = namesTextarea.value;
+  return (
+    names
+      ?.trim()
+      .split("\n")
+      .filter((n) => n) || []
+  );
+}
+
+function updateNamesCount() {
+  const { length } = getNamesFromTextarea();
+  namesCountEl.disabled = length ? true : false;
+  namesCountEl.value = length;
+}
+
+handleSwitchElement({
+  container: document.getElementById("names-switch"),
+  onChange: (isActive) => {
+    setElementState({
+      target: namesTextareaContainer,
+      stateClasses: {
+        on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+        off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+      },
+      isActive,
+    });
+    updateNamesCount();
+  },
+});
+
+namesTextarea.addEventListener("input", updateNamesCount);
+
 // Random Quiz data generator
 function shuffleUniform(arr) {
   const a = [...arr];
@@ -291,8 +328,17 @@ function generateQuizData(names, ranges) {
 
 /* Generate Table */
 
-function getNames(count) {
+function generateNamesByCount(count) {
   return Array.from({ length: count }, (_, i) => i + 1);
+}
+
+function getNames() {
+  let namesArray = getNamesFromTextarea();
+  const namesCount = namesCountEl.value;
+  return {
+    names: namesArray.length ? namesArray : generateNamesByCount(namesCount),
+    showNames: namesArray.length ? true : false,
+  };
 }
 
 function collectValidRanges(rangeDivs) {
@@ -324,7 +370,7 @@ function renderQuestionRow(qNum, img, range) {
 </tr>`;
 }
 
-function renderStudentTable(studentQuiz) {
+function renderStudentTable(studentQuiz, name) {
   let qNum = 1;
 
   const rows = studentQuiz
@@ -337,14 +383,14 @@ function renderStudentTable(studentQuiz) {
 <table class="w-full border-collapse">
   <tr class="bg-gray-200">
     <td class="w-10"></td>
-    <td class="p-1">نام و نام خانوادگی:</td>
+    <td class="p-1">نام و نام خانوادگی: ${name} </td>
   </tr>
   ${rows}
 </table>`;
 }
 
 function generateTable() {
-  const namesNumber = +document.getElementById("names").value;
+  const namesNumber = +namesCountEl.value;
   if (!namesNumber) {
     showToast("لطفا تعداد را وارد کنید", "error");
     return false;
@@ -357,7 +403,7 @@ function generateTable() {
     return false;
   }
 
-  const names = getNames(namesNumber);
+  const { names, showNames } = getNames();
   const quizData = generateQuizData(names, ranges);
 
   const html = names
@@ -365,7 +411,7 @@ function generateTable() {
       (student) => `
 <tr>
   <td class="questions">
-    ${renderStudentTable(quizData[student])}
+    ${renderStudentTable(quizData[student], showNames ? student : ``)}
   </td>
 </tr>`,
     )
@@ -393,7 +439,8 @@ modalOverlay.addEventListener("click", () => {
 
 // Export JSON
 document.getElementById("exportJson").onclick = () => {
-  const namesNumber = document.getElementById("names").value || 0;
+  const { names } = getNames();
+  const namesCount = names.length || namesCountEl.value || 0;
   const ranges = Array.from(document.querySelectorAll(".range-item")).map(
     (div) => {
       return {
@@ -406,7 +453,7 @@ document.getElementById("exportJson").onclick = () => {
     },
   );
 
-  const data = { names: namesNumber, ranges };
+  const data = { names, namesCount, ranges };
   const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -419,9 +466,12 @@ handleFileUpload({
   target: document.getElementById("importJson"),
   onChange: (file) => {
     const data = JSON.parse(file);
-    document.getElementById("names").value = +data.names;
+    namesCountEl.value = +data.namesCount;
     rangesContainer.innerHTML = "";
     data.ranges.forEach((r) => rangesContainer.appendChild(createRangeItem(r)));
+
+    namesTextarea.value = data.names.join("\n");
+    updateNamesCount();
   },
   readAs: "Text",
 });

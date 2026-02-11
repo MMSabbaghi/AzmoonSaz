@@ -38,28 +38,51 @@
     </button>
 
     <div id="sentinel"></div>
-    <div class="flex items-center justify-between gap-1 my-1 bg-white export-btns sticky-box" id="sticky">
+    <div class="my-1 bg-white export-btns sticky-box" id="sticky">
+      <div class="flex items-center justify-between gap-1">
+        <div class="flex items-center gap-2">
+          <div>
+            <label> تعداد دانش آموزان: </label>
+            <input value="1" data-number-input="true" data-float="false" type="text" id="names-count"
+              class="border rounded p-2 w-20" placeholder="تعداد ">
+          </div>
+          <!-- Switch -->
+          <div id="names-switch" class="flex gap-1">
+            <label> نمایش اسامی: </label>
+            <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
+        transition-all duration-300 ease-out
+        shadow-inner">
 
-      <div>
-        <label> تعداد دانش آموزان: </label>
-        <input value="1" data-number-input="true" data-float="false" type="text" id="names" class="border rounded p-2"
-          placeholder="تعداد ">
+              <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)]
+        transition-all duration-500
+        shadow-md">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <button id="generate" class="btn px-4 py-2 rounded mt-2 mb-2">
+            <i class="bi bi-clipboard2-check"></i>
+            <span>
+              تولید آزمون
+            </span>
+          </button>
+
+          <button onclick="window.print()" class="btn px-4 py-2 rounded mt-2 mb-2">
+            <i class="bi bi-printer"></i>
+            <span>
+              چاپ خروجی
+            </span>
+          </button>
+        </div>
+
       </div>
-
-      <div>
-        <button id="generate" class="btn px-4 py-2 rounded mt-2 mb-2">
-          <i class="bi bi-clipboard2-check"></i>
-          <span>
-            تولید آزمون
-          </span>
-        </button>
-
-        <button onclick="window.print()" class="btn px-4 py-2 rounded mt-2 mb-2">
-          <i class="bi bi-printer"></i>
-          <span>
-            چاپ خروجی
-          </span>
-        </button>
+      <div id="names-textarea" class="overflow-hidden
+         max-h-0 opacity-0 blur-sm -translate-y-3
+         transition-all duration-500 ease-out">
+        <textarea rows="5" class="w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none"
+          placeholder="نام دانش‌آموزان هر کدام در یک خط"></textarea>
       </div>
 
     </div>
