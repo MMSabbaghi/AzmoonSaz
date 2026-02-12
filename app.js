@@ -504,13 +504,10 @@ function generateTable() {
 
 /// Image Modal
 modalOverlay.addEventListener("click", () => {
-  cropperInstance?.destroy();
-  cropperInstance = null;
+  cropCleanup();
   selectedImg = null;
   modal.style.display = "none";
   modalImg.src = "";
-  editCropBtn.classList.remove("hidden");
-  saveCroppedImageBtn.classList.add("hidden");
 });
 
 // Export JSON
@@ -703,10 +700,14 @@ function cleanup() {
 /// Crop Image suppurt
 function toggleCropBtns() {
   editCropBtn.classList.toggle("hidden");
-  saveCroppedImageBtn.classList.toggle("hidden");
-  cancelCropBtn.classList.toggle("hidden");
+  const isActive = editCropBtn.classList.contains("hidden");
+
+  const func = isActive ? "remove" : "add";
+  saveCroppedImageBtn.classList[func]("hidden");
+  cancelCropBtn.classList[func]("hidden");
+
   [...alignBtnS, heightInput, saveModalSettingsBtn].forEach(
-    (el) => (el.disabled = editCropBtn.classList.contains("hidden")),
+    (el) => (el.disabled = isActive),
   );
 }
 
