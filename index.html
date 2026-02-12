@@ -96,7 +96,7 @@
   <!-- Modal برای نمایش بزرگ تصویر -->
   <div id="modal" class="modal" style="display: none;">
     <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
-    <div class="max-w-3xl flex flex-col z-10">
+    <div class="flex flex-col z-10 w-[72rem] p-6">
       <div class="flex flex-wrap gap-3 mb-1">
         <button id="editCropBtn" class="btn px-4 py-2 disabled:opacity-50"><i class="bi bi-crop"></i>
           <span> برش</span>
@@ -105,7 +105,24 @@
           <span> ذخیره</span>
         </button>
       </div>
-      <img id="modal-img" src="">
+      <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
+
+        <tr>
+          <td style="border: 1px solid #333;" class=" w-10 text-center font-bold">
+            1
+            <span class="font-normal text-xs">
+              (1نمره)
+            </span>
+          </td>
+
+          <td class="p-0">
+            <div class="h-[75px] overflow-hidden relative">
+              <p class="absolute">متن سوال اینجا قرار می گیرد.</p>
+              <img id="modal-img" class="max-h-[75px] w-full object-contain" src="">
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
   </div>
 

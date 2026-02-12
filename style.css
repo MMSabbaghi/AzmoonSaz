@@ -125,18 +125,11 @@ input:focus {
 }
 
 #printable td,
+#printable td.questions td,
 #printable th {
   border: 1px solid #333;
 }
-#printable td.student {
-  width: 15%;
-  font-weight: bold;
-  font-size: 14px;
-}
 
-#printable td.questions td {
-  border: 1px solid #333;
-}
 #printable td.questions img {
   display: block;
 }
@@ -151,11 +144,6 @@ input:focus {
   height: 100%;
   justify-content: center;
   align-items: center;
-}
-.modal img {
-  max-width: 90%;
-  max-height: 90%;
-  border-radius: 6px;
 }
 
 .file {
@@ -206,11 +194,4 @@ input:focus + label {
   height: 80px;
   border: 2px dashed var(--primary);
   border-radius: var(--radius);
-}
-
-/*Cropper settings*/
-.cropper-container,
-#modal-img {
-  max-width: 100%;
-  max-height: 80vh;
 }
