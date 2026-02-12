@@ -288,7 +288,7 @@ function createRangeItem(rangeData = null) {
 
   handleFileUpload({
     target: div.querySelector(".range-images"),
-    onChange: (img) => addImage(img, div),
+    onChange: (src) => addImage({ src }, div),
     readAs: "DataURL",
   });
 
