@@ -1,6 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Vazirmatn&display=swap");
+
 body {
   font-family: "Vazirmatn", sans-serif;
+  transition: font-family 0.2s ease;
 }
 
 :root {
@@ -69,20 +71,24 @@ input:focus {
   background: #f9f9f9;
   position: relative;
 }
+
 .range-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-weight: bold;
 }
+
 .preview {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
+
 .preview div {
   position: relative;
 }
+
 .preview img {
   width: 150px;
   height: 30px;
@@ -91,6 +97,7 @@ input:focus {
   border-radius: 4px;
   cursor: pointer;
 }
+
 .preview button {
   position: absolute;
   top: -4px;
@@ -103,15 +110,18 @@ input:focus {
   text-align: center;
   cursor: pointer;
 }
+
 @media print {
   body * {
     visibility: hidden;
     background-color: white;
   }
+
   #printable,
   #printable * {
     visibility: visible;
   }
+
   #printable {
     position: absolute;
     top: 0;
@@ -121,6 +131,19 @@ input:focus {
 
   #toTop {
     visibility: hidden;
+  }
+
+  /* جلوگیری از بریده شدن جدول بین صفحات */
+  #printable table {
+    page-break-inside: avoid;
+  }
+
+  #printable tr {
+    page-break-inside: avoid;
+  }
+
+  #printable td.questions {
+    page-break-inside: avoid;
   }
 }
 
@@ -160,7 +183,6 @@ input:focus {
   justify-content: center;
 }
 
-/* Adding an outline to the label on focus */
 input:focus + label {
   outline: 1px solid #000;
   outline: -webkit-focus-ring-color auto 2px;

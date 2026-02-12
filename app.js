@@ -769,3 +769,9 @@ saveModalSettingsBtn.addEventListener("click", (e) => {
     },
   });
 });
+
+// ---------- انتخاب فونت ----------
+const fontSelector = document.getElementById("fontSelector");
+fontSelector.addEventListener("change", function (e) {
+  document.body.style.fontFamily = e.target.value;
+});

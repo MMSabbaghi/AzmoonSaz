@@ -3,17 +3,18 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- بهینه‌سازی موبایل -->
   <title>ساخت کوییز</title>
   <link href="./utils/cropper/cropper.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="./icons/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="style.css">
   <script src="./utils/3.4.17"></script>
+  <link rel="stylesheet" href="./style.css">
 </head>
 
 <body class="bg-gray-100 p-6">
 
   <div class="max-w-6xl mx-auto bg-white p-6 rounded shadow app-container" id="app-container">
-    <div class="flex items-center justify-between mb-2">
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
       <h1 class="text-2xl font-bold">کوئیز ساز</h1>
       <div>
         <button id="exportJson" class="btn px-4 py-2">
@@ -45,6 +46,21 @@
             <label> تعداد دانش آموزان: </label>
             <input value="1" data-number-input="true" data-float="false" type="text" id="names-count"
               class="border rounded p-2 w-20" placeholder="تعداد ">
+          </div>
+          <!-- انتخاب فونت -->
+          <div class="flex items-center gap-2">
+            <label for="fontSelector">فونت:</label>
+            <select id="fontSelector" class="border rounded p-2 text-sm bg-white text-gray-800">
+              <option value="'Vazirmatn', sans-serif" style="font-family: 'Vazirmatn', sans-serif;">وزیرمتن</option>
+              <option value="Arial, sans-serif" style="font-family: Arial, sans-serif;">Arial</option>
+              <option value="Tahoma, sans-serif" style="font-family: Tahoma, sans-serif;">Tahoma</option>
+              <option value="'Times New Roman', serif" style="font-family: 'Times New Roman', serif;">Times New Roman
+              </option>
+              <option value="'Courier New', monospace" style="font-family: 'Courier New', monospace;">Courier New
+              </option>
+              <option value="'B Nazanin', 'BNazanin', tahoma, sans-serif"
+                style="font-family: 'B Nazanin', 'BNazanin', tahoma, sans-serif;">B Nazanin</option>
+            </select>
           </div>
           <!-- Switch -->
           <div id="names-switch" class="flex gap-1">
@@ -96,8 +112,10 @@
   <!-- Modal برای نمایش بزرگ تصویر -->
   <div id="modal" class="modal" style="display: none;">
     <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
-    <div class="flex flex-col z-10 w-[72rem] p-6">
-      <div class="my-1 bg-[#f9f9f9] p-1">
+    <!-- این div محتوای اصلی مودال است: id اضافه شده برای کشیدن -->
+    <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg"
+      style="transition: transform 0.3s ease-out;">
+      <div class="my-1 p-1">
         <div class="flex items-center gap-2">
           <div>
             <label> ارتفاع تصویر : </label>
@@ -168,7 +186,7 @@
   <script src="./utils/persian-inputs.js"></script>
   <script src="./utils/alert.js"></script>
   <script src="./utils/confirm.js"></script>
-  <script src="app.js"></script>
+  <script src="./app.js"></script>
 
 </body>
 
