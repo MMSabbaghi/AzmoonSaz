@@ -232,7 +232,7 @@ function createRangeItem(rangeData = null) {
       <div class="relative inline-block">
       <div class="file-input">
       <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
-      <label for="file-${fileID}" class="btn px-4 py-2 rounded">
+      <label for="${fileID}" class="btn px-4 py-2 rounded">
       <i class="bi bi-image"></i>
       </label>
       <span class="range-total absolute top-0 left-0 -mt-2 -ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
