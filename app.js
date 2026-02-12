@@ -504,7 +504,7 @@ function generateTable() {
 
 /// Image Modal
 modalOverlay.addEventListener("click", () => {
-  cropCleanup();
+  cropCleanup(false);
   selectedImg = null;
   modal.style.display = "none";
   modalImg.src = "";
@@ -698,9 +698,14 @@ function cleanup() {
 }
 
 /// Crop Image suppurt
-function toggleCropBtns() {
-  editCropBtn.classList.toggle("hidden");
-  const isActive = editCropBtn.classList.contains("hidden");
+function cropCleanup() {
+  cropperInstance?.destroy();
+  cropperInstance = null;
+  toggleCropBtns(false);
+}
+
+function toggleCropBtns(isActive) {
+  editCropBtn.classList[isActive ? "add" : "remove"]("hidden");
 
   const func = isActive ? "remove" : "add";
   saveCroppedImageBtn.classList[func]("hidden");
@@ -725,7 +730,7 @@ editCropBtn.addEventListener("click", () => {
     autoCropArea: 1,
   });
 
-  toggleCropBtns();
+  toggleCropBtns(true);
 });
 
 // ذخیره تصویر کراپ شده با تایید
@@ -741,12 +746,6 @@ saveCroppedImageBtn.addEventListener("click", () => {
 });
 
 cancelCropBtn.addEventListener("click", cropCleanup);
-
-function cropCleanup() {
-  cropperInstance?.destroy();
-  cropperInstance = null;
-  toggleCropBtns();
-}
 
 /// Style Settings
 
