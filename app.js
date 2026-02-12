@@ -743,7 +743,7 @@ saveCroppedImageBtn.addEventListener("click", () => {
 cancelCropBtn.addEventListener("click", cropCleanup);
 
 function cropCleanup() {
-  cropperInstance.destroy();
+  cropperInstance?.destroy();
   cropperInstance = null;
   toggleCropBtns();
 }
