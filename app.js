@@ -188,7 +188,7 @@ async function handlePasteRange() {
   try {
     const text = await navigator.clipboard.readText();
     const pastedArray = JSON.parse(text);
-    [...pastedArray].forEach((src) => addImage({ src }, selectedRange));
+    [...pastedArray].forEach((img) => addImage(img, selectedRange));
   } catch (err) {
     console.error("خطا در پیست کردن: ", err);
   }
