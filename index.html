@@ -97,28 +97,53 @@
   <div id="modal" class="modal" style="display: none;">
     <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
     <div class="flex flex-col z-10 w-[72rem] p-6">
-      <div class="flex flex-wrap gap-3 mb-1">
-        <button id="editCropBtn" class="btn px-4 py-2 disabled:opacity-50"><i class="bi bi-crop"></i>
-          <span> برش</span>
-        </button>
-        <button id="saveCroppedImageBtn" class="btn px-4 py-2 hidden"><i class="bi bi-floppy"></i>
-          <span> ذخیره</span>
-        </button>
+      <div class="my-1 bg-[#f9f9f9] p-1">
+        <div class="flex items-center gap-2">
+          <div>
+            <label> ارتفاع تصویر : </label>
+            <input data-number-input="true" data-float="false" type="text" id="modal-imgHeight"
+              class="border rounded p-2 w-20 disabled:opacity-50" placeholder="اندازه ">
+          </div>
+          <div>
+            <label> تراز تصویر : </label>
+            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="setImageAlign(`RIGHT`)">
+              <i class="bi bi-align-start"></i>
+            </button>
+            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="setImageAlign(`CENTER`)">
+              <i class="bi bi-align-middle"></i>
+            </button>
+            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="setImageAlign(`LEFT`)">
+              <i class="bi bi-align-end"></i>
+            </button>
+          </div>
+          <div class="mr-auto">
+            <button id="editCropBtn" class="btn px-4 py-2"><i class="bi bi-crop"></i>
+              <span> برش</span>
+            </button>
+            <div class="flex items-center gap-2">
+              <button id="saveCroppedImageBtn" class="btn px-4 py-2 hidden"><i class="bi bi-check"></i>
+                <span> بریدن </span>
+              </button>
+              <button id="cancelCropBtn" class="btn px-4 py-2 hidden"><i class="bi bi-x"></i>
+                <span> لغو </span>
+              </button>
+            </div>
+          </div>
+          <button id="saveModalSettingsBtn" class="btn px-4 py-2 disabled:opacity-50"><i class="bi bi-floppy"></i>
+            <span> ذخیره</span>
+          </button>
+        </div>
       </div>
-      <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
 
+      <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
         <tr>
-          <td style="border: 1px solid #333;" class=" w-10 text-center font-bold">
-            1
-            <span class="font-normal text-xs">
-              (1نمره)
-            </span>
+          <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold">
           </td>
 
           <td class="p-0">
-            <div class="h-[75px] overflow-hidden relative">
-              <p class="absolute">متن سوال اینجا قرار می گیرد.</p>
-              <img id="modal-img" class="max-h-[75px] w-full object-contain" src="">
+            <div class="relative">
+              <p id="modal-Qdesc" class="absolute"></p>
+              <img id="modal-img" src="">
             </div>
           </td>
         </tr>

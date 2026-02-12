@@ -5,6 +5,7 @@ const modalImg = document.getElementById("modal-img");
 const modalOverlay = document.getElementById("modal-overlay");
 const editCropBtn = document.getElementById("editCropBtn");
 const saveCroppedImageBtn = document.getElementById("saveCroppedImageBtn");
+const cancelCropBtn = document.getElementById("cancelCropBtn");
 const ranges_list = document.getElementById("ranges");
 const moveToTopBtn = document.getElementById("toTop");
 const sticky = document.getElementById("sticky");
@@ -12,13 +13,29 @@ const sentinel = document.getElementById("sentinel");
 const namesCountEl = document.getElementById("names-count");
 const namesTextareaContainer = document.getElementById("names-textarea");
 const namesTextarea = namesTextareaContainer.querySelector("textarea");
+const heightInput = document.querySelector("#modal-imgHeight");
+const saveModalSettingsBtn = document.querySelector("#saveModalSettingsBtn");
+const alignBtnS = document.querySelectorAll(".align-btn");
 
 //state
 let selectedRange;
 let selectedImg;
 let cropperInstance;
 let draggedItem;
+let modalSelectedAlign;
 let isTouch = false;
+
+//Constant
+const IMAGE_DEFAULTS = {
+  height: 75,
+  align: "RIGHT",
+};
+
+const imageAlign = {
+  RIGHT: { marginRight: 0, marginLeft: "auto" },
+  LEFT: { marginRight: "auto", marginLeft: 0 },
+  CENTER: { marginRight: "auto", marginLeft: "auto" },
+};
 
 //public functions
 function toPersianDigits(str) {
@@ -72,9 +89,24 @@ function shuffleArray(array) {
   return [...array].sort(() => Math.random() - 0.5);
 }
 
+function createRandomId(prefix) {
+  return prefix + "-" + crypto.randomUUID();
+}
+
 ///// App codes
+function getImageStyle({ dataset }) {
+  const { maxheight, align } = dataset;
+  return {
+    height: maxheight,
+    align: imageAlign[align],
+  };
+}
+
 function getRangeImages(target) {
-  return Array.from(target.querySelectorAll(".preview img")).map((i) => i.src);
+  return Array.from(target.querySelectorAll(".preview img")).map((i) => {
+    const { maxheight, align } = i.dataset;
+    return { src: i.src, height: maxheight, align };
+  });
 }
 
 function getRangeData(target) {
@@ -92,23 +124,50 @@ function updateRangeTotal(target) {
     `${toPersianDigits(imagesCount)}`;
 }
 
-function createImageElement(imgSrc, target) {
+function setModalStyle({ height, align }) {
+  if (height) {
+    modalImg.style.maxHeight = height + "px";
+    heightInput.value = height;
+  }
+  if (align) {
+    modalImg.style.marginRight = align.marginRight;
+    modalImg.style.marginLeft = align.marginLeft;
+  }
+}
+
+function setModalTableData(target) {
+  const { desc, score } = getRangeData(target);
+  document.getElementById("modal-Qdesc").innerText = desc;
+  document.getElementById("modal-Qscore").innerHTML = `
+    ${toPersianDigits(1)}
+    <span class="font-normal text-xs">
+       ${+score > 0 ? `(${toPersianDigits(score)}نمره)` : ``}
+    </span>
+  `;
+}
+
+function createImageElement(img, target) {
+  const { src, height, align } = img;
   const imgContainer = document.createElement("div");
-  imgContainer.innerHTML = `<img src="${imgSrc}" alt=""><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
+  imgContainer.innerHTML = `<img data-maxHeight="${height || IMAGE_DEFAULTS.height}" data-align="${align || IMAGE_DEFAULTS.align}" src="${src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
   imgContainer.querySelector("button").onclick = () => {
     imgContainer.remove();
     updateRangeTotal(target);
   };
   imgContainer.querySelector("img").onclick = (e) => {
     selectedImg = e.target;
+    const { align, height } = getImageStyle(e.target);
     modalImg.src = e.target.src;
+    setModalStyle({ align, height });
+    setModalTableData(target);
+    modalSelectedAlign = e.target.dataset.align;
     modal.style.display = "flex";
   };
   return imgContainer;
 }
 
-function addImage(imgSrc, target) {
-  const imgContainer = createImageElement(imgSrc, target);
+function addImage(img, target) {
+  const imgContainer = createImageElement(img, target);
   target.querySelector(".preview").appendChild(imgContainer);
   updateRangeTotal(target);
 }
@@ -118,7 +177,8 @@ function handlePasteImage(items) {
     if (items[i].type.indexOf("image") !== -1) {
       const blob = items[i].getAsFile();
       const reader = new FileReader();
-      reader.onload = (ev) => addImage(ev.target.result, selectedRange);
+      reader.onload = (ev) =>
+        addImage({ src: ev.target.result }, selectedRange);
       reader.readAsDataURL(blob);
     }
   }
@@ -128,7 +188,7 @@ async function handlePasteRange() {
   try {
     const text = await navigator.clipboard.readText();
     const pastedArray = JSON.parse(text);
-    [...pastedArray].forEach((img) => addImage(img, selectedRange));
+    [...pastedArray].forEach((src) => addImage({ src }, selectedRange));
   } catch (err) {
     console.error("خطا در پیست کردن: ", err);
   }
@@ -140,12 +200,18 @@ document.addEventListener("paste", ({ clipboardData }) =>
 
 document.addEventListener("paste", handlePasteRange);
 
+function createRangeImages(target, images) {
+  images.forEach((img) => addImage(img, target));
+}
+
 function createRangeItem(rangeData = null) {
   const setFieldValue = (fieldName, defaultValue = "") =>
     `value="${rangeData ? rangeData[fieldName] : defaultValue}"`;
 
   const div = document.createElement("div");
-  const fileID = crypto.randomUUID();
+  div.id = createRandomId("range-item");
+  const fileID = createRandomId("file");
+
   div.draggable = true;
   div.className = "range-item transition-transform duration-200 ease-out";
   div.innerHTML = `
@@ -165,7 +231,7 @@ function createRangeItem(rangeData = null) {
       </div>
       <div class="relative inline-block">
       <div class="file-input">
-      <input type="file" id="file-${fileID}" accept="image/*" multiple class="file range-images">
+      <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
       <label for="file-${fileID}" class="btn px-4 py-2 rounded">
       <i class="bi bi-image"></i>
       </label>
@@ -199,12 +265,12 @@ function createRangeItem(rangeData = null) {
     <div id="textareaBox" class="overflow-hidden
          max-h-0 opacity-0 blur-sm -translate-y-3
          transition-all duration-500 ease-out">
-        <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData?.desc || ``}</textarea>
+        <textarea ${setFieldValue(`desc`)} class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData?.desc || ``}</textarea>
     </div>
     <div class="preview"></div>
   `;
 
-  if (rangeData) rangeData.images.forEach((imgSrc) => addImage(imgSrc, div));
+  createRangeImages(div, rangeData?.images || []);
   div.addEventListener("click", (e) => (selectedRange = div));
 
   handleSwitchElement({
@@ -347,6 +413,15 @@ function collectValidRanges(rangeDivs) {
     .filter((r) => r.images.length && r.count);
 }
 
+function getAlignClass(align) {
+  const classes = {
+    RIGHT: "ml-auto",
+    LEFT: "mr-auto",
+    CENTER: "mx-auto",
+  };
+  return classes[align];
+}
+
 function renderQuestionRow(qNum, img, range) {
   return `
  <tr>
@@ -358,11 +433,11 @@ function renderQuestionRow(qNum, img, range) {
   </td>
 
   <td class="p-0">
-    <div class="h-[75px] overflow-hidden relative">
+    <div class="relative">
       ${range.desc ? `<p class="absolute">${range.desc}</p>` : ``}
       <img
-        class="max-h-[75px] w-full object-contain"
-        src="${img}"
+        class="max-h-[${img.height}px] ${getAlignClass(img.align)}"
+        src="${img.src}"
         alt="${range.rangeName}"
       >
     </div>
@@ -629,6 +704,10 @@ function cleanup() {
 function toggleCropBtns() {
   editCropBtn.classList.toggle("hidden");
   saveCroppedImageBtn.classList.toggle("hidden");
+  cancelCropBtn.classList.toggle("hidden");
+  [...alignBtnS, heightInput, saveModalSettingsBtn].forEach(
+    (el) => (el.disabled = editCropBtn.classList.contains("hidden")),
+  );
 }
 
 // فعال کردن حالت ویرایش و کراپ
@@ -651,20 +730,42 @@ editCropBtn.addEventListener("click", () => {
 // ذخیره تصویر کراپ شده با تایید
 saveCroppedImageBtn.addEventListener("click", () => {
   if (!cropperInstance) return;
+  const croppedCanvas = cropperInstance.getCroppedCanvas();
+  const croppedImage = new Image();
+  croppedImage.onload = () => {
+    modalImg.src = croppedImage.src;
+    cropCleanup();
+  };
+  croppedImage.src = croppedCanvas.toDataURL();
+});
 
+cancelCropBtn.addEventListener("click", cropCleanup);
+
+function cropCleanup() {
+  cropperInstance.destroy();
+  cropperInstance = null;
+  toggleCropBtns();
+}
+
+/// Style Settings
+
+heightInput.addEventListener("input", (e) => {
+  setModalStyle({ height: e.target.value });
+});
+
+function setImageAlign(align) {
+  setModalStyle({ align: imageAlign[align] });
+  modalSelectedAlign = align;
+}
+
+saveModalSettingsBtn.addEventListener("click", (e) => {
   showConfirm({
-    msg: "آیا از ذخیره تصویر اطمینان دارید؟",
+    msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
     on_confirm: () => {
-      const croppedCanvas = cropperInstance.getCroppedCanvas();
-      const croppedImage = new Image();
-      croppedImage.onload = () => {
-        modalImg.src = croppedImage.src;
-        selectedImg.src = croppedImage.src;
-        cropperInstance.destroy();
-        cropperInstance = null;
-        toggleCropBtns();
-      };
-      croppedImage.src = croppedCanvas.toDataURL();
+      selectedImg.src = modalImg.src;
+      selectedImg.dataset.maxheight = heightInput.value;
+      selectedImg.dataset.align = modalSelectedAlign;
+      showToast("با موفقیت ذخیره شد.");
     },
   });
 });
