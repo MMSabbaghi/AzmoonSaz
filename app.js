@@ -1,6 +1,6 @@
 // ---------- State Management ----------
 const appState = {
-  ranges: [], // { id, rangeName, count, score, desc, showDesc, images: [{ src, height, align, showCaption, customCaption }] }
+  ranges: [], // { id, rangeName, count, score, desc, images: [{ src, height, align, showCaption, customCaption }] }
   names: [],
   namesCount: 1,
   font: "'Vazirmatn', sans-serif",
@@ -95,7 +95,17 @@ async function copyToClipboard(textToCopy) {
 }
 
 function createRandomId(prefix) {
-  return prefix + "-" + crypto.randomUUID();
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return prefix + "-" + crypto.randomUUID();
+  } else {
+    return (
+      prefix +
+      "-" +
+      Date.now() +
+      "-" +
+      Math.random().toString(36).substring(2, 9)
+    );
+  }
 }
 
 // ---------- Image & Style Helpers ----------
@@ -132,6 +142,7 @@ let activeRangeId = null;
 let activeImageSrc = null;
 let cropper = null;
 let isTouchDevice = false;
+let draggedElement = null;
 const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
@@ -249,21 +260,6 @@ function buildRangeDOM(rangeData) {
       <div class="preview"></div>
       `;
 
-  if (rangeData.showDesc) {
-    const sw = div.querySelector("#switch");
-    const knob = div.querySelector("#knob");
-    sw.classList.add("bg-[#333]");
-    knob.classList.add("translate-x-4", "scale-105");
-    setElementState({
-      target: div.querySelector("#textareaBox"),
-      stateClasses: {
-        on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-        off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-      },
-      isActive: true,
-    });
-  }
-
   return div;
 }
 
@@ -286,7 +282,6 @@ function attachRangeEvents(rangeElement, rangeId) {
         },
         isActive,
       });
-      updateRangeInState(rangeId, { showDesc: isActive });
     },
   });
 
@@ -355,7 +350,6 @@ function createRangeElement(rangeData = null) {
       count: 1,
       score: 1,
       desc: "",
-      showDesc: false,
       images: [],
     };
     appState.ranges.push(newRange);
@@ -756,7 +750,6 @@ handleFileUpload({
         const rangeWithId = {
           ...r,
           id: createRandomId("range-item"),
-          showDesc: false,
           images,
         };
         appState.ranges.push(rangeWithId);
@@ -774,6 +767,13 @@ handleFileUpload({
     }
   },
   readAs: "Text",
+});
+
+alignButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const align = btn.dataset.align;
+    if (align) updateModalImageAlign(align);
+  });
 });
 
 // Drag & Drop
