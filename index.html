@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- بهینه‌سازی موبایل -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ساخت کوییز</title>
   <link href="./utils/cropper/cropper.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="./icons/bootstrap-icons.min.css">
@@ -19,7 +19,8 @@
       <div>
         <button id="exportJson" class="btn px-4 py-2">
           <i class="bi bi-floppy"></i>
-          ذخیره آزمون</button>
+          ذخیره آزمون
+        </button>
         <input type="file" id="importJson" class="hidden">
         <label for="importJson" class="btn px-4 py-2">
           <i class="bi bi-folder-plus"></i>
@@ -32,10 +33,7 @@
 
     <button id="addRange" style="width: 100%;" class="btn add-btn my-2">
       <i class="bi bi-plus-lg"></i>
-      <span>
-        افزودن
-        مبحث جدید
-      </span>
+      <span>افزودن مبحث جدید</span>
     </button>
 
     <div id="sentinel"></div>
@@ -47,7 +45,6 @@
             <input value="1" data-number-input="true" data-float="false" type="text" id="names-count"
               class="border rounded p-2 w-20" placeholder="تعداد ">
           </div>
-          <!-- انتخاب فونت -->
           <div class="flex items-center gap-2">
             <label for="fontSelector">فونت:</label>
             <select id="fontSelector" class="border rounded p-2 text-sm bg-white text-gray-800">
@@ -56,45 +53,32 @@
               <option value="'BNazanin', sans-serif" style="font-family:'BNazanin', sans-serif;">نازنین</option>
             </select>
           </div>
-          <!-- Switch -->
           <div id="names-switch" class="flex gap-1">
             <label> نمایش اسامی: </label>
             <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
-        transition-all duration-300 ease-out
-        shadow-inner">
-
+                transition-all duration-300 ease-out shadow-inner">
               <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)]
-        transition-all duration-500
-        shadow-md">
+                  transition-all duration-500 shadow-md">
               </div>
             </div>
           </div>
         </div>
-
         <div>
           <button id="generate" class="btn px-4 py-2 rounded mt-2 mb-2">
             <i class="bi bi-clipboard2-check"></i>
-            <span>
-              تولید آزمون
-            </span>
+            <span>تولید آزمون</span>
           </button>
-
           <button onclick="window.print()" class="btn px-4 py-2 rounded mt-2 mb-2">
             <i class="bi bi-printer"></i>
-            <span>
-              چاپ خروجی
-            </span>
+            <span>چاپ خروجی</span>
           </button>
         </div>
-
       </div>
-      <div id="names-textarea" class="overflow-hidden
-         max-h-0 opacity-0 blur-sm -translate-y-3
-         transition-all duration-500 ease-out">
+      <div id="names-textarea"
+        class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
         <textarea rows="5" class="w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none"
           placeholder="نام دانش‌آموزان هر کدام در یک خط"></textarea>
       </div>
-
     </div>
     <div id="printable" class="overflow-auto">
       <div class="flex items-center justify-center">
@@ -103,14 +87,13 @@
     </div>
   </div>
 
-  <!-- Modal برای نمایش بزرگ تصویر -->
-  <div id="modal" class="modal" style="display: none;">
+  <!-- Modal برای نمایش بزرگ تصویر (به‌روزرسانی شده) -->
+  <div id="modal" class="modal" style="display: none;"> <!-- display:none برای جلوگیری از flicker اولیه -->
     <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
-    <!-- این div محتوای اصلی مودال است: id اضافه شده برای کشیدن -->
     <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg"
       style="transition: transform 0.3s ease-out;">
-      <div class="my-1 p-1">
-        <div class="flex items-center gap-2">
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
           <div>
             <label> ارتفاع تصویر : </label>
             <input data-number-input="true" data-float="false" type="text" id="modal-imgHeight"
@@ -118,43 +101,45 @@
           </div>
           <div>
             <label> تراز تصویر : </label>
-            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="updateModalImageAlign(`RIGHT`)">
+            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="updateModalImageAlign('RIGHT')">
               <i class="bi bi-align-start"></i>
             </button>
-            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="updateModalImageAlign(`CENTER`)">
+            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="updateModalImageAlign('CENTER')">
               <i class="bi bi-align-middle"></i>
             </button>
-            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="updateModalImageAlign(`LEFT`)">
+            <button class="align-btn btn px-4 py-2 disabled:opacity-50" onclick="updateModalImageAlign('LEFT')">
               <i class="bi bi-align-end"></i>
             </button>
           </div>
-          <div class="mr-auto">
-            <button id="editCropBtn" class="btn px-4 py-2"><i class="bi bi-crop"></i>
-              <span> برش</span>
-            </button>
-            <div class="flex items-center gap-2">
-              <button id="saveCroppedImageBtn" class="btn px-4 py-2 hidden"><i class="bi bi-check"></i>
-                <span> بریدن </span>
-              </button>
-              <button id="cancelCropBtn" class="btn px-4 py-2 hidden"><i class="bi bi-x"></i>
-                <span> لغو </span>
-              </button>
-            </div>
+          <!-- بخش جدید: نمایش متن اختصاصی -->
+          <div class="flex items-center gap-2">
+            <label for="modal-show-caption">نمایش متن:</label>
+            <input type="checkbox" id="modal-show-caption" class="w-5 h-5">
           </div>
-          <button id="saveModalSettingsBtn" class="btn px-4 py-2 disabled:opacity-50"><i class="bi bi-floppy"></i>
-            <span> ذخیره</span>
-          </button>
+          <div class="mr-auto flex gap-2">
+            <button id="editCropBtn" class="btn px-4 py-2"><i class="bi bi-crop"></i><span> برش</span></button>
+            <div class="flex items-center gap-2">
+              <button id="saveCroppedImageBtn" class="btn px-4 py-2 hidden"><i class="bi bi-check"></i><span> بریدن
+                </span></button>
+              <button id="cancelCropBtn" class="btn px-4 py-2 hidden"><i class="bi bi-x"></i><span> لغو </span></button>
+            </div>
+            <button id="saveModalSettingsBtn" class="btn px-4 py-2 disabled:opacity-50"><i
+                class="bi bi-floppy"></i><span> ذخیره</span></button>
+          </div>
+        </div>
+        <!-- تکست‌اریای متن اختصاصی (در صورت فعال بودن چک‌باکس) -->
+        <div class="mt-2" id="modal-caption-container">
+          <textarea id="modal-custom-caption" rows="2" class="w-full border rounded p-2 text-sm"
+            placeholder="متن اختصاصی این سوال (در صورت خالی بودن از متن کلی مبحث استفاده می‌شود)"></textarea>
         </div>
       </div>
 
       <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
         <tr>
-          <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold">
-          </td>
-
+          <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold"></td>
           <td class="p-0">
             <div class="relative">
-              <p id="modal-Qdesc" class="absolute"></p>
+              <p id="modal-Qdesc"></p>
               <img id="modal-img" src="">
             </div>
           </td>
@@ -181,7 +166,6 @@
   <script src="./utils/alert.js"></script>
   <script src="./utils/confirm.js"></script>
   <script src="./app.js"></script>
-
 </body>
 
 </html>

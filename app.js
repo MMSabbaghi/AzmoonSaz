@@ -1,7 +1,7 @@
 // ---------- State Management ----------
 const appState = {
-  ranges: [], // { id, rangeName, count, score, desc, showDesc, images: [{ src, height, align }] }
-  names: [], // array of student names from textarea
+  ranges: [], // { id, rangeName, count, score, desc, showDesc, images: [{ src, height, align, showCaption, customCaption }] }
+  names: [],
   namesCount: 1,
   font: "'Vazirmatn', sans-serif",
   modal: {
@@ -9,10 +9,20 @@ const appState = {
     selectedImageSrc: null,
     height: 75,
     align: "RIGHT",
+    showCaption: true,
+    customCaption: "",
   },
 };
 
-// State update helpers
+// مقادیر پیش‌فرض برای تصاویر جدید
+const IMAGE_DEFAULTS = {
+  height: 75,
+  align: "RIGHT",
+  showCaption: true,
+  customCaption: "",
+};
+
+// ---------- State update helpers (بدون تغییر) ----------
 function updateRangeInState(rangeId, updates) {
   const index = appState.ranges.findIndex((r) => r.id === rangeId);
   if (index !== -1) {
@@ -23,7 +33,12 @@ function updateRangeInState(rangeId, updates) {
 function addImageToState(rangeId, imageData) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (range) {
-    range.images.push(imageData);
+    // اطمینان از وجود فیلدهای جدید
+    const fullImageData = {
+      ...IMAGE_DEFAULTS,
+      ...imageData,
+    };
+    range.images.push(fullImageData);
   }
 }
 
@@ -40,7 +55,7 @@ function reorderRangesInState(newOrderIds) {
     .filter(Boolean);
 }
 
-// ---------- Utility Functions (preserved) ----------
+// ---------- Utility Functions (کاملاً حفظ شده) ----------
 function toPersianDigits(str) {
   return (str + "").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 }
@@ -91,24 +106,11 @@ function createRandomId(prefix) {
 }
 
 // ---------- Image & Style Helpers ----------
-const IMAGE_DEFAULTS = {
-  height: 75,
-  align: "RIGHT",
-};
-
 const alignStyles = {
   RIGHT: { marginRight: 0, marginLeft: "auto" },
   LEFT: { marginRight: "auto", marginLeft: 0 },
   CENTER: { marginRight: "auto", marginLeft: "auto" },
 };
-
-function getImageStyleFromElement({ dataset }) {
-  const { maxheight, align } = dataset;
-  return {
-    height: maxheight,
-    align: alignStyles[align],
-  };
-}
 
 // ---------- DOM Elements ----------
 const rangesContainer = document.getElementById("ranges");
@@ -128,44 +130,71 @@ const heightInput = document.querySelector("#modal-imgHeight");
 const saveModalSettingsBtn = document.querySelector("#saveModalSettingsBtn");
 const alignButtons = document.querySelectorAll(".align-btn");
 const fontSelector = document.getElementById("fontSelector");
+const modalShowCaption = document.getElementById("modal-show-caption");
+const modalCustomCaption = document.getElementById("modal-custom-caption");
+const modalQdesc = document.getElementById("modal-Qdesc");
 
 // ---------- State-bound UI Variables ----------
 let activeRangeId = null;
 let activeImageSrc = null;
 let cropper = null;
-let draggedElement = null;
 let isTouchDevice = false;
 const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
-// ---------- Image Thumbnail Creation (preserved) ----------
+// ---------- Image Thumbnail Creation (به‌روز شده برای فیلدهای جدید) ----------
 function createImageThumbnailElement(img, targetDiv, rangeId) {
-  const { src, height, align } = img;
+  const { imageId } = img; // فقط id را نگه می‌داریم، بقیه را در لحظه کلیک از state می‌خوانیم
   const imgContainer = document.createElement("div");
-  imgContainer.innerHTML = `<img data-maxHeight="${height || IMAGE_DEFAULTS.height}" data-align="${align || IMAGE_DEFAULTS.align}" src="${src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
+  imgContainer.innerHTML = `<img data-image-id="${imageId}" src="${img.src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
 
   // Remove image
   imgContainer.querySelector("button").onclick = () => {
-    removeImageFromState(rangeId, src);
+    removeImageFromState(rangeId, img.src);
     imgContainer.remove();
     updateRangeImageCountBadge(targetDiv);
   };
 
-  // Open modal
   imgContainer.querySelector("img").onclick = (e) => {
-    activeImageSrc = src;
-    appState.modal.selectedRangeId = rangeId;
-    appState.modal.selectedImageSrc = src;
-    appState.modal.height = height || IMAGE_DEFAULTS.height;
-    appState.modal.align = align || IMAGE_DEFAULTS.align;
+    const range = appState.ranges.find((r) => r.id === rangeId);
+    const currentImg = range?.images.find((img) => img.imageId === imageId);
+    if (!currentImg) {
+      showToast("خطا: تصویر یافت نشد!", "error");
+      return;
+    }
 
-    modalImg.src = src;
+    // پر کردن appState.modal با داده‌های به‌روز
+    activeImageSrc = currentImg.src;
+    appState.modal.selectedRangeId = rangeId;
+    appState.modal.selectedImageSrc = currentImg.src;
+    appState.modal.imageId = imageId;
+    appState.modal.height = currentImg.height || IMAGE_DEFAULTS.height;
+    appState.modal.align = currentImg.align || IMAGE_DEFAULTS.align;
+    appState.modal.showCaption =
+      currentImg.showCaption !== undefined
+        ? currentImg.showCaption
+        : IMAGE_DEFAULTS.showCaption;
+    appState.modal.customCaption =
+      currentImg.customCaption !== undefined
+        ? currentImg.customCaption
+        : IMAGE_DEFAULTS.customCaption;
+
+    // نمایش تصویر و اعمال استایل
+    modalImg.src = currentImg.src;
     applyModalImageStyle({
       height: appState.modal.height,
       align: alignStyles[appState.modal.align],
     });
-    updateModalDescriptionAndScore(rangeId);
+    updateModalDescriptionAndScore(rangeId); // این تابع از appState.modal برای متن استفاده می‌کند
+
+    // مقداردهی المان‌های مدال
+    modalShowCaption.checked = appState.modal.showCaption;
+    modalCustomCaption.value = appState.modal.customCaption;
+    modalCustomCaption.disabled = !appState.modal.showCaption;
+
+    // نمایش مدال
     modal.style.display = "flex";
+    setTimeout(() => modal.classList.add("modal--visible"), 10);
   };
 
   return imgContainer;
@@ -177,7 +206,7 @@ function updateRangeImageCountBadge(target) {
     `${toPersianDigits(imagesCount)}`;
 }
 
-// ---------- Range DOM Building and Event Attachment ----------
+// ---------- Range DOM Building (بدون تغییر، فقط دقت شود که تصاویر با فیلدهای جدید ساخته شوند) ----------
 function buildRangeDOM(rangeData) {
   const div = document.createElement("div");
   div.id = rangeData.id;
@@ -187,59 +216,45 @@ function buildRangeDOM(rangeData) {
   const fileID = createRandomId("file");
 
   div.innerHTML = `
-  <div class="range-header my-1">
-    <div class="flex items-center gap-2">
-      <div>
-      <label class="font-normal text-[#777]"> مبحث: </label>
-      <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
+      <div class="range-header my-1">
+        <div class="flex items-center gap-2">
+          <div>
+            <label class="font-normal text-[#777]"> مبحث: </label>
+            <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
+          </div>
+          <div>
+            <label class="font-normal text-[#777]"> تعداد: </label>
+            <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
+          </div>
+          <div>
+            <label class="font-normal text-[#777]" > نمره: </label>
+            <input value="${rangeData.score}" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
+          </div>
+          <div class="relative inline-block">
+            <div class="file-input">
+              <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
+              <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
+              <span class="range-total absolute top-0 left-0 -mt-2 -ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                ${toPersianDigits(rangeData.images.length)}
+              </span>
+            </div>
+          </div>
+          <label class="font-normal text-[#777]" > متن سوال: </label>
+          <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
+            <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
+          <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
+        </div>
       </div>
-      <div>
-      <label class="font-normal text-[#777]"> تعداد: </label>
-      <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
-      </div>
-      <div>
-      <label class="font-normal text-[#777]" > نمره: </label>
-      <input value="${rangeData.score}" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
-      </div>
-      <div class="relative inline-block">
-      <div class="file-input">
-      <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
-      <label for="${fileID}" class="btn px-4 py-2 rounded">
-      <i class="bi bi-image"></i>
-      </label>
-      <span class="range-total absolute top-0 left-0 -mt-2 -ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-        ${toPersianDigits(rangeData.images.length)}
-      </span>
-    </div>
-      </div>
-      <!-- Switch -->
-      <label class="font-normal text-[#777]" > متن سوال: </label>
-      <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
-      transition-all duration-300 ease-out shadow-inner">
-        <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)]
-           transition-all duration-500 shadow-md">
-      </div>
-    </div>
-    </div>
-    <div class="flex items-center gap-2">
-    <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out">
-    <i class="bi bi-trash3"></i>
-    </button>
-    <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out">
-    <i class="bi bi-copy"></i>
-    </button>
-      </div>
-    </div>
-
-    <div id="textareaBox" class="overflow-hidden
-         max-h-0 opacity-0 blur-sm -translate-y-3
-         transition-all duration-500 ease-out">
+      <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
         <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
-    </div>
-    <div class="preview"></div>
-  `;
+      </div>
+      <div class="preview"></div>
+      `;
 
-  // Set initial switch state if showDesc is true
   if (rangeData.showDesc) {
     const sw = div.querySelector("#switch");
     const knob = div.querySelector("#knob");
@@ -262,12 +277,10 @@ function attachRangeEvents(rangeElement, rangeId) {
   const rangeData = appState.ranges.find((r) => r.id === rangeId);
   if (!rangeData) return;
 
-  // Set active range on click
   rangeElement.addEventListener("click", () => {
     activeRangeId = rangeId;
   });
 
-  // Switch for description
   handleSwitchElement({
     container: rangeElement,
     onChange: (isActive) => {
@@ -283,7 +296,6 @@ function attachRangeEvents(rangeElement, rangeId) {
     },
   });
 
-  // File upload
   handleFileUpload({
     target: rangeElement.querySelector(".range-images"),
     onChange: (src) => {
@@ -291,14 +303,14 @@ function attachRangeEvents(rangeElement, rangeId) {
         src,
         height: IMAGE_DEFAULTS.height,
         align: IMAGE_DEFAULTS.align,
+        showCaption: IMAGE_DEFAULTS.showCaption,
+        customCaption: IMAGE_DEFAULTS.customCaption,
       };
-      // استفاده از تابع واحد اضافه‌کردن تصاویر به جای کد تکراری
       addImagesToRange(rangeId, [imageData]);
     },
     readAs: "DataURL",
   });
 
-  // Remove range
   rangeElement.querySelector(".remove-range").onclick = () => {
     showConfirm({
       msg: "آیا از حذف این مبحث اطمینان دارید؟",
@@ -309,7 +321,6 @@ function attachRangeEvents(rangeElement, rangeId) {
     });
   };
 
-  // Copy images
   rangeElement.querySelector(".copy-range").addEventListener("click", () => {
     const images = appState.ranges.find((r) => r.id === rangeId)?.images || [];
     if (images.length) {
@@ -319,7 +330,6 @@ function attachRangeEvents(rangeElement, rangeId) {
     }
   });
 
-  // Input fields update state
   rangeElement.querySelector(".range-name").addEventListener("input", (e) => {
     updateRangeInState(rangeId, { rangeName: e.target.value });
   });
@@ -333,7 +343,6 @@ function attachRangeEvents(rangeElement, rangeId) {
     updateRangeInState(rangeId, { desc: e.target.value });
   });
 
-  // Populate existing images
   rangeData.images.forEach((img) => {
     const imgContainer = createImageThumbnailElement(
       img,
@@ -363,7 +372,7 @@ function createRangeElement(rangeData = null) {
   return el;
 }
 
-// ---------- Names Section Rendering ----------
+// ---------- Names Section Rendering (بدون تغییر) ----------
 function renderNamesSection() {
   namesTextarea.value = appState.names.join("\n");
   namesCountEl.value = appState.namesCount;
@@ -380,23 +389,19 @@ function syncNamesFromTextarea() {
 }
 
 // ---------- Unified function to add images to a range ----------
-function addImagesToRange(rangeId, imagesArray) {
-  const rangeDiv = document.getElementById(rangeId);
-  if (!rangeDiv) return;
-
-  imagesArray.forEach((imageData) => {
-    addImageToState(rangeId, imageData);
-    const imgContainer = createImageThumbnailElement(
-      imageData,
-      rangeDiv,
-      rangeId,
-    );
-    rangeDiv.querySelector(".preview").appendChild(imgContainer);
-  });
-  updateRangeImageCountBadge(rangeDiv);
+function addImageToState(rangeId, imageData) {
+  const range = appState.ranges.find((r) => r.id === rangeId);
+  if (range) {
+    const fullImageData = {
+      ...IMAGE_DEFAULTS,
+      imageId: createRandomId("img"),
+      ...imageData,
+    };
+    range.images.push(fullImageData);
+  }
 }
 
-// ---------- Unified Paste Handler ----------
+// ---------- Unified Paste Handler (به‌روز شده برای فیلدهای جدید) ----------
 document.addEventListener("paste", async (e) => {
   if (!activeRangeId) return;
 
@@ -411,16 +416,17 @@ document.addEventListener("paste", async (e) => {
             src: ev.target.result,
             height: IMAGE_DEFAULTS.height,
             align: IMAGE_DEFAULTS.align,
+            showCaption: IMAGE_DEFAULTS.showCaption,
+            customCaption: IMAGE_DEFAULTS.customCaption,
           };
           addImagesToRange(activeRangeId, [imageData]);
         };
         reader.readAsDataURL(blob);
-        return; // Only handle first image (as original)
+        return;
       }
     }
   }
 
-  // If no image, try JSON array
   try {
     const text = await navigator.clipboard.readText();
     const pastedArray = JSON.parse(text);
@@ -429,16 +435,20 @@ document.addEventListener("paste", async (e) => {
         ...img,
         height: img.height || IMAGE_DEFAULTS.height,
         align: img.align || IMAGE_DEFAULTS.align,
+        showCaption:
+          img.showCaption !== undefined
+            ? img.showCaption
+            : IMAGE_DEFAULTS.showCaption,
+        customCaption: img.customCaption || IMAGE_DEFAULTS.customCaption,
       }));
       addImagesToRange(activeRangeId, imagesData);
     }
   } catch (err) {
-    // مدیریت خطا: حداقل در کنسول ثبت شود (بدون تغییر در تجربه کاربری)
     console.error("خطا در پردازش چسباندن (JSON نامعتبر):", err);
   }
 });
 
-// ---------- Generate Quiz (unchanged) ----------
+// ---------- Generate Quiz (به‌روز شده برای متن اختصاصی) ----------
 function fisherYatesShuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -475,26 +485,35 @@ function getAlignmentClass(align) {
   return classes[align];
 }
 
+// تابع کمکی برای تعیین متن نهایی سوال
+function getCaptionText(rangeDesc, img) {
+  if (img.showCaption === false) return null; // عدم نمایش متن
+  if (img.customCaption && img.customCaption.trim() !== "")
+    return img.customCaption;
+  return rangeDesc; // اگر متن اختصاصی نباشد، از desc کلی استفاده کن (حتی اگر خالی باشد)
+}
+
 function createQuestionRowHtml(qNum, img, range) {
+  const captionText = getCaptionText(range.desc, img);
   return `
- <tr>
-  <td class="w-10 text-center font-bold">
-    ${toPersianDigits(qNum)}
-    <span class="font-normal text-xs">
-      ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
-    </span>
-  </td>
-  <td class="p-0">
-    <div>
-      ${range.desc ? `<p>${range.desc}</p>` : ``}
-      <img
-        class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}"
-        src="${img.src}"
-        alt="${range.rangeName}"
-      >
-    </div>
-  </td>
-</tr>`;
+        <tr>
+          <td class="w-10 text-center font-bold">
+            ${toPersianDigits(qNum)}
+            <span class="font-normal text-xs">
+              ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
+            </span>
+          </td>
+          <td class="p-0">
+            <div>
+              ${captionText !== null ? `<p>${captionText}</p>` : ""}
+              <img
+                class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}"
+                src="${img.src}"
+                alt="${range.rangeName}"
+              >
+            </div>
+          </td>
+        </tr>`;
 }
 
 function createStudentTableHtml(studentQuiz, name) {
@@ -505,13 +524,13 @@ function createStudentTableHtml(studentQuiz, name) {
     )
     .join("");
   return `
-<table class="w-full border-collapse">
-  <tr class="bg-gray-200">
-    <td class="w-10"></td>
-    <td class="p-1">نام و نام خانوادگی: ${name} </td>
-  </tr>
-  ${rows}
-</table>`;
+        <table class="w-full border-collapse">
+          <tr class="bg-gray-200">
+            <td class="w-10"></td>
+            <td class="p-1">نام و نام خانوادگی: ${name} </td>
+          </tr>
+          ${rows}
+        </table>`;
 }
 
 function generateAnonymousStudentNames(count) {
@@ -549,24 +568,24 @@ function generateQuizHtml() {
   const html = names
     .map(
       (student) => `
-<tr>
-  <td class="questions">
-    ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
-  </td>
-</tr>`,
+            <tr>
+              <td class="questions">
+                ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
+              </td>
+            </tr>`,
     )
     .join("");
 
   document.getElementById("printable").innerHTML = `
-<table class="w-full">
-  <tbody>
-    ${html}
-  </tbody>
-</table>`;
+        <table class="w-full">
+          <tbody>
+            ${html}
+          </tbody>
+        </table>`;
   return true;
 }
 
-// ---------- Modal Helpers ----------
+// ---------- Modal Helpers (به‌روز شده) ----------
 function applyModalImageStyle({ height, align }) {
   if (height) {
     modalImg.style.maxHeight = height + "px";
@@ -581,14 +600,51 @@ function applyModalImageStyle({ height, align }) {
 function updateModalDescriptionAndScore(rangeId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (!range) return;
-  document.getElementById("modal-Qdesc").innerText = range.desc;
+  // نمایش متن بر اساس تنظیمات فعلی تصویر (که در appState.modal ذخیره شده)
+  const showCaption = appState.modal.showCaption;
+  const customCaption = appState.modal.customCaption;
+  let finalText = "";
+  if (showCaption) {
+    finalText =
+      customCaption && customCaption.trim() !== "" ? customCaption : range.desc;
+  } else {
+    finalText = ""; // عدم نمایش متن
+  }
+  modalQdesc.innerText = finalText;
   document.getElementById("modal-Qscore").innerHTML = `
-    ${toPersianDigits(1)}
-    <span class="font-normal text-xs">
-       ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
-    </span>
-  `;
+        ${toPersianDigits(1)}
+        <span class="font-normal text-xs">
+          ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
+        </span>
+      `;
 }
+
+// پیش‌نمایش زنده هنگام تغییر چک‌باکس یا متن
+function onModalCaptionChange() {
+  appState.modal.showCaption = modalShowCaption.checked;
+  appState.modal.customCaption = modalCustomCaption.value;
+  modalCustomCaption.disabled = !appState.modal.showCaption;
+  // به‌روزرسانی نمایش متن در مدال
+  const range = appState.ranges.find(
+    (r) => r.id === appState.modal.selectedRangeId,
+  );
+  if (range) {
+    let finalText = "";
+    if (appState.modal.showCaption) {
+      finalText =
+        appState.modal.customCaption &&
+        appState.modal.customCaption.trim() !== ""
+          ? appState.modal.customCaption
+          : range.desc;
+    } else {
+      finalText = "";
+    }
+    modalQdesc.innerText = finalText;
+  }
+}
+
+modalShowCaption.addEventListener("change", onModalCaptionChange);
+modalCustomCaption.addEventListener("input", onModalCaptionChange);
 
 function destroyCropper() {
   cropper?.destroy();
@@ -601,9 +657,13 @@ function toggleCropButtons(isActive) {
   const func = isActive ? "remove" : "add";
   saveCroppedImageBtn.classList[func]("hidden");
   cancelCropBtn.classList[func]("hidden");
-  [...alignButtons, heightInput, saveModalSettingsBtn].forEach(
-    (el) => (el.disabled = isActive),
-  );
+  [
+    ...alignButtons,
+    heightInput,
+    saveModalSettingsBtn,
+    modalShowCaption,
+    modalCustomCaption,
+  ].forEach((el) => el && (el.disabled = isActive));
 }
 
 function updateModalImageAlign(align) {
@@ -617,7 +677,6 @@ document.getElementById("addRange").onclick = () => {
   rangesContainer.appendChild(newRangeDiv);
 };
 
-// Names switch
 handleSwitchElement({
   container: document.getElementById("names-switch"),
   onChange: (isActive) => {
@@ -679,11 +738,16 @@ handleFileUpload({
       appState.namesCount = data.namesCount || 1;
 
       data.ranges.forEach((r) => {
+        const images = (r.images || []).map((img) => ({
+          ...IMAGE_DEFAULTS,
+          imageId: img.imageId || createRandomId("img"),
+          ...img,
+        }));
         const rangeWithId = {
           ...r,
           id: createRandomId("range-item"),
           showDesc: false,
-          images: r.images || [],
+          images,
         };
         appState.ranges.push(rangeWithId);
       });
@@ -702,7 +766,7 @@ handleFileUpload({
   readAs: "Text",
 });
 
-// Drag & Drop (unchanged)
+// Drag & Drop (بدون تغییر)
 rangesContainer.addEventListener("dragstart", (e) => {
   if (!e.target.classList.contains("range-item")) return;
   draggedElement = e.target;
@@ -812,8 +876,11 @@ function dragCleanup() {
 modalOverlay.addEventListener("click", () => {
   destroyCropper();
   activeImageSrc = null;
-  modal.style.display = "none";
-  modalImg.src = "";
+  modal.classList.remove("modal--visible");
+  setTimeout(() => {
+    modal.style.display = "none";
+    modalImg.src = "";
+  }, 300); // هماهنگ با transition
 });
 
 editCropBtn.addEventListener("click", () => {
@@ -855,29 +922,42 @@ saveModalSettingsBtn.addEventListener("click", () => {
   showConfirm({
     msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
     on_confirm: () => {
-      if (appState.modal.selectedRangeId && appState.modal.selectedImageSrc) {
-        const range = appState.ranges.find(
-          (r) => r.id === appState.modal.selectedRangeId,
-        );
-        if (range) {
-          const imgObj = range.images.find(
-            (img) => img.src === appState.modal.selectedImageSrc,
-          );
-          if (imgObj) {
-            imgObj.src = modalImg.src;
-            imgObj.height = appState.modal.height;
-            imgObj.align = appState.modal.align;
-          }
-        }
+      const {
+        selectedRangeId,
+        selectedImageSrc,
+        imageId,
+        height,
+        align,
+        showCaption,
+        customCaption,
+      } = appState.modal;
+
+      const range = appState.ranges.find((r) => r.id === selectedRangeId);
+      const imgObj = range?.images.find((img) => img.src === selectedImageSrc);
+      if (!imgObj) {
+        showToast("خطا: تصویر مورد نظر یافت نشد!", "error");
+        return;
       }
-      if (activeImageSrc) {
-        const imgEl = document.querySelector(`img[src="${activeImageSrc}"]`);
-        if (imgEl) {
-          imgEl.src = modalImg.src;
-          imgEl.dataset.maxheight = appState.modal.height;
-          imgEl.dataset.align = appState.modal.align;
-        }
-      }
+
+      const newSrc = modalImg.src;
+      Object.assign(imgObj, {
+        src: newSrc,
+        height,
+        align,
+        showCaption,
+        customCaption,
+      });
+
+      // به‌روزرسانی تامبنیل با استفاده از imageId
+      const thumbnailImg = document.querySelector(
+        `img[data-image-id="${imageId}"]`,
+      );
+      if (thumbnailImg) thumbnailImg.src = newSrc;
+
+      // هماهنگ‌سازی متغیرهای اشاره‌گر
+      if (activeImageSrc === selectedImageSrc) activeImageSrc = newSrc;
+      appState.modal.selectedImageSrc = newSrc;
+
       showToast("با موفقیت ذخیره شد.");
     },
   });
