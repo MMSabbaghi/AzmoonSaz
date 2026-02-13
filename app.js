@@ -34,7 +34,7 @@ function removeImageFromState(rangeId, imageSrc) {
   }
 }
 
-function reorderRanges(newOrderIds) {
+function reorderRangesInState(newOrderIds) {
   appState.ranges = newOrderIds
     .map((id) => appState.ranges.find((r) => r.id === id))
     .filter(Boolean);
@@ -96,17 +96,17 @@ const IMAGE_DEFAULTS = {
   align: "RIGHT",
 };
 
-const imageAlign = {
+const alignStyles = {
   RIGHT: { marginRight: 0, marginLeft: "auto" },
   LEFT: { marginRight: "auto", marginLeft: 0 },
   CENTER: { marginRight: "auto", marginLeft: "auto" },
 };
 
-function getImageStyle({ dataset }) {
+function getImageStyleFromElement({ dataset }) {
   const { maxheight, align } = dataset;
   return {
     height: maxheight,
-    align: imageAlign[align],
+    align: alignStyles[align],
   };
 }
 
@@ -126,20 +126,20 @@ const namesTextareaContainer = document.getElementById("names-textarea");
 const namesTextarea = namesTextareaContainer.querySelector("textarea");
 const heightInput = document.querySelector("#modal-imgHeight");
 const saveModalSettingsBtn = document.querySelector("#saveModalSettingsBtn");
-const alignBtnS = document.querySelectorAll(".align-btn");
+const alignButtons = document.querySelectorAll(".align-btn");
 const fontSelector = document.getElementById("fontSelector");
 
 // ---------- State-bound UI Variables ----------
-let selectedRangeId = null;
-let selectedImgSrc = null;
-let cropperInstance = null;
-let draggedItem = null;
-let isTouch = false;
-const placeholder = document.createElement("div");
-placeholder.className = "placeholder";
+let activeRangeId = null;
+let activeImageSrc = null;
+let cropper = null;
+let draggedElement = null;
+let isTouchDevice = false;
+const dragPlaceholder = document.createElement("div");
+dragPlaceholder.className = "placeholder";
 
 // ---------- Pure Render Functions (preserve original DOM creation) ----------
-function createRangeItem(rangeData = null) {
+function createRangeElement(rangeData = null) {
   // If no data provided, create a new range object and add to state
   if (!rangeData) {
     const newRange = {
@@ -233,13 +233,13 @@ function createRangeItem(rangeData = null) {
 
   // Render existing images
   rangeData.images.forEach((img) => {
-    const imgContainer = createImageElement(img, div, rangeData.id);
+    const imgContainer = createImageThumbnailElement(img, div, rangeData.id);
     div.querySelector(".preview").appendChild(imgContainer);
   });
 
   // ---------- Event Listeners (update state + UI) ----------
   div.addEventListener("click", (e) => {
-    selectedRangeId = rangeData.id;
+    activeRangeId = rangeData.id;
   });
 
   // Switch for description
@@ -268,9 +268,13 @@ function createRangeItem(rangeData = null) {
         align: IMAGE_DEFAULTS.align,
       };
       addImageToState(rangeData.id, imageData);
-      const imgContainer = createImageElement(imageData, div, rangeData.id);
+      const imgContainer = createImageThumbnailElement(
+        imageData,
+        div,
+        rangeData.id,
+      );
       div.querySelector(".preview").appendChild(imgContainer);
-      updateRangeTotal(div);
+      updateRangeImageCountBadge(div);
     },
     readAs: "DataURL",
   });
@@ -314,7 +318,7 @@ function createRangeItem(rangeData = null) {
   return div;
 }
 
-function createImageElement(img, targetDiv, rangeId) {
+function createImageThumbnailElement(img, targetDiv, rangeId) {
   const { src, height, align } = img;
   const imgContainer = document.createElement("div");
   imgContainer.innerHTML = `<img data-maxHeight="${height || IMAGE_DEFAULTS.height}" data-align="${align || IMAGE_DEFAULTS.align}" src="${src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
@@ -323,36 +327,36 @@ function createImageElement(img, targetDiv, rangeId) {
   imgContainer.querySelector("button").onclick = () => {
     removeImageFromState(rangeId, src);
     imgContainer.remove();
-    updateRangeTotal(targetDiv);
+    updateRangeImageCountBadge(targetDiv);
   };
 
   // Open modal
   imgContainer.querySelector("img").onclick = (e) => {
-    selectedImgSrc = src;
+    activeImageSrc = src;
     appState.modal.selectedRangeId = rangeId;
     appState.modal.selectedImageSrc = src;
     appState.modal.height = height || IMAGE_DEFAULTS.height;
     appState.modal.align = align || IMAGE_DEFAULTS.align;
 
     modalImg.src = src;
-    setModalStyle({
+    applyModalImageStyle({
       height: appState.modal.height,
-      align: imageAlign[appState.modal.align],
+      align: alignStyles[appState.modal.align],
     });
-    setModalTableData(rangeId);
+    updateModalDescriptionAndScore(rangeId);
     modal.style.display = "flex";
   };
 
   return imgContainer;
 }
 
-function updateRangeTotal(target) {
+function updateRangeImageCountBadge(target) {
   const imagesCount = target.querySelector(".preview").children.length;
   target.querySelector(".range-total").textContent =
     `${toPersianDigits(imagesCount)}`;
 }
 
-function setModalStyle({ height, align }) {
+function applyModalImageStyle({ height, align }) {
   if (height) {
     modalImg.style.maxHeight = height + "px";
     heightInput.value = height;
@@ -363,7 +367,7 @@ function setModalStyle({ height, align }) {
   }
 }
 
-function setModalTableData(rangeId) {
+function updateModalDescriptionAndScore(rangeId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (!range) return;
   document.getElementById("modal-Qdesc").innerText = range.desc;
@@ -377,7 +381,7 @@ function setModalTableData(rangeId) {
 
 // ---------- Global Event Listeners (state-aware) ----------
 document.getElementById("addRange").onclick = () => {
-  const newRangeDiv = createRangeItem(); // automatically added to state
+  const newRangeDiv = createRangeElement(); // automatically added to state
   rangesContainer.appendChild(newRangeDiv);
 };
 
@@ -393,11 +397,11 @@ handleSwitchElement({
       },
       isActive,
     });
-    updateNamesFromTextarea();
+    syncNamesFromTextarea();
   },
 });
 
-function updateNamesFromTextarea() {
+function syncNamesFromTextarea() {
   const names = namesTextarea.value
     .trim()
     .split("\n")
@@ -408,7 +412,7 @@ function updateNamesFromTextarea() {
 }
 
 namesTextarea.addEventListener("input", () => {
-  updateNamesFromTextarea();
+  syncNamesFromTextarea();
   appState.namesCount = namesCountEl.value;
 });
 
@@ -418,7 +422,7 @@ namesCountEl.addEventListener("input", (e) => {
 
 // ---------- Paste Image (state update) ----------
 document.addEventListener("paste", ({ clipboardData }) => {
-  if (!selectedRangeId) return;
+  if (!activeRangeId) return;
   const items = clipboardData.items;
   for (let i = 0; i < items.length; i++) {
     if (items[i].type.indexOf("image") !== -1) {
@@ -430,16 +434,16 @@ document.addEventListener("paste", ({ clipboardData }) => {
           height: IMAGE_DEFAULTS.height,
           align: IMAGE_DEFAULTS.align,
         };
-        addImageToState(selectedRangeId, imageData);
-        const rangeDiv = document.getElementById(selectedRangeId);
+        addImageToState(activeRangeId, imageData);
+        const rangeDiv = document.getElementById(activeRangeId);
         if (rangeDiv) {
-          const imgContainer = createImageElement(
+          const imgContainer = createImageThumbnailElement(
             imageData,
             rangeDiv,
-            selectedRangeId,
+            activeRangeId,
           );
           rangeDiv.querySelector(".preview").appendChild(imgContainer);
-          updateRangeTotal(rangeDiv);
+          updateRangeImageCountBadge(rangeDiv);
         }
       };
       reader.readAsDataURL(blob);
@@ -448,11 +452,11 @@ document.addEventListener("paste", ({ clipboardData }) => {
 });
 
 document.addEventListener("paste", async (e) => {
-  if (!selectedRangeId) return;
+  if (!activeRangeId) return;
   try {
     const text = await navigator.clipboard.readText();
     const pastedArray = JSON.parse(text);
-    const rangeDiv = document.getElementById(selectedRangeId);
+    const rangeDiv = document.getElementById(activeRangeId);
     if (rangeDiv) {
       pastedArray.forEach((img) => {
         const imageData = {
@@ -460,15 +464,15 @@ document.addEventListener("paste", async (e) => {
           height: img.height || IMAGE_DEFAULTS.height,
           align: img.align || IMAGE_DEFAULTS.align,
         };
-        addImageToState(selectedRangeId, imageData);
-        const imgContainer = createImageElement(
+        addImageToState(activeRangeId, imageData);
+        const imgContainer = createImageThumbnailElement(
           imageData,
           rangeDiv,
-          selectedRangeId,
+          activeRangeId,
         );
         rangeDiv.querySelector(".preview").appendChild(imgContainer);
       });
-      updateRangeTotal(rangeDiv);
+      updateRangeImageCountBadge(rangeDiv);
     }
   } catch (err) {
     // ignore non-JSON paste
@@ -476,7 +480,7 @@ document.addEventListener("paste", async (e) => {
 });
 
 // ---------- Generate Quiz (reads from state) ----------
-function shuffleUniform(arr) {
+function fisherYatesShuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -485,20 +489,20 @@ function shuffleUniform(arr) {
   return a;
 }
 
-function pickUniqueRandom(source, count) {
+function pickRandomItems(source, count) {
   if (!Array.isArray(source) || source.length === 0 || count <= 0) return [];
-  const shuffled = shuffleUniform(source);
+  const shuffled = fisherYatesShuffle(source);
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
-function generateQuizData(names, ranges) {
+function buildQuizData(names, ranges) {
   const finalData = Object.fromEntries(names.map((n) => [n, []]));
   ranges.forEach((r) => {
     const images = Array.isArray(r.images) ? r.images : [];
     names.forEach((student) => {
       finalData[student].push({
         rangeName: r.rangeName,
-        images: pickUniqueRandom(images, r.count),
+        images: pickRandomItems(images, r.count),
         score: r.score,
         desc: r.desc,
       });
@@ -507,12 +511,12 @@ function generateQuizData(names, ranges) {
   return finalData;
 }
 
-function getAlignClass(align) {
+function getAlignmentClass(align) {
   const classes = { RIGHT: "ml-auto", LEFT: "mr-auto", CENTER: "mx-auto" };
   return classes[align];
 }
 
-function renderQuestionRow(qNum, img, range) {
+function createQuestionRowHtml(qNum, img, range) {
   return `
  <tr>
   <td class="w-10 text-center font-bold">
@@ -525,7 +529,7 @@ function renderQuestionRow(qNum, img, range) {
     <div class="relative">
       ${range.desc ? `<p class="absolute">${range.desc}</p>` : ``}
       <img
-        class="max-h-[${img.height}px] ${getAlignClass(img.align)}"
+        class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}"
         src="${img.src}"
         alt="${range.rangeName}"
       >
@@ -534,11 +538,11 @@ function renderQuestionRow(qNum, img, range) {
 </tr>`;
 }
 
-function renderStudentTable(studentQuiz, name) {
+function createStudentTableHtml(studentQuiz, name) {
   let qNum = 1;
   const rows = studentQuiz
     .flatMap((range) =>
-      range.images.map((img) => renderQuestionRow(qNum++, img, range)),
+      range.images.map((img) => createQuestionRowHtml(qNum++, img, range)),
     )
     .join("");
   return `
@@ -551,20 +555,22 @@ function renderStudentTable(studentQuiz, name) {
 </table>`;
 }
 
-function generateNamesByCount(count) {
+function generateAnonymousStudentNames(count) {
   return Array.from({ length: count }, (_, i) => i + 1);
 }
 
-function getNames() {
+function getStudentNames() {
   let namesArray = appState.names;
   const namesCount = appState.namesCount;
   return {
-    names: namesArray.length ? namesArray : generateNamesByCount(namesCount),
+    names: namesArray.length
+      ? namesArray
+      : generateAnonymousStudentNames(namesCount),
     showNames: namesArray.length ? true : false,
   };
 }
 
-function generateTable() {
+function generateQuizHtml() {
   if (!appState.namesCount && !appState.names.length) {
     showToast("لطفا تعداد را وارد کنید", "error");
     return false;
@@ -578,15 +584,15 @@ function generateTable() {
     return false;
   }
 
-  const { names, showNames } = getNames();
-  const quizData = generateQuizData(names, validRanges);
+  const { names, showNames } = getStudentNames();
+  const quizData = buildQuizData(names, validRanges);
 
   const html = names
     .map(
       (student) => `
 <tr>
   <td class="questions">
-    ${renderStudentTable(quizData[student], showNames ? student : ``)}
+    ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
   </td>
 </tr>`,
     )
@@ -602,7 +608,7 @@ function generateTable() {
 }
 
 document.getElementById("generate").onclick = (e) => {
-  const isGenerated = generateTable();
+  const isGenerated = generateQuizHtml();
   if (isGenerated) e.target.scrollIntoView({ behavior: "smooth" });
 };
 
@@ -651,7 +657,7 @@ handleFileUpload({
     // Re-render UI
     rangesContainer.innerHTML = "";
     appState.ranges.forEach((r) => {
-      rangesContainer.appendChild(createRangeItem(r));
+      rangesContainer.appendChild(createRangeElement(r));
     });
 
     namesTextarea.value = appState.names.join("\n");
@@ -664,28 +670,28 @@ handleFileUpload({
 // ---------- Drag & Drop (reorder state) ----------
 rangesContainer.addEventListener("dragstart", (e) => {
   if (!e.target.classList.contains("range-item")) return;
-  draggedItem = e.target;
-  draggedItem.classList.add("opacity-50");
-  setTimeout(() => draggedItem.classList.add("hidden"), 0);
+  draggedElement = e.target;
+  draggedElement.classList.add("opacity-50");
+  setTimeout(() => draggedElement.classList.add("hidden"), 0);
 });
 
-rangesContainer.addEventListener("dragend", cleanup);
+rangesContainer.addEventListener("dragend", dragCleanup);
 
 rangesContainer.addEventListener("dragover", (e) => {
-  if (isTouch || !draggedItem) return;
+  if (isTouchDevice || !draggedElement) return;
   e.preventDefault();
-  handleMove(e.clientY);
+  handleDragMove(e.clientY);
 });
 
 rangesContainer.addEventListener("drop", (e) => {
   e.preventDefault();
-  if (placeholder.parentNode) {
-    rangesContainer.insertBefore(draggedItem, placeholder);
+  if (dragPlaceholder.parentNode) {
+    rangesContainer.insertBefore(draggedElement, dragPlaceholder);
     // Update state order after drop
     const newOrder = [...rangesContainer.querySelectorAll(".range-item")].map(
       (el) => el.id,
     );
-    reorderRanges(newOrder);
+    reorderRangesInState(newOrder);
   }
 });
 
@@ -694,9 +700,9 @@ rangesContainer.addEventListener(
   (e) => {
     const target = e.target.closest(".range-item");
     if (!target) return;
-    isTouch = true;
-    draggedItem = target;
-    draggedItem.classList.add("opacity-50");
+    isTouchDevice = true;
+    draggedElement = target;
+    draggedElement.classList.add("opacity-50");
   },
   { passive: true },
 );
@@ -704,39 +710,39 @@ rangesContainer.addEventListener(
 rangesContainer.addEventListener(
   "touchmove",
   (e) => {
-    if (!draggedItem) return;
-    handleMove(e.touches[0].clientY);
+    if (!draggedElement) return;
+    handleDragMove(e.touches[0].clientY);
   },
   { passive: true },
 );
 
 rangesContainer.addEventListener("touchend", () => {
-  if (placeholder.parentNode) {
-    rangesContainer.insertBefore(draggedItem, placeholder);
+  if (dragPlaceholder.parentNode) {
+    rangesContainer.insertBefore(draggedElement, dragPlaceholder);
     const newOrder = [...rangesContainer.querySelectorAll(".range-item")].map(
       (el) => el.id,
     );
-    reorderRanges(newOrder);
+    reorderRangesInState(newOrder);
   }
-  cleanup();
+  dragCleanup();
 });
 
-function handleMove(pointerY) {
-  animateReorder();
+function handleDragMove(pointerY) {
+  animateReordering();
   const items = [
     ...rangesContainer.querySelectorAll(".range-item:not(.opacity-50)"),
   ];
   for (const item of items) {
     const rect = item.getBoundingClientRect();
     if (pointerY < rect.top + rect.height / 2) {
-      item.before(placeholder);
+      item.before(dragPlaceholder);
       return;
     }
   }
-  rangesContainer.appendChild(placeholder);
+  rangesContainer.appendChild(dragPlaceholder);
 }
 
-function animateReorder() {
+function animateReordering() {
   const items = [...rangesContainer.querySelectorAll(".range-item")];
   const first = new Map();
   items.forEach((el) => {
@@ -760,41 +766,41 @@ function animateReorder() {
   });
 }
 
-function cleanup() {
-  if (!draggedItem) return;
-  draggedItem.classList.remove("opacity-50", "hidden");
-  placeholder.remove();
-  draggedItem = null;
-  isTouch = false;
+function dragCleanup() {
+  if (!draggedElement) return;
+  draggedElement.classList.remove("opacity-50", "hidden");
+  dragPlaceholder.remove();
+  draggedElement = null;
+  isTouchDevice = false;
 }
 
 // ---------- Modal & Cropper (stateful) ----------
 modalOverlay.addEventListener("click", () => {
-  cropCleanup(false);
-  selectedImgSrc = null;
+  destroyCropper(false);
+  activeImageSrc = null;
   modal.style.display = "none";
   modalImg.src = "";
 });
 
-function cropCleanup() {
-  cropperInstance?.destroy();
-  cropperInstance = null;
-  toggleCropBtns(false);
+function destroyCropper() {
+  cropper?.destroy();
+  cropper = null;
+  toggleCropButtons(false);
 }
 
-function toggleCropBtns(isActive) {
+function toggleCropButtons(isActive) {
   editCropBtn.classList[isActive ? "add" : "remove"]("hidden");
   const func = isActive ? "remove" : "add";
   saveCroppedImageBtn.classList[func]("hidden");
   cancelCropBtn.classList[func]("hidden");
-  [...alignBtnS, heightInput, saveModalSettingsBtn].forEach(
+  [...alignButtons, heightInput, saveModalSettingsBtn].forEach(
     (el) => (el.disabled = isActive),
   );
 }
 
 editCropBtn.addEventListener("click", () => {
-  if (cropperInstance) cropperInstance.destroy();
-  cropperInstance = new Cropper(modalImg, {
+  if (cropper) cropper.destroy();
+  cropper = new Cropper(modalImg, {
     aspectRatio: NaN,
     viewMode: 1,
     movable: true,
@@ -803,33 +809,33 @@ editCropBtn.addEventListener("click", () => {
     responsive: true,
     autoCropArea: 1,
   });
-  toggleCropBtns(true);
+  toggleCropButtons(true);
 });
 
 saveCroppedImageBtn.addEventListener("click", () => {
-  if (!cropperInstance) return;
-  const croppedCanvas = cropperInstance.getCroppedCanvas();
+  if (!cropper) return;
+  const croppedCanvas = cropper.getCroppedCanvas();
   const croppedImage = new Image();
   croppedImage.onload = () => {
     modalImg.src = croppedImage.src;
-    cropCleanup();
+    destroyCropper();
   };
   croppedImage.src = croppedCanvas.toDataURL();
 });
 
-cancelCropBtn.addEventListener("click", cropCleanup);
+cancelCropBtn.addEventListener("click", destroyCropper);
 
 heightInput.addEventListener("input", (e) => {
   appState.modal.height = parseInt(e.target.value) || IMAGE_DEFAULTS.height;
-  setModalStyle({
+  applyModalImageStyle({
     height: appState.modal.height,
-    align: imageAlign[appState.modal.align],
+    align: alignStyles[appState.modal.align],
   });
 });
 
-function setImageAlign(align) {
+function updateModalImageAlign(align) {
   appState.modal.align = align;
-  setModalStyle({ align: imageAlign[align] });
+  applyModalImageStyle({ align: alignStyles[align] });
 }
 
 saveModalSettingsBtn.addEventListener("click", (e) => {
@@ -853,8 +859,8 @@ saveModalSettingsBtn.addEventListener("click", (e) => {
         }
       }
       // Also update the DOM img element
-      if (selectedImgSrc) {
-        const imgEl = document.querySelector(`img[src="${selectedImgSrc}"]`);
+      if (activeImageSrc) {
+        const imgEl = document.querySelector(`img[src="${activeImageSrc}"]`);
         if (imgEl) {
           imgEl.src = modalImg.src;
           imgEl.dataset.maxheight = appState.modal.height;
