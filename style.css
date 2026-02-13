@@ -1,4 +1,23 @@
-@import url("https://fonts.googleapis.com/css2?family=Vazirmatn&display=swap");
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("fonts/Vazirmatn-Regular.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Shabnam";
+  src: url("fonts/Shabnam.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "BNazanin";
+  src: url("fonts/BNAZANB.woff2") format("woff2");
+  font-weight: bold;
+  font-style: normal;
+}
 
 body {
   font-family: "Vazirmatn", sans-serif;
