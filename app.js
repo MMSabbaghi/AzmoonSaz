@@ -485,8 +485,8 @@ function createQuestionRowHtml(qNum, img, range) {
     </span>
   </td>
   <td class="p-0">
-    <div class="relative">
-      ${range.desc ? `<p class="absolute">${range.desc}</p>` : ``}
+    <div>
+      ${range.desc ? `<p>${range.desc}</p>` : ``}
       <img
         class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}"
         src="${img.src}"
