@@ -1,12 +1,13 @@
 // ---------- State Management ----------
 const appState = {
-  ranges: [], // { id, rangeName, count, score, desc, images: [{ src, height, align, showCaption, customCaption }] }
+  ranges: [], // { id, rangeName, count, score, desc, images: [{ src, height, align, showCaption, customCaption, imageId }] }
   names: [],
   namesCount: 1,
   font: "'Vazirmatn', sans-serif",
   modal: {
     selectedRangeId: null,
     selectedImageSrc: null,
+    imageId: null,
     height: 75,
     align: "RIGHT",
     showCaption: true,
@@ -14,7 +15,6 @@ const appState = {
   },
 };
 
-// مقادیر پیش‌فرض برای تصاویر جدید
 const IMAGE_DEFAULTS = {
   height: 75,
   align: "RIGHT",
@@ -33,12 +33,9 @@ function updateRangeInState(rangeId, updates) {
 function removeImageFromState(rangeId, imageSrc, imageId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (range) {
-    if (imageId) {
-      range.images = range.images.filter((img) => img.imageId !== imageId);
-    } else {
-      // برای سازگاری با داده‌های قدیمی (بدون imageId)
-      range.images = range.images.filter((img) => img.src !== imageSrc);
-    }
+    range.images = imageId
+      ? range.images.filter((img) => img.imageId !== imageId)
+      : range.images.filter((img) => img.src !== imageSrc);
   }
 }
 
@@ -146,61 +143,68 @@ let draggedElement = null;
 const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
-// ---------- Image Thumbnail Creation ----------
+// ========== Image Thumbnail Helpers ==========
+function openImageModal(rangeId, imageId) {
+  const range = appState.ranges.find((r) => r.id === rangeId);
+  const currentImg = range?.images.find((img) => img.imageId === imageId);
+  if (!currentImg) {
+    showToast("خطا: تصویر یافت نشد!", "error");
+    return;
+  }
+
+  activeImageSrc = currentImg.src;
+  appState.modal.selectedRangeId = rangeId;
+  appState.modal.selectedImageSrc = currentImg.src;
+  appState.modal.imageId = imageId;
+  appState.modal.height = currentImg.height || IMAGE_DEFAULTS.height;
+  appState.modal.align = currentImg.align || IMAGE_DEFAULTS.align;
+  appState.modal.showCaption =
+    currentImg.showCaption !== undefined
+      ? currentImg.showCaption
+      : IMAGE_DEFAULTS.showCaption;
+  appState.modal.customCaption =
+    currentImg.customCaption !== undefined
+      ? currentImg.customCaption
+      : IMAGE_DEFAULTS.customCaption;
+
+  modalImg.src = currentImg.src;
+  applyModalImageStyle({
+    height: appState.modal.height,
+    align: alignStyles[appState.modal.align],
+  });
+  updateModalDescriptionAndScore(rangeId);
+
+  modalShowCaption.checked = appState.modal.showCaption;
+  modalCustomCaption.value = appState.modal.customCaption;
+  modalCustomCaption.disabled = !appState.modal.showCaption;
+
+  modal.style.display = "flex";
+  setTimeout(() => modal.classList.add("modal--visible"), 10);
+}
+
+function handleRemoveImageClick(
+  rangeId,
+  imageSrc,
+  imageId,
+  imgContainer,
+  targetDiv,
+) {
+  removeImageFromState(rangeId, imageSrc, imageId);
+  imgContainer.remove();
+  updateRangeImageCountBadge(targetDiv);
+}
+
 function createImageThumbnailElement(img, targetDiv, rangeId) {
-  const { imageId } = img; // فقط id را نگه می‌داریم، بقیه را در لحظه کلیک از state می‌خوانیم
+  const { imageId, src } = img;
   const imgContainer = document.createElement("div");
-  imgContainer.innerHTML = `<img data-image-id="${imageId}" src="${img.src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
+  imgContainer.innerHTML = `<img data-image-id="${imageId}" src="${src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
 
-  // Remove image (با ارسال imageId)
-  imgContainer.querySelector("button").onclick = () => {
-    removeImageFromState(rangeId, img.src, imageId);
-    imgContainer.remove();
-    updateRangeImageCountBadge(targetDiv);
-  };
+  const removeBtn = imgContainer.querySelector("button");
+  const imgElement = imgContainer.querySelector("img");
 
-  // Open modal
-  imgContainer.querySelector("img").onclick = (e) => {
-    const range = appState.ranges.find((r) => r.id === rangeId);
-    const currentImg = range?.images.find((img) => img.imageId === imageId);
-    if (!currentImg) {
-      showToast("خطا: تصویر یافت نشد!", "error");
-      return;
-    }
-
-    // پر کردن appState.modal با داده‌های به‌روز
-    activeImageSrc = currentImg.src;
-    appState.modal.selectedRangeId = rangeId;
-    appState.modal.selectedImageSrc = currentImg.src;
-    appState.modal.imageId = imageId;
-    appState.modal.height = currentImg.height || IMAGE_DEFAULTS.height;
-    appState.modal.align = currentImg.align || IMAGE_DEFAULTS.align;
-    appState.modal.showCaption =
-      currentImg.showCaption !== undefined
-        ? currentImg.showCaption
-        : IMAGE_DEFAULTS.showCaption;
-    appState.modal.customCaption =
-      currentImg.customCaption !== undefined
-        ? currentImg.customCaption
-        : IMAGE_DEFAULTS.customCaption;
-
-    // نمایش تصویر و اعمال استایل
-    modalImg.src = currentImg.src;
-    applyModalImageStyle({
-      height: appState.modal.height,
-      align: alignStyles[appState.modal.align],
-    });
-    updateModalDescriptionAndScore(rangeId); // این تابع از appState.modal برای متن استفاده می‌کند
-
-    // مقداردهی المان‌های مدال
-    modalShowCaption.checked = appState.modal.showCaption;
-    modalCustomCaption.value = appState.modal.customCaption;
-    modalCustomCaption.disabled = !appState.modal.showCaption;
-
-    // نمایش مدال
-    modal.style.display = "flex";
-    setTimeout(() => modal.classList.add("modal--visible"), 10);
-  };
+  removeBtn.onclick = () =>
+    handleRemoveImageClick(rangeId, src, imageId, imgContainer, targetDiv);
+  imgElement.onclick = () => openImageModal(rangeId, imageId);
 
   return imgContainer;
 }
@@ -211,95 +215,66 @@ function updateRangeImageCountBadge(target) {
     `${toPersianDigits(imagesCount)}`;
 }
 
-// ---------- Range DOM Building ----------
-function buildRangeDOM(rangeData) {
-  const div = document.createElement("div");
-  div.id = rangeData.id;
-  div.draggable = true;
-  div.className = "range-item transition-transform duration-200 ease-out";
-
+// ========== Range DOM Building Helpers ==========
+function getRangeHTML(rangeData) {
   const fileID = createRandomId("file");
-
-  div.innerHTML = `
-      <div class="range-header my-1">
-        <div class="flex items-center gap-2">
-          <div>
-            <label class="font-normal text-[#777]"> مبحث: </label>
-            <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
-          </div>
-          <div>
-            <label class="font-normal text-[#777]"> تعداد: </label>
-            <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
-          </div>
-          <div>
-            <label class="font-normal text-[#777]" > نمره: </label>
-            <input value="${rangeData.score}" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
-          </div>
-          <div class="relative inline-block">
-            <div class="file-input">
-              <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
-              <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
-              <span class="range-total absolute top-0 left-0 -mt-2 -ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                ${toPersianDigits(rangeData.images.length)}
-              </span>
-            </div>
-          </div>
-          <label class="font-normal text-[#777]" > متن سوال: </label>
-          <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
-            <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+  return `
+    <div class="range-header my-1">
+      <div class="flex items-center gap-2">
+        <div>
+          <label class="font-normal text-[#777]"> مبحث: </label>
+          <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
+        </div>
+        <div>
+          <label class="font-normal text-[#777]"> تعداد: </label>
+          <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
+        </div>
+        <div>
+          <label class="font-normal text-[#777]" > نمره: </label>
+          <input value="${rangeData.score}" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
+        </div>
+        <div class="relative inline-block">
+          <div class="file-input">
+            <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
+            <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
+            <span class="range-total absolute top-0 left-0 -mt-2 -ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              ${toPersianDigits(rangeData.images.length)}
+            </span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
-          <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
+        <label class="font-normal text-[#777]" > متن سوال: </label>
+        <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
+          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
         </div>
       </div>
-      <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-        <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+      <div class="flex items-center gap-2">
+        <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
+        <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
       </div>
-      <div class="preview"></div>
-      `;
-
-  return div;
+    </div>
+    <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
+      <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+    </div>
+    <div class="preview"></div>
+  `;
 }
 
-function attachRangeEvents(rangeElement, rangeId) {
-  const rangeData = appState.ranges.find((r) => r.id === rangeId);
-  if (!rangeData) return;
-
-  rangeElement.addEventListener("click", () => {
-    activeRangeId = rangeId;
+function setupRangeInputs(rangeElement, rangeId) {
+  rangeElement.querySelector(".range-name").addEventListener("input", (e) => {
+    updateRangeInState(rangeId, { rangeName: e.target.value });
   });
-
-  handleSwitchElement({
-    container: rangeElement,
-    onChange: (isActive) => {
-      setElementState({
-        target: rangeElement.querySelector("#textareaBox"),
-        stateClasses: {
-          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-        },
-        isActive,
-      });
-    },
+  rangeElement.querySelector(".range-count").addEventListener("input", (e) => {
+    updateRangeInState(rangeId, { count: parseInt(e.target.value) || 0 });
   });
-
-  handleFileUpload({
-    target: rangeElement.querySelector(".range-images"),
-    onChange: (src) => {
-      const imageData = {
-        src,
-        height: IMAGE_DEFAULTS.height,
-        align: IMAGE_DEFAULTS.align,
-        showCaption: IMAGE_DEFAULTS.showCaption,
-        customCaption: IMAGE_DEFAULTS.customCaption,
-      };
-      addImagesToRange(rangeId, [imageData]); // اینجا از addImagesToRange استفاده شده
-    },
-    readAs: "DataURL",
+  rangeElement.querySelector(".range-score").addEventListener("input", (e) => {
+    updateRangeInState(rangeId, { score: e.target.value });
   });
+  rangeElement.querySelector(".range-desc").addEventListener("input", (e) => {
+    updateRangeInState(rangeId, { desc: e.target.value });
+  });
+}
 
+function setupRangeButtons(rangeElement, rangeId) {
   rangeElement.querySelector(".remove-range").onclick = () => {
     showConfirm({
       msg: "آیا از حذف این مبحث اطمینان دارید؟",
@@ -318,28 +293,71 @@ function attachRangeEvents(rangeElement, rangeId) {
       showToast("تصویری برای کپی وجود ندارد.", "error");
     }
   });
+}
 
-  rangeElement.querySelector(".range-name").addEventListener("input", (e) => {
-    updateRangeInState(rangeId, { rangeName: e.target.value });
+function setupFileUploadOnRange(rangeElement, rangeId) {
+  handleFileUpload({
+    target: rangeElement.querySelector(".range-images"),
+    onChange: (src) => {
+      const imageData = {
+        src,
+        height: IMAGE_DEFAULTS.height,
+        align: IMAGE_DEFAULTS.align,
+        showCaption: IMAGE_DEFAULTS.showCaption,
+        customCaption: IMAGE_DEFAULTS.customCaption,
+      };
+      addImagesToRange(rangeId, [imageData]);
+    },
+    readAs: "DataURL",
   });
-  rangeElement.querySelector(".range-count").addEventListener("input", (e) => {
-    updateRangeInState(rangeId, { count: parseInt(e.target.value) || 0 });
+}
+
+function setupSwitchOnRange(rangeElement) {
+  handleSwitchElement({
+    container: rangeElement,
+    onChange: (isActive) => {
+      setElementState({
+        target: rangeElement.querySelector("#textareaBox"),
+        stateClasses: {
+          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+        },
+        isActive,
+      });
+    },
   });
-  rangeElement.querySelector(".range-score").addEventListener("input", (e) => {
-    updateRangeInState(rangeId, { score: e.target.value });
-  });
-  rangeElement.querySelector(".range-desc").addEventListener("input", (e) => {
-    updateRangeInState(rangeId, { desc: e.target.value });
+}
+
+function attachRangeEvents(rangeElement, rangeId) {
+  rangeElement.addEventListener("click", () => {
+    activeRangeId = rangeId;
   });
 
-  rangeData.images.forEach((img) => {
-    const imgContainer = createImageThumbnailElement(
-      img,
-      rangeElement,
-      rangeId,
-    );
-    rangeElement.querySelector(".preview").appendChild(imgContainer);
-  });
+  setupSwitchOnRange(rangeElement);
+  setupFileUploadOnRange(rangeElement, rangeId);
+  setupRangeButtons(rangeElement, rangeId);
+  setupRangeInputs(rangeElement, rangeId);
+
+  const rangeData = appState.ranges.find((r) => r.id === rangeId);
+  if (rangeData) {
+    rangeData.images.forEach((img) => {
+      const imgContainer = createImageThumbnailElement(
+        img,
+        rangeElement,
+        rangeId,
+      );
+      rangeElement.querySelector(".preview").appendChild(imgContainer);
+    });
+  }
+}
+
+function buildRangeDOM(rangeData) {
+  const div = document.createElement("div");
+  div.id = rangeData.id;
+  div.draggable = true;
+  div.className = "range-item transition-transform duration-200 ease-out";
+  div.innerHTML = getRangeHTML(rangeData);
+  return div;
 }
 
 function createRangeElement(rangeData = null) {
@@ -360,7 +378,7 @@ function createRangeElement(rangeData = null) {
   return el;
 }
 
-// ---------- Names Section Rendering ----------
+// ========== Names Section ==========
 function renderNamesSection() {
   namesTextarea.value = appState.names.join("\n");
   namesCountEl.value = appState.namesCount;
@@ -376,7 +394,7 @@ function syncNamesFromTextarea() {
   renderNamesSection();
 }
 
-// ---------- Unified function to add images to a range ----------
+// ========== Add Images to Range ==========
 function addImageToState(rangeId, imageData) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (range) {
@@ -409,7 +427,7 @@ function addImagesToRange(rangeId, imagesArray) {
   updateRangeImageCountBadge(rangeDiv);
 }
 
-// ---------- Unified Paste Handler ----------
+// ========== Paste Handler ==========
 document.addEventListener("paste", async (e) => {
   if (!activeRangeId) return;
 
@@ -422,10 +440,7 @@ document.addEventListener("paste", async (e) => {
         reader.onload = (ev) => {
           const imageData = {
             src: ev.target.result,
-            height: IMAGE_DEFAULTS.height,
-            align: IMAGE_DEFAULTS.align,
-            showCaption: IMAGE_DEFAULTS.showCaption,
-            customCaption: IMAGE_DEFAULTS.customCaption,
+            ...IMAGE_DEFAULTS,
           };
           addImagesToRange(activeRangeId, [imageData]);
         };
@@ -456,7 +471,7 @@ document.addEventListener("paste", async (e) => {
   }
 });
 
-// ---------- Generate Quiz ----------
+// ========== Quiz Generation ==========
 function fisherYatesShuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -503,24 +518,24 @@ function getCaptionText(rangeDesc, img) {
 function createQuestionRowHtml(qNum, img, range) {
   const captionText = getCaptionText(range.desc, img);
   return `
-        <tr>
-          <td class="w-10 text-center font-bold">
-            ${toPersianDigits(qNum)}
-            <span class="font-normal text-xs">
-              ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
-            </span>
-          </td>
-          <td class="p-0">
-            <div>
-              ${captionText !== null ? `<p>${captionText}</p>` : ""}
-              <img
-                class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}"
-                src="${img.src}"
-                alt="${range.rangeName}"
-              >
-            </div>
-          </td>
-        </tr>`;
+    <tr>
+      <td class="w-10 text-center font-bold">
+        ${toPersianDigits(qNum)}
+        <span class="font-normal text-xs">
+          ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
+        </span>
+      </td>
+      <td class="p-0">
+        <div>
+          ${captionText !== null ? `<p>${captionText}</p>` : ""}
+          <img
+            class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}"
+            src="${img.src}"
+            alt="${range.rangeName}"
+          >
+        </div>
+      </td>
+    </tr>`;
 }
 
 function createStudentTableHtml(studentQuiz, name) {
@@ -531,13 +546,13 @@ function createStudentTableHtml(studentQuiz, name) {
     )
     .join("");
   return `
-        <table class="w-full border-collapse">
-          <tr class="bg-gray-200">
-            <td class="w-10"></td>
-            <td class="p-1">نام و نام خانوادگی: ${name} </td>
-          </tr>
-          ${rows}
-        </table>`;
+    <table class="w-full border-collapse">
+      <tr class="bg-gray-200">
+        <td class="w-10"></td>
+        <td class="p-1">نام و نام خانوادگی: ${name} </td>
+      </tr>
+      ${rows}
+    </table>`;
 }
 
 function generateAnonymousStudentNames(count) {
@@ -545,13 +560,11 @@ function generateAnonymousStudentNames(count) {
 }
 
 function getStudentNames() {
-  let namesArray = appState.names;
-  const namesCount = appState.namesCount;
   return {
-    names: namesArray.length
-      ? namesArray
-      : generateAnonymousStudentNames(namesCount),
-    showNames: namesArray.length ? true : false,
+    names: appState.names.length
+      ? appState.names
+      : generateAnonymousStudentNames(appState.namesCount),
+    showNames: appState.names.length > 0,
   };
 }
 
@@ -575,24 +588,23 @@ function generateQuizHtml() {
   const html = names
     .map(
       (student) => `
-            <tr>
-              <td class="questions">
-                ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
-              </td>
-            </tr>`,
+      <tr>
+        <td class="questions">
+          ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
+        </td>
+      </tr>
+    `,
     )
     .join("");
 
   document.getElementById("printable").innerHTML = `
-        <table class="w-full">
-          <tbody>
-            ${html}
-          </tbody>
-        </table>`;
+    <table class="w-full">
+      <tbody>${html}</tbody>
+    </table>`;
   return true;
 }
 
-// ---------- Modal Helpers ----------
+// ========== Modal Helpers ==========
 function applyModalImageStyle({ height, align }) {
   if (height) {
     modalImg.style.maxHeight = height + "px";
@@ -613,16 +625,14 @@ function updateModalDescriptionAndScore(rangeId) {
   if (showCaption) {
     finalText =
       customCaption && customCaption.trim() !== "" ? customCaption : range.desc;
-  } else {
-    finalText = "";
   }
   modalQdesc.innerText = finalText;
   document.getElementById("modal-Qscore").innerHTML = `
-        ${toPersianDigits(1)}
-        <span class="font-normal text-xs">
-          ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
-        </span>
-      `;
+    ${toPersianDigits(1)}
+    <span class="font-normal text-xs">
+      ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
+    </span>
+  `;
 }
 
 function onModalCaptionChange() {
@@ -640,15 +650,10 @@ function onModalCaptionChange() {
         appState.modal.customCaption.trim() !== ""
           ? appState.modal.customCaption
           : range.desc;
-    } else {
-      finalText = "";
     }
     modalQdesc.innerText = finalText;
   }
 }
-
-modalShowCaption.addEventListener("change", onModalCaptionChange);
-modalCustomCaption.addEventListener("input", onModalCaptionChange);
 
 function destroyCropper() {
   cropper?.destroy();
@@ -675,7 +680,103 @@ function updateModalImageAlign(align) {
   applyModalImageStyle({ align: alignStyles[align] });
 }
 
-// ---------- Event Listeners ----------
+// ========== Drag & Drop Helpers ==========
+function handleDragStart(e) {
+  if (!e.target.classList.contains("range-item")) return;
+  draggedElement = e.target;
+  draggedElement.classList.add("opacity-50");
+  setTimeout(() => draggedElement.classList.add("hidden"), 0);
+}
+
+function handleDragOver(e) {
+  if (isTouchDevice || !draggedElement) return;
+  e.preventDefault();
+  handleDragMove(e.clientY);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  if (dragPlaceholder.parentNode) {
+    rangesContainer.insertBefore(draggedElement, dragPlaceholder);
+    const newOrder = [...rangesContainer.querySelectorAll(".range-item")].map(
+      (el) => el.id,
+    );
+    reorderRangesInState(newOrder);
+  }
+}
+
+function handleTouchStart(e) {
+  const target = e.target.closest(".range-item");
+  if (!target) return;
+  isTouchDevice = true;
+  draggedElement = target;
+  draggedElement.classList.add("opacity-50");
+}
+
+function handleTouchMove(e) {
+  if (!draggedElement) return;
+  handleDragMove(e.touches[0].clientY);
+}
+
+function handleTouchEnd() {
+  if (dragPlaceholder.parentNode) {
+    rangesContainer.insertBefore(draggedElement, dragPlaceholder);
+    const newOrder = [...rangesContainer.querySelectorAll(".range-item")].map(
+      (el) => el.id,
+    );
+    reorderRangesInState(newOrder);
+  }
+  dragCleanup();
+}
+
+function handleDragMove(pointerY) {
+  animateReordering();
+  const items = [
+    ...rangesContainer.querySelectorAll(".range-item:not(.opacity-50)"),
+  ];
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    if (pointerY < rect.top + rect.height / 2) {
+      item.before(dragPlaceholder);
+      return;
+    }
+  }
+  rangesContainer.appendChild(dragPlaceholder);
+}
+
+function animateReordering() {
+  const items = [...rangesContainer.querySelectorAll(".range-item")];
+  const first = new Map();
+  items.forEach((el) => {
+    first.set(el, el.getBoundingClientRect());
+  });
+  requestAnimationFrame(() => {
+    items.forEach((el) => {
+      const last = el.getBoundingClientRect();
+      const prev = first.get(el);
+      const dx = prev.left - last.left;
+      const dy = prev.top - last.top;
+      if (dx || dy) {
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        el.style.transition = "none";
+        requestAnimationFrame(() => {
+          el.style.transform = "";
+          el.style.transition = "";
+        });
+      }
+    });
+  });
+}
+
+function dragCleanup() {
+  if (!draggedElement) return;
+  draggedElement.classList.remove("opacity-50", "hidden");
+  dragPlaceholder.remove();
+  draggedElement = null;
+  isTouchDevice = false;
+}
+
+// ========== Event Listeners ==========
 document.getElementById("addRange").onclick = () => {
   const newRangeDiv = createRangeElement();
   rangesContainer.appendChild(newRangeDiv);
@@ -777,110 +878,17 @@ alignButtons.forEach((btn) => {
 });
 
 // Drag & Drop
-rangesContainer.addEventListener("dragstart", (e) => {
-  if (!e.target.classList.contains("range-item")) return;
-  draggedElement = e.target;
-  draggedElement.classList.add("opacity-50");
-  setTimeout(() => draggedElement.classList.add("hidden"), 0);
-});
-
+rangesContainer.addEventListener("dragstart", handleDragStart);
 rangesContainer.addEventListener("dragend", dragCleanup);
-
-rangesContainer.addEventListener("dragover", (e) => {
-  if (isTouchDevice || !draggedElement) return;
-  e.preventDefault();
-  handleDragMove(e.clientY);
+rangesContainer.addEventListener("dragover", handleDragOver);
+rangesContainer.addEventListener("drop", handleDrop);
+rangesContainer.addEventListener("touchstart", handleTouchStart, {
+  passive: true,
 });
-
-rangesContainer.addEventListener("drop", (e) => {
-  e.preventDefault();
-  if (dragPlaceholder.parentNode) {
-    rangesContainer.insertBefore(draggedElement, dragPlaceholder);
-    const newOrder = [...rangesContainer.querySelectorAll(".range-item")].map(
-      (el) => el.id,
-    );
-    reorderRangesInState(newOrder);
-  }
+rangesContainer.addEventListener("touchmove", handleTouchMove, {
+  passive: true,
 });
-
-rangesContainer.addEventListener(
-  "touchstart",
-  (e) => {
-    const target = e.target.closest(".range-item");
-    if (!target) return;
-    isTouchDevice = true;
-    draggedElement = target;
-    draggedElement.classList.add("opacity-50");
-  },
-  { passive: true },
-);
-
-rangesContainer.addEventListener(
-  "touchmove",
-  (e) => {
-    if (!draggedElement) return;
-    handleDragMove(e.touches[0].clientY);
-  },
-  { passive: true },
-);
-
-rangesContainer.addEventListener("touchend", () => {
-  if (dragPlaceholder.parentNode) {
-    rangesContainer.insertBefore(draggedElement, dragPlaceholder);
-    const newOrder = [...rangesContainer.querySelectorAll(".range-item")].map(
-      (el) => el.id,
-    );
-    reorderRangesInState(newOrder);
-  }
-  dragCleanup();
-});
-
-function handleDragMove(pointerY) {
-  animateReordering();
-  const items = [
-    ...rangesContainer.querySelectorAll(".range-item:not(.opacity-50)"),
-  ];
-  for (const item of items) {
-    const rect = item.getBoundingClientRect();
-    if (pointerY < rect.top + rect.height / 2) {
-      item.before(dragPlaceholder);
-      return;
-    }
-  }
-  rangesContainer.appendChild(dragPlaceholder);
-}
-
-function animateReordering() {
-  const items = [...rangesContainer.querySelectorAll(".range-item")];
-  const first = new Map();
-  items.forEach((el) => {
-    first.set(el, el.getBoundingClientRect());
-  });
-  requestAnimationFrame(() => {
-    items.forEach((el) => {
-      const last = el.getBoundingClientRect();
-      const prev = first.get(el);
-      const dx = prev.left - last.left;
-      const dy = prev.top - last.top;
-      if (dx || dy) {
-        el.style.transform = `translate(${dx}px, ${dy}px)`;
-        el.style.transition = "none";
-        requestAnimationFrame(() => {
-          el.style.transform = "";
-          el.style.transition = "";
-        });
-      }
-    });
-  });
-}
-
-function dragCleanup() {
-  if (!draggedElement) return;
-  draggedElement.classList.remove("opacity-50", "hidden");
-  dragPlaceholder.remove();
-  draggedElement = null;
-  isTouchDevice = false;
-}
+rangesContainer.addEventListener("touchend", handleTouchEnd);
 
 // Modal events
 modalOverlay.addEventListener("click", () => {
@@ -928,7 +936,6 @@ heightInput.addEventListener("input", (e) => {
   });
 });
 
-// اصلاح saveModalSettingsBtn برای جستجو با imageId
 saveModalSettingsBtn.addEventListener("click", () => {
   showConfirm({
     msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
@@ -958,15 +965,10 @@ saveModalSettingsBtn.addEventListener("click", () => {
         customCaption,
       });
 
-      // به‌روزرسانی تامبنیل با imageId
       const thumbnailImg = document.querySelector(
         `img[data-image-id="${imageId}"]`,
       );
-      if (thumbnailImg) {
-        thumbnailImg.src = newSrc;
-        thumbnailImg.dataset.maxheight = height;
-        thumbnailImg.dataset.align = align;
-      }
+      if (thumbnailImg) thumbnailImg.src = newSrc;
 
       if (activeImageSrc === imgObj.src) activeImageSrc = newSrc;
       appState.modal.selectedImageSrc = newSrc;
@@ -975,6 +977,9 @@ saveModalSettingsBtn.addEventListener("click", () => {
     },
   });
 });
+
+modalShowCaption.addEventListener("change", onModalCaptionChange);
+modalCustomCaption.addEventListener("input", onModalCaptionChange);
 
 // Font selector
 fontSelector.addEventListener("change", function (e) {
