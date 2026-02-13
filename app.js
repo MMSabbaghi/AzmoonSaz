@@ -3,7 +3,6 @@ const appState = {
   ranges: [], // { id, rangeName, count, score, desc, showDesc, images: [{ src, height, align }] }
   names: [], // array of student names from textarea
   namesCount: 1,
-  showNames: false,
   font: "'Vazirmatn', sans-serif",
   modal: {
     selectedRangeId: null,
@@ -394,13 +393,7 @@ handleSwitchElement({
       },
       isActive,
     });
-    appState.showNames = isActive;
-    if (!isActive) {
-      appState.names = [];
-      namesCountEl.disabled = false;
-    } else {
-      updateNamesFromTextarea();
-    }
+    updateNamesFromTextarea();
   },
 });
 
@@ -420,9 +413,7 @@ namesTextarea.addEventListener("input", () => {
 });
 
 namesCountEl.addEventListener("input", (e) => {
-  if (!appState.showNames) {
-    appState.namesCount = parseInt(e.target.value) || 1;
-  }
+  appState.namesCount = parseInt(e.target.value) || 1;
 });
 
 // ---------- Paste Image (state update) ----------
@@ -645,7 +636,6 @@ handleFileUpload({
     appState.ranges = [];
     appState.names = data.names || [];
     appState.namesCount = data.namesCount || 1;
-    appState.showNames = appState.names.length > 0;
 
     // Recreate ranges from imported data
     data.ranges.forEach((r) => {
@@ -667,22 +657,6 @@ handleFileUpload({
     namesTextarea.value = appState.names.join("\n");
     namesCountEl.value = appState.namesCount;
     namesCountEl.disabled = appState.names.length > 0;
-
-    // Set names switch state
-    if (appState.showNames) {
-      const sw = document.querySelector("#names-switch #switch");
-      const knob = document.querySelector("#names-switch #knob");
-      sw.classList.add("bg-[#333]");
-      knob.classList.add("translate-x-4", "scale-105");
-      setElementState({
-        target: namesTextareaContainer,
-        stateClasses: {
-          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-        },
-        isActive: true,
-      });
-    }
   },
   readAs: "Text",
 });
