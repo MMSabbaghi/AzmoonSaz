@@ -87,10 +87,6 @@ async function copyToClipboard(textToCopy) {
   }
 }
 
-function shuffleArray(array) {
-  return [...array].sort(() => Math.random() - 0.5);
-}
-
 function createRandomId(prefix) {
   return prefix + "-" + crypto.randomUUID();
 }
