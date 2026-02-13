@@ -292,14 +292,8 @@ function attachRangeEvents(rangeElement, rangeId) {
         height: IMAGE_DEFAULTS.height,
         align: IMAGE_DEFAULTS.align,
       };
-      addImageToState(rangeId, imageData);
-      const imgContainer = createImageThumbnailElement(
-        imageData,
-        rangeElement,
-        rangeId,
-      );
-      rangeElement.querySelector(".preview").appendChild(imgContainer);
-      updateRangeImageCountBadge(rangeElement);
+      // استفاده از تابع واحد اضافه‌کردن تصاویر به جای کد تکراری
+      addImagesToRange(rangeId, [imageData]);
     },
     readAs: "DataURL",
   });
@@ -385,7 +379,7 @@ function syncNamesFromTextarea() {
   renderNamesSection();
 }
 
-// ---------- Unified Paste Handler ----------
+// ---------- Unified function to add images to a range ----------
 function addImagesToRange(rangeId, imagesArray) {
   const rangeDiv = document.getElementById(rangeId);
   if (!rangeDiv) return;
@@ -402,6 +396,7 @@ function addImagesToRange(rangeId, imagesArray) {
   updateRangeImageCountBadge(rangeDiv);
 }
 
+// ---------- Unified Paste Handler ----------
 document.addEventListener("paste", async (e) => {
   if (!activeRangeId) return;
 
@@ -438,7 +433,8 @@ document.addEventListener("paste", async (e) => {
       addImagesToRange(activeRangeId, imagesData);
     }
   } catch (err) {
-    // Ignore non-JSON paste
+    // مدیریت خطا: حداقل در کنسول ثبت شود (بدون تغییر در تجربه کاربری)
+    console.error("خطا در پردازش چسباندن (JSON نامعتبر):", err);
   }
 });
 
@@ -676,27 +672,32 @@ document.getElementById("exportJson").onclick = () => {
 handleFileUpload({
   target: document.getElementById("importJson"),
   onChange: (file) => {
-    const data = JSON.parse(file);
-    appState.ranges = [];
-    appState.names = data.names || [];
-    appState.namesCount = data.namesCount || 1;
+    try {
+      const data = JSON.parse(file);
+      appState.ranges = [];
+      appState.names = data.names || [];
+      appState.namesCount = data.namesCount || 1;
 
-    data.ranges.forEach((r) => {
-      const rangeWithId = {
-        ...r,
-        id: createRandomId("range-item"),
-        showDesc: false,
-        images: r.images || [],
-      };
-      appState.ranges.push(rangeWithId);
-    });
+      data.ranges.forEach((r) => {
+        const rangeWithId = {
+          ...r,
+          id: createRandomId("range-item"),
+          showDesc: false,
+          images: r.images || [],
+        };
+        appState.ranges.push(rangeWithId);
+      });
 
-    rangesContainer.innerHTML = "";
-    appState.ranges.forEach((r) => {
-      rangesContainer.appendChild(createRangeElement(r));
-    });
+      rangesContainer.innerHTML = "";
+      appState.ranges.forEach((r) => {
+        rangesContainer.appendChild(createRangeElement(r));
+      });
 
-    renderNamesSection();
+      renderNamesSection();
+    } catch (err) {
+      console.error("خطا در پردازش فایل JSON:", err);
+      showToast("فایل JSON نامعتبر است!", "error");
+    }
   },
   readAs: "Text",
 });
