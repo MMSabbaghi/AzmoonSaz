@@ -22,7 +22,7 @@ const IMAGE_DEFAULTS = {
   customCaption: "",
 };
 
-// ---------- State update helpers (بدون تغییر) ----------
+// ---------- State update helpers ----------
 function updateRangeInState(rangeId, updates) {
   const index = appState.ranges.findIndex((r) => r.id === rangeId);
   if (index !== -1) {
@@ -30,22 +30,15 @@ function updateRangeInState(rangeId, updates) {
   }
 }
 
-function addImageToState(rangeId, imageData) {
+function removeImageFromState(rangeId, imageSrc, imageId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (range) {
-    // اطمینان از وجود فیلدهای جدید
-    const fullImageData = {
-      ...IMAGE_DEFAULTS,
-      ...imageData,
-    };
-    range.images.push(fullImageData);
-  }
-}
-
-function removeImageFromState(rangeId, imageSrc) {
-  const range = appState.ranges.find((r) => r.id === rangeId);
-  if (range) {
-    range.images = range.images.filter((img) => img.src !== imageSrc);
+    if (imageId) {
+      range.images = range.images.filter((img) => img.imageId !== imageId);
+    } else {
+      // برای سازگاری با داده‌های قدیمی (بدون imageId)
+      range.images = range.images.filter((img) => img.src !== imageSrc);
+    }
   }
 }
 
@@ -55,7 +48,7 @@ function reorderRangesInState(newOrderIds) {
     .filter(Boolean);
 }
 
-// ---------- Utility Functions (کاملاً حفظ شده) ----------
+// ---------- Utility Functions ----------
 function toPersianDigits(str) {
   return (str + "").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 }
@@ -142,19 +135,20 @@ let isTouchDevice = false;
 const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
-// ---------- Image Thumbnail Creation (به‌روز شده برای فیلدهای جدید) ----------
+// ---------- Image Thumbnail Creation ----------
 function createImageThumbnailElement(img, targetDiv, rangeId) {
   const { imageId } = img; // فقط id را نگه می‌داریم، بقیه را در لحظه کلیک از state می‌خوانیم
   const imgContainer = document.createElement("div");
   imgContainer.innerHTML = `<img data-image-id="${imageId}" src="${img.src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
 
-  // Remove image
+  // Remove image (با ارسال imageId)
   imgContainer.querySelector("button").onclick = () => {
-    removeImageFromState(rangeId, img.src);
+    removeImageFromState(rangeId, img.src, imageId);
     imgContainer.remove();
     updateRangeImageCountBadge(targetDiv);
   };
 
+  // Open modal
   imgContainer.querySelector("img").onclick = (e) => {
     const range = appState.ranges.find((r) => r.id === rangeId);
     const currentImg = range?.images.find((img) => img.imageId === imageId);
@@ -206,7 +200,7 @@ function updateRangeImageCountBadge(target) {
     `${toPersianDigits(imagesCount)}`;
 }
 
-// ---------- Range DOM Building (بدون تغییر، فقط دقت شود که تصاویر با فیلدهای جدید ساخته شوند) ----------
+// ---------- Range DOM Building ----------
 function buildRangeDOM(rangeData) {
   const div = document.createElement("div");
   div.id = rangeData.id;
@@ -306,7 +300,7 @@ function attachRangeEvents(rangeElement, rangeId) {
         showCaption: IMAGE_DEFAULTS.showCaption,
         customCaption: IMAGE_DEFAULTS.customCaption,
       };
-      addImagesToRange(rangeId, [imageData]);
+      addImagesToRange(rangeId, [imageData]); // اینجا از addImagesToRange استفاده شده
     },
     readAs: "DataURL",
   });
@@ -372,7 +366,7 @@ function createRangeElement(rangeData = null) {
   return el;
 }
 
-// ---------- Names Section Rendering (بدون تغییر) ----------
+// ---------- Names Section Rendering ----------
 function renderNamesSection() {
   namesTextarea.value = appState.names.join("\n");
   namesCountEl.value = appState.namesCount;
@@ -398,10 +392,30 @@ function addImageToState(rangeId, imageData) {
       ...imageData,
     };
     range.images.push(fullImageData);
+    return fullImageData;
   }
+  return null;
 }
 
-// ---------- Unified Paste Handler (به‌روز شده برای فیلدهای جدید) ----------
+function addImagesToRange(rangeId, imagesArray) {
+  const rangeDiv = document.getElementById(rangeId);
+  if (!rangeDiv) return;
+
+  imagesArray.forEach((imageData) => {
+    const fullImageData = addImageToState(rangeId, imageData);
+    if (fullImageData) {
+      const imgContainer = createImageThumbnailElement(
+        fullImageData,
+        rangeDiv,
+        rangeId,
+      );
+      rangeDiv.querySelector(".preview").appendChild(imgContainer);
+    }
+  });
+  updateRangeImageCountBadge(rangeDiv);
+}
+
+// ---------- Unified Paste Handler ----------
 document.addEventListener("paste", async (e) => {
   if (!activeRangeId) return;
 
@@ -448,7 +462,7 @@ document.addEventListener("paste", async (e) => {
   }
 });
 
-// ---------- Generate Quiz (به‌روز شده برای متن اختصاصی) ----------
+// ---------- Generate Quiz ----------
 function fisherYatesShuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -485,12 +499,11 @@ function getAlignmentClass(align) {
   return classes[align];
 }
 
-// تابع کمکی برای تعیین متن نهایی سوال
 function getCaptionText(rangeDesc, img) {
-  if (img.showCaption === false) return null; // عدم نمایش متن
+  if (img.showCaption === false) return null;
   if (img.customCaption && img.customCaption.trim() !== "")
     return img.customCaption;
-  return rangeDesc; // اگر متن اختصاصی نباشد، از desc کلی استفاده کن (حتی اگر خالی باشد)
+  return rangeDesc;
 }
 
 function createQuestionRowHtml(qNum, img, range) {
@@ -585,7 +598,7 @@ function generateQuizHtml() {
   return true;
 }
 
-// ---------- Modal Helpers (به‌روز شده) ----------
+// ---------- Modal Helpers ----------
 function applyModalImageStyle({ height, align }) {
   if (height) {
     modalImg.style.maxHeight = height + "px";
@@ -600,7 +613,6 @@ function applyModalImageStyle({ height, align }) {
 function updateModalDescriptionAndScore(rangeId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (!range) return;
-  // نمایش متن بر اساس تنظیمات فعلی تصویر (که در appState.modal ذخیره شده)
   const showCaption = appState.modal.showCaption;
   const customCaption = appState.modal.customCaption;
   let finalText = "";
@@ -608,7 +620,7 @@ function updateModalDescriptionAndScore(rangeId) {
     finalText =
       customCaption && customCaption.trim() !== "" ? customCaption : range.desc;
   } else {
-    finalText = ""; // عدم نمایش متن
+    finalText = "";
   }
   modalQdesc.innerText = finalText;
   document.getElementById("modal-Qscore").innerHTML = `
@@ -619,12 +631,10 @@ function updateModalDescriptionAndScore(rangeId) {
       `;
 }
 
-// پیش‌نمایش زنده هنگام تغییر چک‌باکس یا متن
 function onModalCaptionChange() {
   appState.modal.showCaption = modalShowCaption.checked;
   appState.modal.customCaption = modalCustomCaption.value;
   modalCustomCaption.disabled = !appState.modal.showCaption;
-  // به‌روزرسانی نمایش متن در مدال
   const range = appState.ranges.find(
     (r) => r.id === appState.modal.selectedRangeId,
   );
@@ -766,7 +776,7 @@ handleFileUpload({
   readAs: "Text",
 });
 
-// Drag & Drop (بدون تغییر)
+// Drag & Drop
 rangesContainer.addEventListener("dragstart", (e) => {
   if (!e.target.classList.contains("range-item")) return;
   draggedElement = e.target;
@@ -880,7 +890,7 @@ modalOverlay.addEventListener("click", () => {
   setTimeout(() => {
     modal.style.display = "none";
     modalImg.src = "";
-  }, 300); // هماهنگ با transition
+  }, 300);
 });
 
 editCropBtn.addEventListener("click", () => {
@@ -918,13 +928,13 @@ heightInput.addEventListener("input", (e) => {
   });
 });
 
+// اصلاح saveModalSettingsBtn برای جستجو با imageId
 saveModalSettingsBtn.addEventListener("click", () => {
   showConfirm({
     msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
     on_confirm: () => {
       const {
         selectedRangeId,
-        selectedImageSrc,
         imageId,
         height,
         align,
@@ -933,7 +943,7 @@ saveModalSettingsBtn.addEventListener("click", () => {
       } = appState.modal;
 
       const range = appState.ranges.find((r) => r.id === selectedRangeId);
-      const imgObj = range?.images.find((img) => img.src === selectedImageSrc);
+      const imgObj = range?.images.find((img) => img.imageId === imageId);
       if (!imgObj) {
         showToast("خطا: تصویر مورد نظر یافت نشد!", "error");
         return;
@@ -948,14 +958,17 @@ saveModalSettingsBtn.addEventListener("click", () => {
         customCaption,
       });
 
-      // به‌روزرسانی تامبنیل با استفاده از imageId
+      // به‌روزرسانی تامبنیل با imageId
       const thumbnailImg = document.querySelector(
         `img[data-image-id="${imageId}"]`,
       );
-      if (thumbnailImg) thumbnailImg.src = newSrc;
+      if (thumbnailImg) {
+        thumbnailImg.src = newSrc;
+        thumbnailImg.dataset.maxheight = height;
+        thumbnailImg.dataset.align = align;
+      }
 
-      // هماهنگ‌سازی متغیرهای اشاره‌گر
-      if (activeImageSrc === selectedImageSrc) activeImageSrc = newSrc;
+      if (activeImageSrc === imgObj.src) activeImageSrc = newSrc;
       appState.modal.selectedImageSrc = newSrc;
 
       showToast("با موفقیت ذخیره شد.");
