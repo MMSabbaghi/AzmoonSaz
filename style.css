@@ -355,3 +355,53 @@ input:focus + label {
 .image-settings.hidden {
   display: none;
 }
+
+/* انیمیشن ورود برای رنج‌ها */
+.range-item-enter {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+/* انیمیشن ورود برای آیتم‌های داخل رنج */
+.item-thumbnail-enter {
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* استایل placeholder برای ویرایشگر متن (اختیاری) */
+.text-editor-content[placeholder]:empty:before {
+  content: attr(placeholder);
+  color: #aaa;
+}
+.text-editor-content[placeholder]:empty:focus:before {
+  content: "";
+}
+
+/* استایل برای المان‌های تعاملی غیرفعال */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none; /* کلیک روی المان کار نمی‌کند */
+}
+
+/* استایل برای ویرایشگر متن در حالت غیرفعال (contentEditable=false) */
+.text-editor--disabled {
+  opacity: 0.6;
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  border-color: #ccc;
+}
+
+/* تنظیم placeholder در حالت غیرفعال (اختیاری) */
+.text-editor--disabled[placeholder]:empty:before {
+  color: #999;
+}

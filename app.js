@@ -539,17 +539,17 @@ async function handlePasteInModal(items) {
     let text = null;
     for (let i = 0; i < items.length; i++) {
       if (items[i].type === "text/html") {
-        html = await new Promise(resolve => items[i].getAsString(resolve));
+        html = await new Promise((resolve) => items[i].getAsString(resolve));
         break;
       } else if (items[i].type === "text/plain") {
-        text = await new Promise(resolve => items[i].getAsString(resolve));
+        text = await new Promise((resolve) => items[i].getAsString(resolve));
       }
     }
     modalTextEditor.focus();
     if (html) {
-      document.execCommand('insertHTML', false, html);
+      document.execCommand("insertHTML", false, html);
     } else if (text) {
-      document.execCommand('insertText', false, text);
+      document.execCommand("insertText", false, text);
     }
     updateTempItemFromEditor();
   }
@@ -661,7 +661,7 @@ function renderItemForQuiz(item, rangeDesc) {
   if (item.image && item.image.showText) {
     const text = item.text ? item.text.html : rangeDesc || "";
     if (text) {
-      html += `<div style="text-align: ${item.text ? item.text.align.toLowerCase() : 'right'};">${text}</div>`;
+      html += `<div style="text-align: ${item.text ? item.text.align.toLowerCase() : "right"};">${text}</div>`;
     }
   }
   // اگر تصویر ندارد ولی متن دارد، متن را اضافه کن
@@ -803,17 +803,24 @@ function openModalWithTempItem() {
   if (temp.image) {
     imageSettingsDiv.classList.remove("hidden");
     modalImgHeight.value = temp.image.height;
-    // غیرفعال کردن ویرایشگر اگر showText=false باشد
-    modalTextEditor.disabled = !temp.image.showText;
+
+    // کنترل ویرایشپذیری و کلاس غیرفعال
+    modalTextEditor.contentEditable = temp.image.showText ? "true" : "false";
     if (!temp.image.showText) {
-      modalTextEditor.placeholder = "متن ذخیره شده است اما در پیش‌نمایش نمایش داده نمی‌شود.";
+      modalTextEditor.classList.add("text-editor--disabled");
+      modalTextEditor.setAttribute(
+        "placeholder",
+        "متن ذخیره شده است اما در پیش‌نمایش نمایش داده نمی‌شود.",
+      );
     } else {
-      modalTextEditor.placeholder = "";
+      modalTextEditor.classList.remove("text-editor--disabled");
+      modalTextEditor.removeAttribute("placeholder");
     }
   } else {
     imageSettingsDiv.classList.add("hidden");
-    modalTextEditor.disabled = false;
-    modalTextEditor.placeholder = "";
+    modalTextEditor.contentEditable = "true";
+    modalTextEditor.classList.remove("text-editor--disabled");
+    modalTextEditor.removeAttribute("placeholder");
   }
 
   updateModalPreviewFromTemp();
@@ -852,6 +859,14 @@ function updateModalPreviewFromTemp() {
     )}" src="${img.src}" alt="">`;
   }
   modalPreviewCell.innerHTML = content;
+
+  if (appState.modal.tempItem?.image) {
+    modalTextEditor.contentEditable = appState.modal.tempItem.image.showText
+      ? "true"
+      : "false";
+  } else {
+    modalTextEditor.contentEditable = "true";
+  }
 }
 
 function saveModalChanges() {
@@ -920,13 +935,19 @@ modalImgHeight.addEventListener("input", (e) => {
 modalShowText.addEventListener("change", (e) => {
   if (appState.modal.tempItem?.image) {
     appState.modal.tempItem.image.showText = e.target.checked;
-    // غیرفعال کردن ویرایشگر متن
-    modalTextEditor.disabled = !e.target.checked;
+    modalTextEditor.contentEditable = e.target.checked ? "true" : "false";
+
     if (!e.target.checked) {
-      modalTextEditor.placeholder = "متن ذخیره شده است اما در پیش‌نمایش نمایش داده نمی‌شود.";
+      modalTextEditor.classList.add("text-editor--disabled");
+      modalTextEditor.setAttribute(
+        "placeholder",
+        "متن ذخیره شده است اما در پیش‌نمایش نمایش داده نمی‌شود.",
+      );
     } else {
-      modalTextEditor.placeholder = "";
+      modalTextEditor.classList.remove("text-editor--disabled");
+      modalTextEditor.removeAttribute("placeholder");
     }
+
     updateModalPreviewFromTemp();
   }
 });
@@ -984,22 +1005,43 @@ function toggleCropButtons(isActive) {
   const func = isActive ? "remove" : "add";
   saveCroppedImageBtn.classList[func]("hidden");
   cancelCropBtn.classList[func]("hidden");
-  
-  // همه عناصر تعاملی داخل مدال را غیرفعال/فعال کن
+
+  // همه عناصر تعاملی (غیر از ویرایشگر متن) را غیرفعال/فعال کن
   const interactiveElements = [
-    modalTextEditor,
     ...alignButtons,
     modalImgHeight,
     modalShowText,
     addImageInModalBtn,
     saveModalBtn,
-    ...document.querySelectorAll("[data-command]") // دکمه‌های نوار ابزار
+    ...document.querySelectorAll("[data-command]"),
   ];
-  interactiveElements.forEach((el) => el && (el.disabled = isActive));
 
-  // اگر برش غیرفعال شد، وضعیت showText را دوباره اعمال کن
-  if (!isActive && appState.modal.tempItem?.image) {
-    modalTextEditor.disabled = !appState.modal.tempItem.image.showText;
+  if (isActive) {
+    // غیرفعال‌سازی همه المان‌ها
+    interactiveElements.forEach((el) => el && (el.disabled = true));
+
+    // غیرفعال‌سازی ویرایشگر متن (با contentEditable و کلاس)
+    modalTextEditor.contentEditable = "false";
+    modalTextEditor.classList.add("text-editor--disabled");
+    // (اختیاری) می‌توان placeholder را حفظ کرد یا حذف نمود
+  } else {
+    // فعال‌سازی مجدد المان‌ها
+    interactiveElements.forEach((el) => el && (el.disabled = false));
+
+    // بازیابی وضعیت ویرایشگر بر اساس showText
+    const showText = appState.modal.tempItem?.image?.showText ?? true;
+    modalTextEditor.contentEditable = showText ? "true" : "false";
+
+    if (showText) {
+      modalTextEditor.classList.remove("text-editor--disabled");
+      modalTextEditor.removeAttribute("placeholder");
+    } else {
+      modalTextEditor.classList.add("text-editor--disabled");
+      modalTextEditor.setAttribute(
+        "placeholder",
+        "متن ذخیره شده است اما در پیش‌نمایش نمایش داده نمی‌شود.",
+      );
+    }
   }
 }
 
