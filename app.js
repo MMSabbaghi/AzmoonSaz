@@ -165,7 +165,7 @@ const addImageInModalBtn = document.getElementById("add-image-in-modal");
 const modalImageUpload = document.getElementById("modal-image-upload");
 
 // ---------- State-bound UI Variables ----------
-let activeRangeId = null; // range ای که آخرین بار کلیک شده (برای چسباندن)
+let activeRangeId = null; // last clicked range (for paste)
 let cropper = null;
 let isTouchDevice = false;
 let draggedElement = null;
@@ -247,11 +247,7 @@ function renderRangeItems(rangeElement, rangeId) {
   });
 }
 
-function createItemThumbnailElement(item, rangeDiv, rangeId) {
-  const container = document.createElement("div");
-  container.className = "item-thumbnail";
-  container.dataset.itemId = item.id;
-
+function buildItemThumbnailContent(item) {
   let contentHtml = "";
   if (item.text) {
     contentHtml += `<div class="text-preview" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
@@ -266,9 +262,16 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
           : "mx-auto";
     contentHtml += `<img src="${item.image.src}" style="max-height: ${item.image.height}px; display: block;" class="${marginClass}">`;
   }
+  return contentHtml;
+}
 
+function createItemThumbnailElement(item, rangeDiv, rangeId) {
+  const container = document.createElement("div");
+  container.className = "item-thumbnail";
+  container.dataset.itemId = item.id;
   container.innerHTML =
-    contentHtml + `<button class="remove-item">&times;</button>`;
+    buildItemThumbnailContent(item) +
+    `<button class="remove-item">&times;</button>`;
 
   const removeBtn = container.querySelector(".remove-item");
   removeBtn.onclick = (e) => {
@@ -319,10 +322,10 @@ function getRangeHTML(rangeData) {
           <div class="file-input">
             <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
             <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
-            <span class="range-total absolute top-0 left-0 -mt-2 -ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              ${toPersianDigits(rangeData.items.length)}
-            </span>
           </div>
+          <span class="range-total absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+            ${toPersianDigits(rangeData.items.length)}
+          </span>
         </div>
         <button class="add-text-item btn px-3 py-2 rounded"><i class="bi bi-type"></i></button>
         <label class="font-normal text-[#777]" > متن سوال: </label>
@@ -484,67 +487,52 @@ function syncNamesFromTextarea() {
   renderNamesSection();
 }
 
-// ========== Paste Handler (اصلاح شده برای پشتیبانی از مودال) ==========
-document.addEventListener("paste", async (e) => {
-  // اگر مودال باز است، تصویر را به آیتم موقت اضافه کن
-  if (appState.modal.tempItem) {
-    const items = e.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image") !== -1) {
-          e.preventDefault();
-          const blob = items[i].getAsFile();
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const src = ev.target.result;
-            const temp = appState.modal.tempItem;
-            if (!temp.image) {
-              // اضافه کردن تصویر جدید
-              temp.image = {
-                src,
-                height: IMAGE_DEFAULTS.height,
-                align: IMAGE_DEFAULTS.align,
-                showText: modalShowText.checked,
-                imageId: createRandomId("img"),
-              };
-              imageSettingsDiv.classList.remove("hidden");
-            } else {
-              // جایگزینی تصویر
-              showConfirm({
-                msg: "آیا تصویر فعلی جایگزین شود؟",
-                on_confirm: () => {
-                  temp.image.src = src;
-                  temp.image.imageId = createRandomId("img");
-                },
-              });
-            }
-            updateModalPreviewFromTemp();
+// ========== Paste Handler ==========
+async function handlePasteInModal(items) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf("image") !== -1) {
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const src = ev.target.result;
+        const temp = appState.modal.tempItem;
+        if (!temp.image) {
+          temp.image = {
+            src,
+            height: IMAGE_DEFAULTS.height,
+            align: IMAGE_DEFAULTS.align,
+            showText: modalShowText.checked,
+            imageId: createRandomId("img"),
           };
-          reader.readAsDataURL(blob);
-          return;
+          imageSettingsDiv.classList.remove("hidden");
+        } else {
+          showConfirm({
+            msg: "آیا تصویر فعلی جایگزین شود؟",
+            on_confirm: () => {
+              temp.image.src = src;
+              temp.image.imageId = createRandomId("img");
+            },
+          });
         }
-      }
+        updateModalPreviewFromTemp();
+      };
+      reader.readAsDataURL(blob);
+      return;
     }
-    // اگر JSON نیست، فقط تصویر پشتیبانی می‌شود
-    return;
   }
+}
 
-  // اگر مودال باز نیست، مثل قبل عمل کن
-  if (!activeRangeId) return;
-
-  const items = e.clipboardData?.items;
-  if (items) {
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image") !== -1) {
-        const blob = items[i].getAsFile();
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const newItem = createImageItem(ev.target.result);
-          openModalForNewItem(activeRangeId, newItem);
-        };
-        reader.readAsDataURL(blob);
-        return;
-      }
+async function handlePasteOutsideModal(items) {
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf("image") !== -1) {
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const newItem = createImageItem(ev.target.result);
+        openModalForNewItem(activeRangeId, newItem);
+      };
+      reader.readAsDataURL(blob);
+      return;
     }
   }
 
@@ -577,7 +565,22 @@ document.addEventListener("paste", async (e) => {
       itemsToAdd.forEach((item) => addItemToRange(activeRangeId, item));
     }
   } catch (err) {
-    console.error("خطا در پردازش چسباندن (JSON نامعتبر):", err);
+    console.error("Invalid JSON:", err);
+  }
+}
+
+document.addEventListener("paste", async (e) => {
+  if (!activeRangeId && !appState.modal.tempItem) return;
+
+  const items = e.clipboardData?.items;
+  if (!items) return;
+
+  e.preventDefault();
+
+  if (appState.modal.tempItem) {
+    await handlePasteInModal(items);
+  } else {
+    await handlePasteOutsideModal(items);
   }
 });
 
@@ -631,7 +634,9 @@ function renderItemForQuiz(item, rangeDesc) {
         html += `<div>${text}</div>`;
       }
     }
-    html += `<img class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}" src="${img.src}" alt="">`;
+    html += `<img class="max-h-[${img.height}px] ${getAlignmentClass(
+      img.align,
+    )}" src="${img.src}" alt="">`;
   }
   return html;
 }
@@ -681,12 +686,11 @@ function getStudentNames() {
   };
 }
 
-function generateQuizHtml() {
+function validateQuizInputs() {
   if (!appState.namesCount && !appState.names.length) {
     showToast("لطفا تعداد را وارد کنید", "error");
     return false;
   }
-
   const validRanges = appState.ranges.filter(
     (r) => r.items.length && r.count > 0,
   );
@@ -694,11 +698,14 @@ function generateQuizHtml() {
     showToast("حداقل یک مبحث معتبر تعریف کنید.", "error");
     return false;
   }
+  return validRanges;
+}
 
+function buildQuizHtml(validRanges) {
   const { names, showNames } = getStudentNames();
   const quizData = buildQuizData(names, validRanges);
 
-  const html = names
+  return names
     .map(
       (student) => `
       <tr>
@@ -709,7 +716,13 @@ function generateQuizHtml() {
     `,
     )
     .join("");
+}
 
+function generateQuizHtml() {
+  const validRanges = validateQuizInputs();
+  if (!validRanges) return false;
+
+  const html = buildQuizHtml(validRanges);
   document.getElementById("printable").innerHTML = `
     <table class="w-full">
       <tbody>${html}</tbody>
@@ -788,7 +801,9 @@ function updateModalPreviewFromTemp() {
   }
   if (temp.image) {
     const img = temp.image;
-    content += `<img class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}" src="${img.src}" alt="">`;
+    content += `<img class="max-h-[${img.height}px] ${getAlignmentClass(
+      img.align,
+    )}" src="${img.src}" alt="">`;
   }
   modalPreviewCell.innerHTML = content;
 }
@@ -822,27 +837,7 @@ function closeModal() {
   }, 300);
 }
 
-// ابزارک ویرایشگر متن
-document.querySelectorAll("[data-command]").forEach((btn) => {
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    const command = btn.dataset.command;
-    document.execCommand(command, false, null);
-    if (appState.modal.tempItem) {
-      const html = modalTextEditor.innerHTML;
-      const align = modalTextEditor.style.textAlign || "right";
-      if (!appState.modal.tempItem.text) {
-        appState.modal.tempItem.text = { html, align: align.toUpperCase() };
-      } else {
-        appState.modal.tempItem.text.html = html;
-        appState.modal.tempItem.text.align = align.toUpperCase();
-      }
-      updateModalPreviewFromTemp();
-    }
-  });
-});
-
-modalTextEditor.addEventListener("input", () => {
+function updateTempItemFromEditor() {
   if (appState.modal.tempItem) {
     const html = modalTextEditor.innerHTML;
     const align = modalTextEditor.style.textAlign || "right";
@@ -854,7 +849,19 @@ modalTextEditor.addEventListener("input", () => {
     }
     updateModalPreviewFromTemp();
   }
+}
+
+// Modal editor buttons
+document.querySelectorAll("[data-command]").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    const command = btn.dataset.command;
+    document.execCommand(command, false, null);
+    updateTempItemFromEditor();
+  });
 });
+
+modalTextEditor.addEventListener("input", updateTempItemFromEditor);
 
 modalImgHeight.addEventListener("input", (e) => {
   if (appState.modal.tempItem?.image) {
@@ -884,7 +891,6 @@ alignButtons.forEach((btn) => {
   });
 });
 
-// دکمه تصویر در مودال
 addImageInModalBtn.addEventListener("click", () => {
   modalImageUpload.click();
 });
@@ -918,7 +924,28 @@ handleFileUpload({
   readAs: "DataURL",
 });
 
-// برش تصویر
+// Crop functionality
+function toggleCropButtons(isActive) {
+  editCropBtn.classList[isActive ? "add" : "remove"]("hidden");
+  const func = isActive ? "remove" : "add";
+  saveCroppedImageBtn.classList[func]("hidden");
+  cancelCropBtn.classList[func]("hidden");
+  [
+    modalTextEditor,
+    ...alignButtons,
+    modalImgHeight,
+    modalShowText,
+    addImageInModalBtn,
+    saveModalBtn,
+  ].forEach((el) => el && (el.disabled = isActive));
+}
+
+function destroyCropper() {
+  cropper?.destroy();
+  cropper = null;
+  toggleCropButtons(false);
+}
+
 editCropBtn.addEventListener("click", () => {
   const imgElement = modalPreviewCell.querySelector("img");
   if (!imgElement) return;
@@ -952,28 +979,6 @@ saveCroppedImageBtn.addEventListener("click", () => {
 
 cancelCropBtn.addEventListener("click", destroyCropper);
 
-function destroyCropper() {
-  cropper?.destroy();
-  cropper = null;
-  toggleCropButtons(false);
-}
-
-function toggleCropButtons(isActive) {
-  editCropBtn.classList[isActive ? "add" : "remove"]("hidden");
-  const func = isActive ? "remove" : "add";
-  saveCroppedImageBtn.classList[func]("hidden");
-  cancelCropBtn.classList[func]("hidden");
-  [
-    modalTextEditor,
-    ...alignButtons,
-    modalImgHeight,
-    modalShowText,
-    addImageInModalBtn,
-    saveModalBtn,
-  ].forEach((el) => el && (el.disabled = isActive));
-}
-
-// دکمه ذخیره با تأیید
 saveModalBtn.addEventListener("click", () => {
   showConfirm({
     msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
@@ -981,7 +986,6 @@ saveModalBtn.addEventListener("click", () => {
   });
 });
 
-// بستن مودال با کلیک روی overlay (بدون ذخیره)
 modalOverlay.addEventListener("click", closeModal);
 
 // ========== Drag & Drop Helpers ==========
@@ -1109,8 +1113,99 @@ function dragCleanup() {
   });
 }
 
+// ========== Import/Export Helpers ==========
+function buildItemsFromRangeData(rangeData) {
+  if (rangeData.items) {
+    return rangeData.items.map((it) => ({
+      id: it.id || createRandomId("item"),
+      text: it.text ? { ...it.text } : null,
+      image: it.image
+        ? {
+            ...it.image,
+            imageId: it.image.imageId || createRandomId("img"),
+          }
+        : null,
+    }));
+  } else if (rangeData.images) {
+    return rangeData.images.map((img) => ({
+      id: createRandomId("item"),
+      text: null,
+      image: {
+        src: img.src,
+        height: img.height || IMAGE_DEFAULTS.height,
+        align: img.align || IMAGE_DEFAULTS.align,
+        showText: img.showCaption !== false,
+        imageId: img.imageId || createRandomId("img"),
+      },
+    }));
+  }
+  return [];
+}
+
+function importRangesFromData(data) {
+  appState.ranges = [];
+  appState.names = data.names || [];
+  appState.namesCount = data.namesCount || 1;
+
+  (data.ranges || []).forEach((r) => {
+    const items = buildItemsFromRangeData(r);
+    const rangeWithId = {
+      id: createRandomId("range-item"),
+      rangeName: r.rangeName || "",
+      count: r.count || 1,
+      score: r.score || 1,
+      desc: r.desc || "",
+      items,
+    };
+    appState.ranges.push(rangeWithId);
+  });
+}
+
+function processImportedFile(fileContent) {
+  try {
+    const data = JSON.parse(fileContent);
+    importRangesFromData(data);
+
+    rangesContainer.innerHTML = "";
+    appState.ranges.forEach((r, index) => {
+      const el = createRangeElement(r);
+      rangesContainer.appendChild(el);
+      el.classList.add("range-item-enter");
+      setTimeout(() => {
+        el.classList.remove("range-item-enter");
+      }, index * 100);
+    });
+
+    renderNamesSection();
+  } catch (err) {
+    console.error("Invalid JSON file:", err);
+    showToast("فایل JSON نامعتبر است!", "error");
+  }
+}
+
+function handleExportJson() {
+  const exportData = {
+    names: appState.names,
+    namesCount: appState.namesCount,
+    ranges: appState.ranges.map((r) => ({
+      rangeName: r.rangeName,
+      count: r.count,
+      score: r.score,
+      desc: r.desc,
+      items: r.items,
+    })),
+  };
+  const blob = new Blob([JSON.stringify(exportData)], {
+    type: "application/json",
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "data.json";
+  a.click();
+}
+
 // ========== Event Listeners ==========
-document.getElementById("addRange").onclick = () => {
+function handleAddRange() {
   const newRangeDiv = createRangeElement();
   newRangeDiv.classList.add("range-item-enter");
   rangesContainer.appendChild(newRangeDiv);
@@ -1119,7 +1214,14 @@ document.getElementById("addRange").onclick = () => {
       newRangeDiv.classList.remove("range-item-enter");
     });
   });
-};
+}
+
+function handleGenerateClick(e) {
+  const isGenerated = generateQuizHtml();
+  if (isGenerated) e.target.scrollIntoView({ behavior: "smooth" });
+}
+
+document.getElementById("addRange").onclick = handleAddRange;
 
 handleSwitchElement({
   container: document.getElementById("names-switch"),
@@ -1145,95 +1247,12 @@ namesCountEl.addEventListener("input", (e) => {
   appState.namesCount = parseInt(e.target.value) || 1;
 });
 
-document.getElementById("generate").onclick = (e) => {
-  const isGenerated = generateQuizHtml();
-  if (isGenerated) e.target.scrollIntoView({ behavior: "smooth" });
-};
-
-// Import / Export
-document.getElementById("exportJson").onclick = () => {
-  const exportData = {
-    names: appState.names,
-    namesCount: appState.namesCount,
-    ranges: appState.ranges.map((r) => ({
-      rangeName: r.rangeName,
-      count: r.count,
-      score: r.score,
-      desc: r.desc,
-      items: r.items,
-    })),
-  };
-  const blob = new Blob([JSON.stringify(exportData)], {
-    type: "application/json",
-  });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "data.json";
-  a.click();
-};
+document.getElementById("generate").onclick = handleGenerateClick;
+document.getElementById("exportJson").onclick = handleExportJson;
 
 handleFileUpload({
   target: document.getElementById("importJson"),
-  onChange: (file) => {
-    try {
-      const data = JSON.parse(file);
-      appState.ranges = [];
-      appState.names = data.names || [];
-      appState.namesCount = data.namesCount || 1;
-
-      (data.ranges || []).forEach((r) => {
-        let items = [];
-        if (r.items) {
-          items = r.items.map((it) => ({
-            id: it.id || createRandomId("item"),
-            text: it.text ? { ...it.text } : null,
-            image: it.image
-              ? {
-                  ...it.image,
-                  imageId: it.image.imageId || createRandomId("img"),
-                }
-              : null,
-          }));
-        } else if (r.images) {
-          items = r.images.map((img) => ({
-            id: createRandomId("item"),
-            text: null,
-            image: {
-              src: img.src,
-              height: img.height || IMAGE_DEFAULTS.height,
-              align: img.align || IMAGE_DEFAULTS.align,
-              showText: img.showCaption !== false,
-              imageId: img.imageId || createRandomId("img"),
-            },
-          }));
-        }
-        const rangeWithId = {
-          id: createRandomId("range-item"),
-          rangeName: r.rangeName || "",
-          count: r.count || 1,
-          score: r.score || 1,
-          desc: r.desc || "",
-          items,
-        };
-        appState.ranges.push(rangeWithId);
-      });
-
-      rangesContainer.innerHTML = "";
-      appState.ranges.forEach((r, index) => {
-        const el = createRangeElement(r);
-        rangesContainer.appendChild(el);
-        el.classList.add("range-item-enter");
-        setTimeout(() => {
-          el.classList.remove("range-item-enter");
-        }, index * 100);
-      });
-
-      renderNamesSection();
-    } catch (err) {
-      console.error("خطا در پردازش فایل JSON:", err);
-      showToast("فایل JSON نامعتبر است!", "error");
-    }
-  },
+  onChange: processImportedFile,
   readAs: "Text",
 });
 
