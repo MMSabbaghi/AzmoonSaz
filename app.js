@@ -249,9 +249,15 @@ function renderRangeItems(rangeElement, rangeId) {
 
 function buildItemThumbnailContent(item) {
   let contentHtml = "";
-  if (item.text) {
+  // اگر تصویر دارد و showText=true است، متن را اضافه کن (اگر متن وجود داشته باشد)
+  if (item.image && item.image.showText && item.text) {
     contentHtml += `<div class="text-preview" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
   }
+  // اگر تصویر ندارد ولی متن دارد، متن را اضافه کن
+  else if (item.text && !item.image) {
+    contentHtml += `<div class="text-preview" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
+  }
+  // تصویر را همیشه اضافه کن (اگر وجود داشته باشد)
   if (item.image) {
     const imgAlign = item.image.align.toLowerCase();
     const marginClass =
@@ -489,6 +495,10 @@ function syncNamesFromTextarea() {
 
 // ========== Paste Handler ==========
 async function handlePasteInModal(items) {
+  // اگر cropper فعال است، آن را نابود کن
+  if (cropper) destroyCropper();
+
+  let imageProcessed = false;
   for (let i = 0; i < items.length; i++) {
     if (items[i].type.indexOf("image") !== -1) {
       const blob = items[i].getAsFile();
@@ -509,6 +519,7 @@ async function handlePasteInModal(items) {
           showConfirm({
             msg: "آیا تصویر فعلی جایگزین شود؟",
             on_confirm: () => {
+              if (cropper) destroyCropper();
               temp.image.src = src;
               temp.image.imageId = createRandomId("img");
             },
@@ -517,8 +528,30 @@ async function handlePasteInModal(items) {
         updateModalPreviewFromTemp();
       };
       reader.readAsDataURL(blob);
-      return;
+      imageProcessed = true;
+      break;
     }
+  }
+
+  if (!imageProcessed) {
+    // پردازش متن
+    let html = null;
+    let text = null;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type === "text/html") {
+        html = await new Promise(resolve => items[i].getAsString(resolve));
+        break;
+      } else if (items[i].type === "text/plain") {
+        text = await new Promise(resolve => items[i].getAsString(resolve));
+      }
+    }
+    modalTextEditor.focus();
+    if (html) {
+      document.execCommand('insertHTML', false, html);
+    } else if (text) {
+      document.execCommand('insertText', false, text);
+    }
+    updateTempItemFromEditor();
   }
 }
 
@@ -566,6 +599,7 @@ async function handlePasteOutsideModal(items) {
     }
   } catch (err) {
     console.error("Invalid JSON:", err);
+    showToast("محتوا معتبر نیست و نمی‌تواند به عنوان آیتم اضافه شود.", "error");
   }
 }
 
@@ -623,17 +657,20 @@ function getAlignmentClass(align) {
 
 function renderItemForQuiz(item, rangeDesc) {
   let html = "";
-  if (item.text) {
+  // اگر تصویر دارد و showText=true است، متن را اضافه کن (از item.text یا rangeDesc)
+  if (item.image && item.image.showText) {
+    const text = item.text ? item.text.html : rangeDesc || "";
+    if (text) {
+      html += `<div style="text-align: ${item.text ? item.text.align.toLowerCase() : 'right'};">${text}</div>`;
+    }
+  }
+  // اگر تصویر ندارد ولی متن دارد، متن را اضافه کن
+  else if (item.text && !item.image) {
     html += `<div style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
   }
+  // تصویر را همیشه اضافه کن (اگر وجود داشته باشد)
   if (item.image) {
     const img = item.image;
-    if (img.showText) {
-      const text = item.text ? item.text.html : rangeDesc || "";
-      if (text) {
-        html += `<div>${text}</div>`;
-      }
-    }
     html += `<img class="max-h-[${img.height}px] ${getAlignmentClass(
       img.align,
     )}" src="${img.src}" alt="">`;
@@ -766,8 +803,17 @@ function openModalWithTempItem() {
   if (temp.image) {
     imageSettingsDiv.classList.remove("hidden");
     modalImgHeight.value = temp.image.height;
+    // غیرفعال کردن ویرایشگر اگر showText=false باشد
+    modalTextEditor.disabled = !temp.image.showText;
+    if (!temp.image.showText) {
+      modalTextEditor.placeholder = "متن ذخیره شده است اما در پیش‌نمایش نمایش داده نمی‌شود.";
+    } else {
+      modalTextEditor.placeholder = "";
+    }
   } else {
     imageSettingsDiv.classList.add("hidden");
+    modalTextEditor.disabled = false;
+    modalTextEditor.placeholder = "";
   }
 
   updateModalPreviewFromTemp();
@@ -851,9 +897,9 @@ function updateTempItemFromEditor() {
   }
 }
 
-// Modal editor buttons
+// Modal editor buttons (با mousedown به جای click برای حفظ focus)
 document.querySelectorAll("[data-command]").forEach((btn) => {
-  btn.addEventListener("click", (e) => {
+  btn.addEventListener("mousedown", (e) => {
     e.preventDefault();
     const command = btn.dataset.command;
     document.execCommand(command, false, null);
@@ -874,6 +920,13 @@ modalImgHeight.addEventListener("input", (e) => {
 modalShowText.addEventListener("change", (e) => {
   if (appState.modal.tempItem?.image) {
     appState.modal.tempItem.image.showText = e.target.checked;
+    // غیرفعال کردن ویرایشگر متن
+    modalTextEditor.disabled = !e.target.checked;
+    if (!e.target.checked) {
+      modalTextEditor.placeholder = "متن ذخیره شده است اما در پیش‌نمایش نمایش داده نمی‌شود.";
+    } else {
+      modalTextEditor.placeholder = "";
+    }
     updateModalPreviewFromTemp();
   }
 });
@@ -914,6 +967,7 @@ handleFileUpload({
       showConfirm({
         msg: "آیا تصویر فعلی جایگزین شود؟",
         on_confirm: () => {
+          if (cropper) destroyCropper();
           temp.image.src = src;
           temp.image.imageId = createRandomId("img");
         },
@@ -930,14 +984,23 @@ function toggleCropButtons(isActive) {
   const func = isActive ? "remove" : "add";
   saveCroppedImageBtn.classList[func]("hidden");
   cancelCropBtn.classList[func]("hidden");
-  [
+  
+  // همه عناصر تعاملی داخل مدال را غیرفعال/فعال کن
+  const interactiveElements = [
     modalTextEditor,
     ...alignButtons,
     modalImgHeight,
     modalShowText,
     addImageInModalBtn,
     saveModalBtn,
-  ].forEach((el) => el && (el.disabled = isActive));
+    ...document.querySelectorAll("[data-command]") // دکمه‌های نوار ابزار
+  ];
+  interactiveElements.forEach((el) => el && (el.disabled = isActive));
+
+  // اگر برش غیرفعال شد، وضعیت showText را دوباره اعمال کن
+  if (!isActive && appState.modal.tempItem?.image) {
+    modalTextEditor.disabled = !appState.modal.tempItem.image.showText;
+  }
 }
 
 function destroyCropper() {
@@ -1168,12 +1231,16 @@ function processImportedFile(fileContent) {
 
     rangesContainer.innerHTML = "";
     appState.ranges.forEach((r, index) => {
-      const el = createRangeElement(r);
-      rangesContainer.appendChild(el);
-      el.classList.add("range-item-enter");
       setTimeout(() => {
-        el.classList.remove("range-item-enter");
-      }, index * 100);
+        const el = createRangeElement(r);
+        el.classList.add("range-item-enter");
+        rangesContainer.appendChild(el);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            el.classList.remove("range-item-enter");
+          });
+        });
+      }, index * 100); // تأخیر پشت سر هم برای انیمیشن تدریجی
     });
 
     renderNamesSection();
