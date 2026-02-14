@@ -199,6 +199,26 @@ function animateRemoveImage(element, callback) {
   }, 300);
 }
 
+// ========== Image Rendering with Animation ==========
+function renderRangeImages(rangeElement, rangeId) {
+  const range = appState.ranges.find((r) => r.id === rangeId);
+  if (!range) return;
+  const preview = rangeElement.querySelector(".preview");
+  preview.innerHTML = ""; // پاک کردن محتوای قبلی (در صورت نیاز)
+  range.images.forEach((img, index) => {
+    const imgContainer = createImageThumbnailElement(
+      img,
+      rangeElement,
+      rangeId,
+    );
+    imgContainer.classList.add("image-thumbnail-enter");
+    preview.appendChild(imgContainer);
+    setTimeout(() => {
+      imgContainer.classList.remove("image-thumbnail-enter");
+    }, index * 50); // استگر بین تصاویر
+  });
+}
+
 // ========== Image Thumbnail Helpers ==========
 function openImageModal(rangeId, imageId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
@@ -387,18 +407,7 @@ function attachRangeEvents(rangeElement, rangeId) {
   setupFileUploadOnRange(rangeElement, rangeId);
   setupRangeButtons(rangeElement, rangeId);
   setupRangeInputs(rangeElement, rangeId);
-
-  const rangeData = appState.ranges.find((r) => r.id === rangeId);
-  if (rangeData) {
-    rangeData.images.forEach((img) => {
-      const imgContainer = createImageThumbnailElement(
-        img,
-        rangeElement,
-        rangeId,
-      );
-      rangeElement.querySelector(".preview").appendChild(imgContainer);
-    });
-  }
+  renderRangeImages(rangeElement, rangeId);
 }
 
 function buildRangeDOM(rangeData) {
@@ -949,8 +958,14 @@ handleFileUpload({
       });
 
       rangesContainer.innerHTML = "";
-      appState.ranges.forEach((r) => {
-        rangesContainer.appendChild(createRangeElement(r));
+      appState.ranges.forEach((r, index) => {
+        const el = createRangeElement(r);
+        rangesContainer.appendChild(el);
+        // انیمیشن ورود با استگر بین رنج‌ها
+        el.classList.add("range-item-enter");
+        setTimeout(() => {
+          el.classList.remove("range-item-enter");
+        }, index * 100); // ۱۰۰ میلی‌ثانیه فاصله بین هر رنج
       });
 
       renderNamesSection();
