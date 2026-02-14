@@ -440,8 +440,13 @@ function createRangeElement(rangeData = null) {
 // ========== Names Section ==========
 function renderNamesSection() {
   namesTextarea.value = appState.names.join("\n");
-  namesCountEl.value = appState.namesCount;
-  namesCountEl.disabled = appState.names.length > 0;
+  if (appState.names.length > 0) {
+    namesCountEl.value = appState.names.length;
+    namesCountEl.disabled = true;
+  } else {
+    namesCountEl.value = appState.namesCount;
+    namesCountEl.disabled = false;
+  }
 }
 
 function syncNamesFromTextarea() {
