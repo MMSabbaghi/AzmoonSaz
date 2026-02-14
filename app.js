@@ -143,6 +143,62 @@ let draggedElement = null;
 const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
+// ========== Animation Helpers ==========
+function animateAddElement(element, enterClass) {
+  element.classList.add(enterClass);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      element.classList.remove(enterClass);
+    });
+  });
+}
+
+function animateRemoveRange(element, callback) {
+  const height = element.offsetHeight;
+  element.style.transition =
+    "opacity 0.3s ease, transform 0.3s ease, height 0.3s ease, margin 0.3s ease, padding 0.3s ease";
+  element.style.overflow = "hidden";
+  element.style.height = height + "px";
+  // Force reflow
+  element.offsetHeight;
+  element.style.opacity = "0";
+  element.style.transform = "scale(0.8)";
+  element.style.height = "0";
+  element.style.margin = "0";
+  element.style.padding = "0";
+
+  const onTransitionEnd = (e) => {
+    if (e.target === element && e.propertyName === "height") {
+      element.removeEventListener("transitionend", onTransitionEnd);
+      element.remove();
+      if (callback) callback();
+    }
+  };
+  element.addEventListener("transitionend", onTransitionEnd);
+  setTimeout(() => {
+    element.removeEventListener("transitionend", onTransitionEnd);
+    element.remove();
+    if (callback) callback();
+  }, 400);
+}
+
+function animateRemoveImage(element, callback) {
+  element.classList.add("image-thumbnail-exit");
+  const onTransitionEnd = (e) => {
+    if (e.target === element && e.propertyName === "opacity") {
+      element.removeEventListener("transitionend", onTransitionEnd);
+      element.remove();
+      if (callback) callback();
+    }
+  };
+  element.addEventListener("transitionend", onTransitionEnd);
+  setTimeout(() => {
+    element.removeEventListener("transitionend", onTransitionEnd);
+    element.remove();
+    if (callback) callback();
+  }, 300);
+}
+
 // ========== Image Thumbnail Helpers ==========
 function openImageModal(rangeId, imageId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
@@ -182,28 +238,21 @@ function openImageModal(rangeId, imageId) {
   setTimeout(() => modal.classList.add("modal--visible"), 10);
 }
 
-function handleRemoveImageClick(
-  rangeId,
-  imageSrc,
-  imageId,
-  imgContainer,
-  targetDiv,
-) {
-  removeImageFromState(rangeId, imageSrc, imageId);
-  imgContainer.remove();
-  updateRangeImageCountBadge(targetDiv);
-}
-
 function createImageThumbnailElement(img, targetDiv, rangeId) {
   const { imageId, src } = img;
   const imgContainer = document.createElement("div");
+  imgContainer.className = "image-thumbnail";
   imgContainer.innerHTML = `<img data-image-id="${imageId}" src="${src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
 
   const removeBtn = imgContainer.querySelector("button");
   const imgElement = imgContainer.querySelector("img");
 
-  removeBtn.onclick = () =>
-    handleRemoveImageClick(rangeId, src, imageId, imgContainer, targetDiv);
+  removeBtn.onclick = () => {
+    animateRemoveImage(imgContainer, () => {
+      removeImageFromState(rangeId, src, imageId);
+      updateRangeImageCountBadge(targetDiv);
+    });
+  };
   imgElement.onclick = () => openImageModal(rangeId, imageId);
 
   return imgContainer;
@@ -279,8 +328,9 @@ function setupRangeButtons(rangeElement, rangeId) {
     showConfirm({
       msg: "آیا از حذف این مبحث اطمینان دارید؟",
       on_confirm: () => {
-        appState.ranges = appState.ranges.filter((r) => r.id !== rangeId);
-        rangeElement.remove();
+        animateRemoveRange(rangeElement, () => {
+          appState.ranges = appState.ranges.filter((r) => r.id !== rangeId);
+        });
       },
     });
   };
@@ -413,7 +463,7 @@ function addImagesToRange(rangeId, imagesArray) {
   const rangeDiv = document.getElementById(rangeId);
   if (!rangeDiv) return;
 
-  imagesArray.forEach((imageData) => {
+  imagesArray.forEach((imageData, index) => {
     const fullImageData = addImageToState(rangeId, imageData);
     if (fullImageData) {
       const imgContainer = createImageThumbnailElement(
@@ -421,7 +471,11 @@ function addImagesToRange(rangeId, imagesArray) {
         rangeDiv,
         rangeId,
       );
+      imgContainer.classList.add("image-thumbnail-enter");
       rangeDiv.querySelector(".preview").appendChild(imgContainer);
+      setTimeout(() => {
+        imgContainer.classList.remove("image-thumbnail-enter");
+      }, index * 50); // Stagger effect
     }
   });
   updateRangeImageCountBadge(rangeDiv);
@@ -696,13 +750,40 @@ function handleDragOver(e) {
 
 function handleDrop(e) {
   e.preventDefault();
+
+  // Capture old positions for FLIP
+  const items = [...rangesContainer.querySelectorAll(".range-item")];
+  const oldRects = items.map((el) => ({
+    el,
+    rect: el.getBoundingClientRect(),
+  }));
+
   if (dragPlaceholder.parentNode) {
     rangesContainer.insertBefore(draggedElement, dragPlaceholder);
-    const newOrder = [...rangesContainer.querySelectorAll(".range-item")].map(
-      (el) => el.id,
-    );
+    dragPlaceholder.remove();
+
+    const newItems = [...rangesContainer.querySelectorAll(".range-item")];
+    newItems.forEach((el) => {
+      const old = oldRects.find((item) => item.el === el);
+      if (old) {
+        const newRect = el.getBoundingClientRect();
+        const dx = old.rect.left - newRect.left;
+        const dy = old.rect.top - newRect.top;
+        if (dx || dy) {
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+          el.style.transition = "none";
+          requestAnimationFrame(() => {
+            el.style.transform = "";
+            el.style.transition = "transform 0.3s ease";
+          });
+        }
+      }
+    });
+
+    const newOrder = newItems.map((el) => el.id);
     reorderRangesInState(newOrder);
   }
+  dragCleanup();
 }
 
 function handleTouchStart(e) {
@@ -719,18 +800,42 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd() {
+  // Capture old positions for FLIP
+  const items = [...rangesContainer.querySelectorAll(".range-item")];
+  const oldRects = items.map((el) => ({
+    el,
+    rect: el.getBoundingClientRect(),
+  }));
+
   if (dragPlaceholder.parentNode) {
     rangesContainer.insertBefore(draggedElement, dragPlaceholder);
-    const newOrder = [...rangesContainer.querySelectorAll(".range-item")].map(
-      (el) => el.id,
-    );
+    dragPlaceholder.remove();
+
+    const newItems = [...rangesContainer.querySelectorAll(".range-item")];
+    newItems.forEach((el) => {
+      const old = oldRects.find((item) => item.el === el);
+      if (old) {
+        const newRect = el.getBoundingClientRect();
+        const dx = old.rect.left - newRect.left;
+        const dy = old.rect.top - newRect.top;
+        if (dx || dy) {
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+          el.style.transition = "none";
+          requestAnimationFrame(() => {
+            el.style.transform = "";
+            el.style.transition = "transform 0.3s ease";
+          });
+        }
+      }
+    });
+
+    const newOrder = newItems.map((el) => el.id);
     reorderRangesInState(newOrder);
   }
   dragCleanup();
 }
 
 function handleDragMove(pointerY) {
-  animateReordering();
   const items = [
     ...rangesContainer.querySelectorAll(".range-item:not(.opacity-50)"),
   ];
@@ -744,42 +849,29 @@ function handleDragMove(pointerY) {
   rangesContainer.appendChild(dragPlaceholder);
 }
 
-function animateReordering() {
-  const items = [...rangesContainer.querySelectorAll(".range-item")];
-  const first = new Map();
-  items.forEach((el) => {
-    first.set(el, el.getBoundingClientRect());
-  });
-  requestAnimationFrame(() => {
-    items.forEach((el) => {
-      const last = el.getBoundingClientRect();
-      const prev = first.get(el);
-      const dx = prev.left - last.left;
-      const dy = prev.top - last.top;
-      if (dx || dy) {
-        el.style.transform = `translate(${dx}px, ${dy}px)`;
-        el.style.transition = "none";
-        requestAnimationFrame(() => {
-          el.style.transform = "";
-          el.style.transition = "";
-        });
-      }
-    });
-  });
-}
-
 function dragCleanup() {
   if (!draggedElement) return;
   draggedElement.classList.remove("opacity-50", "hidden");
   dragPlaceholder.remove();
   draggedElement = null;
   isTouchDevice = false;
+  // Reset any transforms from FLIP
+  document.querySelectorAll(".range-item").forEach((el) => {
+    el.style.transform = "";
+    el.style.transition = "";
+  });
 }
 
 // ========== Event Listeners ==========
 document.getElementById("addRange").onclick = () => {
   const newRangeDiv = createRangeElement();
+  newRangeDiv.classList.add("range-item-enter");
   rangesContainer.appendChild(newRangeDiv);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      newRangeDiv.classList.remove("range-item-enter");
+    });
+  });
 };
 
 handleSwitchElement({
