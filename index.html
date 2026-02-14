@@ -87,61 +87,73 @@
     </div>
   </div>
 
-  <!-- Modal برای نمایش بزرگ تصویر (به‌روزرسانی شده) -->
-  <div id="modal" class="modal" style="display: none;"> <!-- display:none برای جلوگیری از flicker اولیه -->
+  <!-- مودال ویرایش آیتم -->
+  <div id="modal" class="modal" style="display: none;">
     <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
     <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg"
       style="transition: transform 0.3s ease-out;">
+      <!-- نوار ابزار و تنظیمات -->
       <div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <div>
-            <label> ارتفاع تصویر : </label>
-            <input data-number-input="true" data-float="false" type="text" id="modal-imgHeight"
-              class="border rounded p-2 w-20 disabled:opacity-50" placeholder="اندازه ">
-          </div>
-          <div>
-            <label> تراز تصویر : </label>
-            <button class="align-btn btn px-4 py-2 disabled:opacity-50" data-align="RIGHT">
-              <i class="bi bi-align-start"></i>
-            </button>
-            <button class="align-btn btn px-4 py-2 disabled:opacity-50" data-align="CENTER">
-              <i class="bi bi-align-middle"></i>
-            </button>
-            <button class="align-btn btn px-4 py-2 disabled:opacity-50" data-align="LEFT">
-              <i class="bi bi-align-end"></i>
-            </button>
-          </div>
-          <!-- بخش جدید: نمایش متن اختصاصی -->
-          <div class="flex items-center gap-2">
-            <label for="modal-show-caption">نمایش متن:</label>
-            <input type="checkbox" id="modal-show-caption" class="w-5 h-5">
-          </div>
-          <div class="mr-auto flex gap-2">
-            <button id="editCropBtn" class="btn px-4 py-2"><i class="bi bi-crop"></i><span> برش</span></button>
-            <div class="flex items-center gap-2">
-              <button id="saveCroppedImageBtn" class="btn px-4 py-2 hidden"><i class="bi bi-check"></i><span> بریدن
-                </span></button>
-              <button id="cancelCropBtn" class="btn px-4 py-2 hidden"><i class="bi bi-x"></i><span> لغو </span></button>
+        <!-- ویرایشگر متن -->
+        <div class="mb-2">
+          <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <div class="text-editor-toolbar">
+              <button type="button" data-command="bold" title="پررنگ"><i class="bi bi-type-bold"></i></button>
+              <button type="button" data-command="italic" title="ایتالیک"><i class="bi bi-type-italic"></i></button>
+              <button type="button" data-command="underline" title="زیرخط"><i class="bi bi-type-underline"></i></button>
+              <button type="button" data-command="justifyleft" title="چینش راست"><i
+                  class="bi bi-align-start"></i></button>
+              <button type="button" data-command="justifycenter" title="چینش وسط"><i
+                  class="bi bi-align-middle"></i></button>
+              <button type="button" data-command="justifyright" title="چینش چپ"><i class="bi bi-align-end"></i></button>
             </div>
-            <button id="saveModalSettingsBtn" class="btn px-4 py-2 disabled:opacity-50"><i
-                class="bi bi-floppy"></i><span> ذخیره</span></button>
+            <div class="flex items-center gap-4">
+              <label class="flex items-center gap-1">
+                <input type="checkbox" id="modal-show-text" class="w-5 h-5">
+                <span>نمایش متن سوال</span>
+              </label>
+              <button id="add-image-in-modal" class="btn px-3 py-1" title="افزودن/تغییر تصویر">
+                <i class="bi bi-image"></i> تصویر
+              </button>
+              <div class="flex">
+                <button id="save-modal-btn" class="btn px-3 py-1">
+                  <i class="bi bi-floppy"></i>
+                  ذخیره
+                  تنظیمات</button>
+              </div>
+              <input type="file" id="modal-image-upload" accept="image/*" class="hidden">
+            </div>
           </div>
+          <div id="modal-text-editor" class="text-editor-content" contenteditable="true"></div>
         </div>
-        <!-- تکست‌اریای متن اختصاصی (در صورت فعال بودن چک‌باکس) -->
-        <div class="mt-2" id="modal-caption-container">
-          <textarea id="modal-custom-caption" rows="2" class="w-full border rounded p-2 text-sm"
-            placeholder="متن اختصاصی این سوال (در صورت خالی بودن از متن کلی مبحث استفاده می‌شود)"></textarea>
+
+        <!-- تنظیمات تصویر (فقط در صورت وجود تصویر نمایش داده می‌شود) -->
+        <div id="image-settings" class="image-settings hidden">
+          <div>
+            <label>ارتفاع تصویر:</label>
+            <input type="text" data-number-input="true" data-float="false" id="modal-imgHeight"
+              class="border rounded p-2 w-20" value="75" min="10" max="500">
+          </div>
+          <div>
+            <label>تراز تصویر:</label>
+            <button class="align-btn btn px-3 py-1" data-align="RIGHT"><i class="bi bi-align-start"></i></button>
+            <button class="align-btn btn px-3 py-1" data-align="CENTER"><i class="bi bi-align-middle"></i></button>
+            <button class="align-btn btn px-3 py-1" data-align="LEFT"><i class="bi bi-align-end"></i></button>
+          </div>
+          <div class="mr-auto">
+            <button id="editCropBtn" class="btn px-3 py-1"><i class="bi bi-crop"></i> برش</button>
+            <button id="saveCroppedImageBtn" class="btn px-3 py-1 hidden"><i class="bi bi-check"></i> اعمال</button>
+            <button id="cancelCropBtn" class="btn px-3 py-1 hidden"><i class="bi bi-x"></i> لغو</button>
+          </div>
         </div>
       </div>
 
-      <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
+      <!-- پیش‌نمایش جدول -->
+      <table class="w-full border-collapse bg-white mt-2" style="border: 1px solid #333;">
         <tr>
           <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold"></td>
-          <td class="p-0">
-            <div class="relative">
-              <p id="modal-Qdesc"></p>
-              <img id="modal-img" src="">
-            </div>
+          <td class="p-2" id="modal-preview-cell">
+            <!-- محتوای پیش‌نمایش به صورت داینامیک پر می‌شود -->
           </td>
         </tr>
       </table>

@@ -1,25 +1,26 @@
 // ---------- State Management ----------
 const appState = {
-  ranges: [], // { id, rangeName, count, score, desc, images: [{ src, height, align, showCaption, customCaption, imageId }] }
+  ranges: [], // { id, rangeName, count, score, desc, items: [] }
   names: [],
   namesCount: 1,
   font: "'Vazirmatn', sans-serif",
   modal: {
-    selectedRangeId: null,
-    selectedImageSrc: null,
-    imageId: null,
-    height: 75,
-    align: "RIGHT",
-    showCaption: true,
-    customCaption: "",
+    isOpen: false,
+    rangeId: null,
+    itemId: null,
+    tempItem: null,
   },
+};
+
+const TEXT_DEFAULTS = {
+  html: "<p>متن جدید</p>",
+  align: "RIGHT",
 };
 
 const IMAGE_DEFAULTS = {
   height: 75,
   align: "RIGHT",
-  showCaption: true,
-  customCaption: "",
+  showText: true,
 };
 
 // ---------- State update helpers ----------
@@ -30,12 +31,19 @@ function updateRangeInState(rangeId, updates) {
   }
 }
 
-function removeImageFromState(rangeId, imageSrc, imageId) {
+function updateItemInState(rangeId, itemId, updates) {
+  const range = appState.ranges.find((r) => r.id === rangeId);
+  if (!range) return;
+  const itemIndex = range.items.findIndex((it) => it.id === itemId);
+  if (itemIndex !== -1) {
+    range.items[itemIndex] = { ...range.items[itemIndex], ...updates };
+  }
+}
+
+function removeItemFromState(rangeId, itemId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (range) {
-    range.images = imageId
-      ? range.images.filter((img) => img.imageId !== imageId)
-      : range.images.filter((img) => img.src !== imageSrc);
+    range.items = range.items.filter((it) => it.id !== itemId);
   }
 }
 
@@ -105,38 +113,59 @@ function createRandomId(prefix) {
   }
 }
 
-// ---------- Image & Style Helpers ----------
-const alignStyles = {
-  RIGHT: { marginRight: 0, marginLeft: "auto" },
-  LEFT: { marginRight: "auto", marginLeft: 0 },
-  CENTER: { marginRight: "auto", marginLeft: "auto" },
-};
+// ---------- Item Creation ----------
+function createTextItem(
+  html = TEXT_DEFAULTS.html,
+  align = TEXT_DEFAULTS.align,
+) {
+  return {
+    id: createRandomId("item"),
+    text: { html, align },
+    image: null,
+  };
+}
+
+function createImageItem(
+  src,
+  imageId = createRandomId("img"),
+  height = IMAGE_DEFAULTS.height,
+  align = IMAGE_DEFAULTS.align,
+  showText = IMAGE_DEFAULTS.showText,
+) {
+  return {
+    id: createRandomId("item"),
+    text: null,
+    image: { src, height, align, showText, imageId },
+  };
+}
 
 // ---------- DOM Elements ----------
 const rangesContainer = document.getElementById("ranges");
 const modal = document.getElementById("modal");
-const modalImg = document.getElementById("modal-img");
 const modalOverlay = document.getElementById("modal-overlay");
+const modalTextEditor = document.getElementById("modal-text-editor");
+const imageSettingsDiv = document.getElementById("image-settings");
+const modalImgHeight = document.getElementById("modal-imgHeight");
+const modalShowText = document.getElementById("modal-show-text");
 const editCropBtn = document.getElementById("editCropBtn");
 const saveCroppedImageBtn = document.getElementById("saveCroppedImageBtn");
 const cancelCropBtn = document.getElementById("cancelCropBtn");
+const alignButtons = document.querySelectorAll(".align-btn");
 const moveToTopBtn = document.getElementById("toTop");
 const sticky = document.getElementById("sticky");
 const sentinel = document.getElementById("sentinel");
 const namesCountEl = document.getElementById("names-count");
 const namesTextareaContainer = document.getElementById("names-textarea");
 const namesTextarea = namesTextareaContainer.querySelector("textarea");
-const heightInput = document.querySelector("#modal-imgHeight");
-const saveModalSettingsBtn = document.querySelector("#saveModalSettingsBtn");
-const alignButtons = document.querySelectorAll(".align-btn");
 const fontSelector = document.getElementById("fontSelector");
-const modalShowCaption = document.getElementById("modal-show-caption");
-const modalCustomCaption = document.getElementById("modal-custom-caption");
-const modalQdesc = document.getElementById("modal-Qdesc");
+const modalQscore = document.getElementById("modal-Qscore");
+const modalPreviewCell = document.getElementById("modal-preview-cell");
+const saveModalBtn = document.getElementById("save-modal-btn");
+const addImageInModalBtn = document.getElementById("add-image-in-modal");
+const modalImageUpload = document.getElementById("modal-image-upload");
 
 // ---------- State-bound UI Variables ----------
-let activeRangeId = null;
-let activeImageSrc = null;
+let activeRangeId = null; // range ای که آخرین بار کلیک شده (برای چسباندن)
 let cropper = null;
 let isTouchDevice = false;
 let draggedElement = null;
@@ -159,7 +188,6 @@ function animateRemoveRange(element, callback) {
     "opacity 0.3s ease, transform 0.3s ease, height 0.3s ease, margin 0.3s ease, padding 0.3s ease";
   element.style.overflow = "hidden";
   element.style.height = height + "px";
-  // Force reflow
   element.offsetHeight;
   element.style.opacity = "0";
   element.style.transform = "scale(0.8)";
@@ -182,8 +210,8 @@ function animateRemoveRange(element, callback) {
   }, 400);
 }
 
-function animateRemoveImage(element, callback) {
-  element.classList.add("image-thumbnail-exit");
+function animateRemoveItem(element, callback) {
+  element.classList.add("item-thumbnail-exit");
   const onTransitionEnd = (e) => {
     if (e.target === element && e.propertyName === "opacity") {
       element.removeEventListener("transitionend", onTransitionEnd);
@@ -199,92 +227,77 @@ function animateRemoveImage(element, callback) {
   }, 300);
 }
 
-// ========== Image Rendering with Animation ==========
-function renderRangeImages(rangeElement, rangeId) {
+// ========== Item Rendering ==========
+function renderRangeItems(rangeElement, rangeId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   if (!range) return;
-  const preview = rangeElement.querySelector(".preview");
-  preview.innerHTML = ""; // پاک کردن محتوای قبلی (در صورت نیاز)
-  range.images.forEach((img, index) => {
-    const imgContainer = createImageThumbnailElement(
-      img,
+  const preview = rangeElement.querySelector(".items-preview");
+  preview.innerHTML = "";
+  range.items.forEach((item, index) => {
+    const itemContainer = createItemThumbnailElement(
+      item,
       rangeElement,
       rangeId,
     );
-    imgContainer.classList.add("image-thumbnail-enter");
-    preview.appendChild(imgContainer);
+    itemContainer.classList.add("item-thumbnail-enter");
+    preview.appendChild(itemContainer);
     setTimeout(() => {
-      imgContainer.classList.remove("image-thumbnail-enter");
-    }, index * 50); // استگر بین تصاویر
+      itemContainer.classList.remove("item-thumbnail-enter");
+    }, index * 50);
   });
 }
 
-// ========== Image Thumbnail Helpers ==========
-function openImageModal(rangeId, imageId) {
-  const range = appState.ranges.find((r) => r.id === rangeId);
-  const currentImg = range?.images.find((img) => img.imageId === imageId);
-  if (!currentImg) {
-    showToast("خطا: تصویر یافت نشد!", "error");
-    return;
+function createItemThumbnailElement(item, rangeDiv, rangeId) {
+  const container = document.createElement("div");
+  container.className = "item-thumbnail";
+  container.dataset.itemId = item.id;
+
+  let contentHtml = "";
+  if (item.text) {
+    contentHtml += `<div class="text-preview" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
+  }
+  if (item.image) {
+    const imgAlign = item.image.align.toLowerCase();
+    const marginClass =
+      imgAlign === "right"
+        ? "ml-auto"
+        : imgAlign === "left"
+          ? "mr-auto"
+          : "mx-auto";
+    contentHtml += `<img src="${item.image.src}" style="max-height: ${item.image.height}px; display: block;" class="${marginClass}">`;
   }
 
-  activeImageSrc = currentImg.src;
-  appState.modal.selectedRangeId = rangeId;
-  appState.modal.selectedImageSrc = currentImg.src;
-  appState.modal.imageId = imageId;
-  appState.modal.height = currentImg.height || IMAGE_DEFAULTS.height;
-  appState.modal.align = currentImg.align || IMAGE_DEFAULTS.align;
-  appState.modal.showCaption =
-    currentImg.showCaption !== undefined
-      ? currentImg.showCaption
-      : IMAGE_DEFAULTS.showCaption;
-  appState.modal.customCaption =
-    currentImg.customCaption !== undefined
-      ? currentImg.customCaption
-      : IMAGE_DEFAULTS.customCaption;
+  container.innerHTML =
+    contentHtml + `<button class="remove-item">&times;</button>`;
 
-  modalImg.src = currentImg.src;
-  applyModalImageStyle({
-    height: appState.modal.height,
-    align: alignStyles[appState.modal.align],
-  });
-  updateModalDescriptionAndScore(rangeId);
-
-  modalShowCaption.checked = appState.modal.showCaption;
-  modalCustomCaption.value = appState.modal.customCaption;
-  modalCustomCaption.disabled = !appState.modal.showCaption;
-
-  modal.style.display = "flex";
-  setTimeout(() => modal.classList.add("modal--visible"), 10);
-}
-
-function createImageThumbnailElement(img, targetDiv, rangeId) {
-  const { imageId, src } = img;
-  const imgContainer = document.createElement("div");
-  imgContainer.className = "image-thumbnail";
-  imgContainer.innerHTML = `<img data-image-id="${imageId}" src="${src}"><button class="text-white bg-red-500 opacity-50 hover:opacity-100 rounded remove-range transition-all duration-500 ease-out" >&times;</button>`;
-
-  const removeBtn = imgContainer.querySelector("button");
-  const imgElement = imgContainer.querySelector("img");
-
-  removeBtn.onclick = () => {
-    animateRemoveImage(imgContainer, () => {
-      removeImageFromState(rangeId, src, imageId);
-      updateRangeImageCountBadge(targetDiv);
+  const removeBtn = container.querySelector(".remove-item");
+  removeBtn.onclick = (e) => {
+    e.stopPropagation();
+    showConfirm({
+      msg: "آیتم حذف شود؟",
+      on_confirm: () => {
+        animateRemoveItem(container, () => {
+          removeItemFromState(rangeId, item.id);
+          updateRangeItemCountBadge(rangeDiv);
+        });
+      },
     });
   };
-  imgElement.onclick = () => openImageModal(rangeId, imageId);
 
-  return imgContainer;
+  container.addEventListener("click", () => {
+    openItemModal(rangeId, item.id);
+  });
+
+  return container;
 }
 
-function updateRangeImageCountBadge(target) {
-  const imagesCount = target.querySelector(".preview").children.length;
-  target.querySelector(".range-total").textContent =
-    `${toPersianDigits(imagesCount)}`;
+function updateRangeItemCountBadge(rangeDiv) {
+  const itemsCount = rangeDiv.querySelector(".items-preview").children.length;
+  rangeDiv.querySelector(".range-total").textContent =
+    toPersianDigits(itemsCount);
 }
 
-// ========== Range DOM Building Helpers ==========
+// ========== Range DOM Building ==========
 function getRangeHTML(rangeData) {
   const fileID = createRandomId("file");
   return `
@@ -307,10 +320,11 @@ function getRangeHTML(rangeData) {
             <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
             <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
             <span class="range-total absolute top-0 left-0 -mt-2 -ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              ${toPersianDigits(rangeData.images.length)}
+              ${toPersianDigits(rangeData.items.length)}
             </span>
           </div>
         </div>
+        <button class="add-text-item btn px-3 py-2 rounded"><i class="bi bi-type"></i></button>
         <label class="font-normal text-[#777]" > متن سوال: </label>
         <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
           <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
@@ -324,7 +338,7 @@ function getRangeHTML(rangeData) {
     <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
       <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
     </div>
-    <div class="preview"></div>
+    <div class="items-preview"></div>
   `;
 }
 
@@ -356,12 +370,17 @@ function setupRangeButtons(rangeElement, rangeId) {
   };
 
   rangeElement.querySelector(".copy-range").addEventListener("click", () => {
-    const images = appState.ranges.find((r) => r.id === rangeId)?.images || [];
-    if (images.length) {
-      copyToClipboard(JSON.stringify(images));
+    const items = appState.ranges.find((r) => r.id === rangeId)?.items || [];
+    if (items.length) {
+      copyToClipboard(JSON.stringify(items));
     } else {
-      showToast("تصویری برای کپی وجود ندارد.", "error");
+      showToast("آیتمی برای کپی وجود ندارد.", "error");
     }
+  });
+
+  rangeElement.querySelector(".add-text-item").addEventListener("click", () => {
+    const newItem = createTextItem();
+    openModalForNewItem(rangeId, newItem);
   });
 }
 
@@ -369,14 +388,8 @@ function setupFileUploadOnRange(rangeElement, rangeId) {
   handleFileUpload({
     target: rangeElement.querySelector(".range-images"),
     onChange: (src) => {
-      const imageData = {
-        src,
-        height: IMAGE_DEFAULTS.height,
-        align: IMAGE_DEFAULTS.align,
-        showCaption: IMAGE_DEFAULTS.showCaption,
-        customCaption: IMAGE_DEFAULTS.customCaption,
-      };
-      addImagesToRange(rangeId, [imageData]);
+      const newItem = createImageItem(src);
+      openModalForNewItem(rangeId, newItem);
     },
     readAs: "DataURL",
   });
@@ -399,15 +412,17 @@ function setupSwitchOnRange(rangeElement) {
 }
 
 function attachRangeEvents(rangeElement, rangeId) {
-  rangeElement.addEventListener("click", () => {
-    activeRangeId = rangeId;
+  rangeElement.addEventListener("click", (e) => {
+    if (!e.target.closest("button")) {
+      activeRangeId = rangeId;
+    }
   });
 
   setupSwitchOnRange(rangeElement);
   setupFileUploadOnRange(rangeElement, rangeId);
   setupRangeButtons(rangeElement, rangeId);
   setupRangeInputs(rangeElement, rangeId);
-  renderRangeImages(rangeElement, rangeId);
+  renderRangeItems(rangeElement, rangeId);
 }
 
 function buildRangeDOM(rangeData) {
@@ -427,7 +442,7 @@ function createRangeElement(rangeData = null) {
       count: 1,
       score: 1,
       desc: "",
-      images: [],
+      items: [],
     };
     appState.ranges.push(newRange);
     rangeData = newRange;
@@ -435,6 +450,17 @@ function createRangeElement(rangeData = null) {
   const el = buildRangeDOM(rangeData);
   attachRangeEvents(el, rangeData.id);
   return el;
+}
+
+function addItemToRange(rangeId, item) {
+  const range = appState.ranges.find((r) => r.id === rangeId);
+  if (!range) return;
+  range.items.push(item);
+  const rangeDiv = document.getElementById(rangeId);
+  if (rangeDiv) {
+    renderRangeItems(rangeDiv, rangeId);
+    updateRangeItemCountBadge(rangeDiv);
+  }
 }
 
 // ========== Names Section ==========
@@ -458,45 +484,52 @@ function syncNamesFromTextarea() {
   renderNamesSection();
 }
 
-// ========== Add Images to Range ==========
-function addImageToState(rangeId, imageData) {
-  const range = appState.ranges.find((r) => r.id === rangeId);
-  if (range) {
-    const fullImageData = {
-      ...IMAGE_DEFAULTS,
-      imageId: createRandomId("img"),
-      ...imageData,
-    };
-    range.images.push(fullImageData);
-    return fullImageData;
-  }
-  return null;
-}
-
-function addImagesToRange(rangeId, imagesArray) {
-  const rangeDiv = document.getElementById(rangeId);
-  if (!rangeDiv) return;
-
-  imagesArray.forEach((imageData, index) => {
-    const fullImageData = addImageToState(rangeId, imageData);
-    if (fullImageData) {
-      const imgContainer = createImageThumbnailElement(
-        fullImageData,
-        rangeDiv,
-        rangeId,
-      );
-      imgContainer.classList.add("image-thumbnail-enter");
-      rangeDiv.querySelector(".preview").appendChild(imgContainer);
-      setTimeout(() => {
-        imgContainer.classList.remove("image-thumbnail-enter");
-      }, index * 50); // Stagger effect
-    }
-  });
-  updateRangeImageCountBadge(rangeDiv);
-}
-
-// ========== Paste Handler ==========
+// ========== Paste Handler (اصلاح شده برای پشتیبانی از مودال) ==========
 document.addEventListener("paste", async (e) => {
+  // اگر مودال باز است، تصویر را به آیتم موقت اضافه کن
+  if (appState.modal.tempItem) {
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          e.preventDefault();
+          const blob = items[i].getAsFile();
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const src = ev.target.result;
+            const temp = appState.modal.tempItem;
+            if (!temp.image) {
+              // اضافه کردن تصویر جدید
+              temp.image = {
+                src,
+                height: IMAGE_DEFAULTS.height,
+                align: IMAGE_DEFAULTS.align,
+                showText: modalShowText.checked,
+                imageId: createRandomId("img"),
+              };
+              imageSettingsDiv.classList.remove("hidden");
+            } else {
+              // جایگزینی تصویر
+              showConfirm({
+                msg: "آیا تصویر فعلی جایگزین شود؟",
+                on_confirm: () => {
+                  temp.image.src = src;
+                  temp.image.imageId = createRandomId("img");
+                },
+              });
+            }
+            updateModalPreviewFromTemp();
+          };
+          reader.readAsDataURL(blob);
+          return;
+        }
+      }
+    }
+    // اگر JSON نیست، فقط تصویر پشتیبانی می‌شود
+    return;
+  }
+
+  // اگر مودال باز نیست، مثل قبل عمل کن
   if (!activeRangeId) return;
 
   const items = e.clipboardData?.items;
@@ -506,11 +539,8 @@ document.addEventListener("paste", async (e) => {
         const blob = items[i].getAsFile();
         const reader = new FileReader();
         reader.onload = (ev) => {
-          const imageData = {
-            src: ev.target.result,
-            ...IMAGE_DEFAULTS,
-          };
-          addImagesToRange(activeRangeId, [imageData]);
+          const newItem = createImageItem(ev.target.result);
+          openModalForNewItem(activeRangeId, newItem);
         };
         reader.readAsDataURL(blob);
         return;
@@ -522,17 +552,29 @@ document.addEventListener("paste", async (e) => {
     const text = await navigator.clipboard.readText();
     const pastedArray = JSON.parse(text);
     if (Array.isArray(pastedArray)) {
-      const imagesData = pastedArray.map((img) => ({
-        ...img,
-        height: img.height || IMAGE_DEFAULTS.height,
-        align: img.align || IMAGE_DEFAULTS.align,
-        showCaption:
-          img.showCaption !== undefined
-            ? img.showCaption
-            : IMAGE_DEFAULTS.showCaption,
-        customCaption: img.customCaption || IMAGE_DEFAULTS.customCaption,
-      }));
-      addImagesToRange(activeRangeId, imagesData);
+      const itemsToAdd = pastedArray.map((item) => {
+        if (item.image || item.text) {
+          return {
+            id: item.id || createRandomId("item"),
+            text: item.text ? { ...item.text } : null,
+            image: item.image
+              ? {
+                  ...item.image,
+                  imageId: item.image.imageId || createRandomId("img"),
+                }
+              : null,
+          };
+        } else {
+          return createImageItem(
+            item.src,
+            item.imageId,
+            item.height,
+            item.align,
+            item.showCaption !== false,
+          );
+        }
+      });
+      itemsToAdd.forEach((item) => addItemToRange(activeRangeId, item));
     }
   } catch (err) {
     console.error("خطا در پردازش چسباندن (JSON نامعتبر):", err);
@@ -558,11 +600,11 @@ function pickRandomItems(source, count) {
 function buildQuizData(names, ranges) {
   const finalData = Object.fromEntries(names.map((n) => [n, []]));
   ranges.forEach((r) => {
-    const images = Array.isArray(r.images) ? r.images : [];
+    const items = Array.isArray(r.items) ? r.items : [];
     names.forEach((student) => {
       finalData[student].push({
         rangeName: r.rangeName,
-        images: pickRandomItems(images, r.count),
+        items: pickRandomItems(items, r.count),
         score: r.score,
         desc: r.desc,
       });
@@ -576,15 +618,25 @@ function getAlignmentClass(align) {
   return classes[align];
 }
 
-function getCaptionText(rangeDesc, img) {
-  if (img.showCaption === false) return null;
-  if (img.customCaption && img.customCaption.trim() !== "")
-    return img.customCaption;
-  return rangeDesc;
+function renderItemForQuiz(item, rangeDesc) {
+  let html = "";
+  if (item.text) {
+    html += `<div style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
+  }
+  if (item.image) {
+    const img = item.image;
+    if (img.showText) {
+      const text = item.text ? item.text.html : rangeDesc || "";
+      if (text) {
+        html += `<div>${text}</div>`;
+      }
+    }
+    html += `<img class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}" src="${img.src}" alt="">`;
+  }
+  return html;
 }
 
-function createQuestionRowHtml(qNum, img, range) {
-  const captionText = getCaptionText(range.desc, img);
+function createQuestionRowHtml(qNum, item, range) {
   return `
     <tr>
       <td class="w-10 text-center font-bold">
@@ -594,14 +646,7 @@ function createQuestionRowHtml(qNum, img, range) {
         </span>
       </td>
       <td class="p-0">
-        <div>
-          ${captionText !== null ? `<p>${captionText}</p>` : ""}
-          <img
-            class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}"
-            src="${img.src}"
-            alt="${range.rangeName}"
-          >
-        </div>
+        ${renderItemForQuiz(item, range.desc)}
       </td>
     </tr>`;
 }
@@ -610,7 +655,7 @@ function createStudentTableHtml(studentQuiz, name) {
   let qNum = 1;
   const rows = studentQuiz
     .flatMap((range) =>
-      range.images.map((img) => createQuestionRowHtml(qNum++, img, range)),
+      range.items.map((item) => createQuestionRowHtml(qNum++, item, range)),
     )
     .join("");
   return `
@@ -643,7 +688,7 @@ function generateQuizHtml() {
   }
 
   const validRanges = appState.ranges.filter(
-    (r) => r.images.length && r.count > 0,
+    (r) => r.items.length && r.count > 0,
   );
   if (!validRanges.length) {
     showToast("حداقل یک مبحث معتبر تعریف کنید.", "error");
@@ -672,56 +717,240 @@ function generateQuizHtml() {
   return true;
 }
 
-// ========== Modal Helpers ==========
-function applyModalImageStyle({ height, align }) {
-  if (height) {
-    modalImg.style.maxHeight = height + "px";
-    heightInput.value = height;
-  }
-  if (align) {
-    modalImg.style.marginRight = align.marginRight;
-    modalImg.style.marginLeft = align.marginLeft;
-  }
+// ========== Modal Functions ==========
+function openModalForNewItem(rangeId, newItem) {
+  appState.modal.rangeId = rangeId;
+  appState.modal.itemId = null;
+  appState.modal.tempItem = JSON.parse(JSON.stringify(newItem));
+  openModalWithTempItem();
 }
 
-function updateModalDescriptionAndScore(rangeId) {
+function openItemModal(rangeId, itemId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
-  if (!range) return;
-  const showCaption = appState.modal.showCaption;
-  const customCaption = appState.modal.customCaption;
-  let finalText = "";
-  if (showCaption) {
-    finalText =
-      customCaption && customCaption.trim() !== "" ? customCaption : range.desc;
+  const item = range?.items.find((it) => it.id === itemId);
+  if (!item) return;
+
+  appState.modal.rangeId = rangeId;
+  appState.modal.itemId = itemId;
+  appState.modal.tempItem = JSON.parse(JSON.stringify(item));
+  openModalWithTempItem();
+}
+
+function openModalWithTempItem() {
+  const temp = appState.modal.tempItem;
+  if (!temp) return;
+
+  if (temp.text) {
+    modalTextEditor.innerHTML = temp.text.html;
+    modalTextEditor.style.textAlign = temp.text.align.toLowerCase();
+  } else {
+    modalTextEditor.innerHTML = "";
+    modalTextEditor.style.textAlign = "right";
   }
-  modalQdesc.innerText = finalText;
-  document.getElementById("modal-Qscore").innerHTML = `
+
+  modalShowText.checked = temp.image ? temp.image.showText : false;
+
+  if (temp.image) {
+    imageSettingsDiv.classList.remove("hidden");
+    modalImgHeight.value = temp.image.height;
+  } else {
+    imageSettingsDiv.classList.add("hidden");
+  }
+
+  updateModalPreviewFromTemp();
+
+  modal.style.display = "flex";
+  setTimeout(() => modal.classList.add("modal--visible"), 10);
+}
+
+function updateModalPreviewFromTemp() {
+  const temp = appState.modal.tempItem;
+  if (!temp) return;
+
+  const range = appState.ranges.find((r) => r.id === appState.modal.rangeId);
+  if (!range) return;
+
+  modalQscore.innerHTML = `
     ${toPersianDigits(1)}
     <span class="font-normal text-xs">
       ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
     </span>
   `;
+
+  let content = "";
+  if (temp.image && temp.image.showText) {
+    const text = temp.text ? temp.text.html : range.desc || "";
+    if (text) {
+      content += `<div style="text-align: ${temp.text ? temp.text.align.toLowerCase() : "right"};">${text}</div>`;
+    }
+  } else if (temp.text && !temp.image) {
+    content += `<div style="text-align: ${temp.text.align.toLowerCase()};">${temp.text.html}</div>`;
+  }
+  if (temp.image) {
+    const img = temp.image;
+    content += `<img class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}" src="${img.src}" alt="">`;
+  }
+  modalPreviewCell.innerHTML = content;
 }
 
-function onModalCaptionChange() {
-  appState.modal.showCaption = modalShowCaption.checked;
-  appState.modal.customCaption = modalCustomCaption.value;
-  modalCustomCaption.disabled = !appState.modal.showCaption;
-  const range = appState.ranges.find(
-    (r) => r.id === appState.modal.selectedRangeId,
-  );
-  if (range) {
-    let finalText = "";
-    if (appState.modal.showCaption) {
-      finalText =
-        appState.modal.customCaption &&
-        appState.modal.customCaption.trim() !== ""
-          ? appState.modal.customCaption
-          : range.desc;
-    }
-    modalQdesc.innerText = finalText;
+function saveModalChanges() {
+  const { rangeId, itemId, tempItem } = appState.modal;
+  if (!rangeId || !tempItem) return;
+
+  if (itemId === null) {
+    addItemToRange(rangeId, tempItem);
+    showToast("آیتم جدید اضافه شد.");
+  } else {
+    updateItemInState(rangeId, itemId, tempItem);
+    const rangeDiv = document.getElementById(rangeId);
+    if (rangeDiv) renderRangeItems(rangeDiv, rangeId);
+    showToast("تغییرات ذخیره شد.");
   }
+
+  closeModal();
 }
+
+function closeModal() {
+  destroyCropper();
+  appState.modal.rangeId = null;
+  appState.modal.itemId = null;
+  appState.modal.tempItem = null;
+  modal.classList.remove("modal--visible");
+  setTimeout(() => {
+    modal.style.display = "none";
+    modalTextEditor.innerHTML = "";
+  }, 300);
+}
+
+// ابزارک ویرایشگر متن
+document.querySelectorAll("[data-command]").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    const command = btn.dataset.command;
+    document.execCommand(command, false, null);
+    if (appState.modal.tempItem) {
+      const html = modalTextEditor.innerHTML;
+      const align = modalTextEditor.style.textAlign || "right";
+      if (!appState.modal.tempItem.text) {
+        appState.modal.tempItem.text = { html, align: align.toUpperCase() };
+      } else {
+        appState.modal.tempItem.text.html = html;
+        appState.modal.tempItem.text.align = align.toUpperCase();
+      }
+      updateModalPreviewFromTemp();
+    }
+  });
+});
+
+modalTextEditor.addEventListener("input", () => {
+  if (appState.modal.tempItem) {
+    const html = modalTextEditor.innerHTML;
+    const align = modalTextEditor.style.textAlign || "right";
+    if (!appState.modal.tempItem.text) {
+      appState.modal.tempItem.text = { html, align: align.toUpperCase() };
+    } else {
+      appState.modal.tempItem.text.html = html;
+      appState.modal.tempItem.text.align = align.toUpperCase();
+    }
+    updateModalPreviewFromTemp();
+  }
+});
+
+modalImgHeight.addEventListener("input", (e) => {
+  if (appState.modal.tempItem?.image) {
+    appState.modal.tempItem.image.height =
+      parseInt(e.target.value) || IMAGE_DEFAULTS.height;
+    updateModalPreviewFromTemp();
+  }
+});
+
+modalShowText.addEventListener("change", (e) => {
+  if (appState.modal.tempItem?.image) {
+    appState.modal.tempItem.image.showText = e.target.checked;
+    updateModalPreviewFromTemp();
+  }
+});
+
+alignButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const align = btn.dataset.align;
+    if (!align) return;
+    if (appState.modal.tempItem?.image) {
+      appState.modal.tempItem.image.align = align;
+      updateModalPreviewFromTemp();
+    } else if (appState.modal.tempItem?.text) {
+      document.execCommand(`justify${align.toLowerCase()}`, false, null);
+    }
+  });
+});
+
+// دکمه تصویر در مودال
+addImageInModalBtn.addEventListener("click", () => {
+  modalImageUpload.click();
+});
+
+handleFileUpload({
+  target: modalImageUpload,
+  onChange: (src) => {
+    const temp = appState.modal.tempItem;
+    if (!temp) return;
+
+    if (!temp.image) {
+      temp.image = {
+        src,
+        height: IMAGE_DEFAULTS.height,
+        align: IMAGE_DEFAULTS.align,
+        showText: modalShowText.checked,
+        imageId: createRandomId("img"),
+      };
+      imageSettingsDiv.classList.remove("hidden");
+    } else {
+      showConfirm({
+        msg: "آیا تصویر فعلی جایگزین شود؟",
+        on_confirm: () => {
+          temp.image.src = src;
+          temp.image.imageId = createRandomId("img");
+        },
+      });
+    }
+    updateModalPreviewFromTemp();
+  },
+  readAs: "DataURL",
+});
+
+// برش تصویر
+editCropBtn.addEventListener("click", () => {
+  const imgElement = modalPreviewCell.querySelector("img");
+  if (!imgElement) return;
+  if (cropper) cropper.destroy();
+  cropper = new Cropper(imgElement, {
+    aspectRatio: NaN,
+    viewMode: 1,
+    movable: true,
+    zoomable: true,
+    scalable: true,
+    responsive: true,
+    autoCropArea: 1,
+  });
+  toggleCropButtons(true);
+});
+
+saveCroppedImageBtn.addEventListener("click", () => {
+  if (!cropper) return;
+  const croppedCanvas = cropper.getCroppedCanvas();
+  const croppedImage = new Image();
+  croppedImage.onload = () => {
+    const newSrc = croppedImage.src;
+    if (appState.modal.tempItem?.image) {
+      appState.modal.tempItem.image.src = newSrc;
+    }
+    updateModalPreviewFromTemp();
+    destroyCropper();
+  };
+  croppedImage.src = croppedCanvas.toDataURL();
+});
+
+cancelCropBtn.addEventListener("click", destroyCropper);
 
 function destroyCropper() {
   cropper?.destroy();
@@ -735,18 +964,25 @@ function toggleCropButtons(isActive) {
   saveCroppedImageBtn.classList[func]("hidden");
   cancelCropBtn.classList[func]("hidden");
   [
+    modalTextEditor,
     ...alignButtons,
-    heightInput,
-    saveModalSettingsBtn,
-    modalShowCaption,
-    modalCustomCaption,
+    modalImgHeight,
+    modalShowText,
+    addImageInModalBtn,
+    saveModalBtn,
   ].forEach((el) => el && (el.disabled = isActive));
 }
 
-function updateModalImageAlign(align) {
-  appState.modal.align = align;
-  applyModalImageStyle({ align: alignStyles[align] });
-}
+// دکمه ذخیره با تأیید
+saveModalBtn.addEventListener("click", () => {
+  showConfirm({
+    msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
+    on_confirm: saveModalChanges,
+  });
+});
+
+// بستن مودال با کلیک روی overlay (بدون ذخیره)
+modalOverlay.addEventListener("click", closeModal);
 
 // ========== Drag & Drop Helpers ==========
 function handleDragStart(e) {
@@ -765,7 +1001,6 @@ function handleDragOver(e) {
 function handleDrop(e) {
   e.preventDefault();
 
-  // Capture old positions for FLIP
   const items = [...rangesContainer.querySelectorAll(".range-item")];
   const oldRects = items.map((el) => ({
     el,
@@ -814,7 +1049,6 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd() {
-  // Capture old positions for FLIP
   const items = [...rangesContainer.querySelectorAll(".range-item")];
   const oldRects = items.map((el) => ({
     el,
@@ -869,7 +1103,6 @@ function dragCleanup() {
   dragPlaceholder.remove();
   draggedElement = null;
   isTouchDevice = false;
-  // Reset any transforms from FLIP
   document.querySelectorAll(".range-item").forEach((el) => {
     el.style.transform = "";
     el.style.transition = "";
@@ -927,7 +1160,7 @@ document.getElementById("exportJson").onclick = () => {
       count: r.count,
       score: r.score,
       desc: r.desc,
-      images: r.images,
+      items: r.items,
     })),
   };
   const blob = new Blob([JSON.stringify(exportData)], {
@@ -948,16 +1181,39 @@ handleFileUpload({
       appState.names = data.names || [];
       appState.namesCount = data.namesCount || 1;
 
-      data.ranges.forEach((r) => {
-        const images = (r.images || []).map((img) => ({
-          ...IMAGE_DEFAULTS,
-          imageId: img.imageId || createRandomId("img"),
-          ...img,
-        }));
+      (data.ranges || []).forEach((r) => {
+        let items = [];
+        if (r.items) {
+          items = r.items.map((it) => ({
+            id: it.id || createRandomId("item"),
+            text: it.text ? { ...it.text } : null,
+            image: it.image
+              ? {
+                  ...it.image,
+                  imageId: it.image.imageId || createRandomId("img"),
+                }
+              : null,
+          }));
+        } else if (r.images) {
+          items = r.images.map((img) => ({
+            id: createRandomId("item"),
+            text: null,
+            image: {
+              src: img.src,
+              height: img.height || IMAGE_DEFAULTS.height,
+              align: img.align || IMAGE_DEFAULTS.align,
+              showText: img.showCaption !== false,
+              imageId: img.imageId || createRandomId("img"),
+            },
+          }));
+        }
         const rangeWithId = {
-          ...r,
           id: createRandomId("range-item"),
-          images,
+          rangeName: r.rangeName || "",
+          count: r.count || 1,
+          score: r.score || 1,
+          desc: r.desc || "",
+          items,
         };
         appState.ranges.push(rangeWithId);
       });
@@ -966,11 +1222,10 @@ handleFileUpload({
       appState.ranges.forEach((r, index) => {
         const el = createRangeElement(r);
         rangesContainer.appendChild(el);
-        // انیمیشن ورود با استگر بین رنج‌ها
         el.classList.add("range-item-enter");
         setTimeout(() => {
           el.classList.remove("range-item-enter");
-        }, index * 100); // ۱۰۰ میلی‌ثانیه فاصله بین هر رنج
+        }, index * 100);
       });
 
       renderNamesSection();
@@ -980,13 +1235,6 @@ handleFileUpload({
     }
   },
   readAs: "Text",
-});
-
-alignButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const align = btn.dataset.align;
-    if (align) updateModalImageAlign(align);
-  });
 });
 
 // Drag & Drop
@@ -1001,97 +1249,6 @@ rangesContainer.addEventListener("touchmove", handleTouchMove, {
   passive: true,
 });
 rangesContainer.addEventListener("touchend", handleTouchEnd);
-
-// Modal events
-modalOverlay.addEventListener("click", () => {
-  destroyCropper();
-  activeImageSrc = null;
-  modal.classList.remove("modal--visible");
-  setTimeout(() => {
-    modal.style.display = "none";
-    modalImg.src = "";
-  }, 300);
-});
-
-editCropBtn.addEventListener("click", () => {
-  if (cropper) cropper.destroy();
-  cropper = new Cropper(modalImg, {
-    aspectRatio: NaN,
-    viewMode: 1,
-    movable: true,
-    zoomable: true,
-    scalable: true,
-    responsive: true,
-    autoCropArea: 1,
-  });
-  toggleCropButtons(true);
-});
-
-saveCroppedImageBtn.addEventListener("click", () => {
-  if (!cropper) return;
-  const croppedCanvas = cropper.getCroppedCanvas();
-  const croppedImage = new Image();
-  croppedImage.onload = () => {
-    modalImg.src = croppedImage.src;
-    destroyCropper();
-  };
-  croppedImage.src = croppedCanvas.toDataURL();
-});
-
-cancelCropBtn.addEventListener("click", destroyCropper);
-
-heightInput.addEventListener("input", (e) => {
-  appState.modal.height = parseInt(e.target.value) || IMAGE_DEFAULTS.height;
-  applyModalImageStyle({
-    height: appState.modal.height,
-    align: alignStyles[appState.modal.align],
-  });
-});
-
-saveModalSettingsBtn.addEventListener("click", () => {
-  showConfirm({
-    msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
-    on_confirm: () => {
-      const {
-        selectedRangeId,
-        imageId,
-        height,
-        align,
-        showCaption,
-        customCaption,
-      } = appState.modal;
-
-      const range = appState.ranges.find((r) => r.id === selectedRangeId);
-      const imgObj = range?.images.find((img) => img.imageId === imageId);
-      if (!imgObj) {
-        showToast("خطا: تصویر مورد نظر یافت نشد!", "error");
-        return;
-      }
-
-      const newSrc = modalImg.src;
-      Object.assign(imgObj, {
-        src: newSrc,
-        height,
-        align,
-        showCaption,
-        customCaption,
-      });
-
-      const thumbnailImg = document.querySelector(
-        `img[data-image-id="${imageId}"]`,
-      );
-      if (thumbnailImg) thumbnailImg.src = newSrc;
-
-      if (activeImageSrc === imgObj.src) activeImageSrc = newSrc;
-      appState.modal.selectedImageSrc = newSrc;
-
-      showToast("با موفقیت ذخیره شد.");
-    },
-  });
-});
-
-modalShowCaption.addEventListener("change", onModalCaptionChange);
-modalCustomCaption.addEventListener("input", onModalCaptionChange);
 
 // Font selector
 fontSelector.addEventListener("change", function (e) {
