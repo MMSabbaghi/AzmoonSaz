@@ -172,6 +172,102 @@ let draggedElement = null;
 const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
+// ========== Swipe to Delete (Mobile only) ==========
+let touchStartX = 0;
+let touchEndX = 0;
+const minSwipeDistance = 50;
+
+function initSwipeToDelete() {
+  if (window.innerWidth > 768) return;
+  const items = document.querySelectorAll(".item-thumbnail, .range-item");
+  items.forEach((el) => {
+    if (el.dataset.swipeInit === "true") return;
+    el.dataset.swipeInit = "true";
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    el.addEventListener("touchend", handleTouchEnd);
+    el.addEventListener("touchcancel", handleTouchCancel);
+  });
+}
+
+function handleTouchStart(e) {
+  touchStartX = e.touches[0].clientX;
+  this.dataset.startX = touchStartX;
+  this.dataset.swiping = "false";
+}
+
+function handleTouchMove(e) {
+  if (!touchStartX) return;
+  const currentX = e.touches[0].clientX;
+  const diff = currentX - touchStartX;
+
+  if (Math.abs(diff) > 10) {
+    e.preventDefault();
+    this.dataset.swiping = "true";
+  }
+
+  if (diff < 0) {
+    const translateX = Math.max(diff, -80);
+    this.style.transform = `translateX(${translateX}px)`;
+    this.style.transition = "none";
+  } else if (diff > 0 && this.dataset.swiped === "true") {
+    this.style.transform = "translateX(0)";
+    this.style.transition = "transform 0.3s ease";
+    delete this.dataset.swiped;
+    this.querySelector(".swipe-delete-btn")?.remove();
+  }
+}
+
+function handleTouchEnd(e) {
+  if (!touchStartX) return;
+  touchEndX = e.changedTouches[0].clientX;
+  const diff = touchEndX - touchStartX;
+
+  if (this.dataset.swiping === "true" && diff < -minSwipeDistance) {
+    this.style.transform = "translateX(-80px)";
+    this.style.transition = "transform 0.3s ease";
+    this.dataset.swiped = "true";
+
+    if (!this.querySelector(".swipe-delete-btn")) {
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "swipe-delete-btn";
+      deleteBtn.innerHTML = '<i class="bi bi-trash3"></i>';
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (this.classList.contains("item-thumbnail")) {
+          const removeBtn = this.querySelector(".remove-item");
+          if (removeBtn) removeBtn.click();
+        } else if (this.classList.contains("range-item")) {
+          const removeRangeBtn = this.querySelector(".remove-range");
+          if (removeRangeBtn) removeRangeBtn.click();
+        }
+        this.style.transform = "translateX(0)";
+        delete this.dataset.swiped;
+        this.querySelector(".swipe-delete-btn")?.remove();
+      };
+      this.appendChild(deleteBtn);
+    }
+  } else {
+    this.style.transform = "translateX(0)";
+    this.style.transition = "transform 0.3s ease";
+    delete this.dataset.swiped;
+    this.querySelector(".swipe-delete-btn")?.remove();
+  }
+
+  touchStartX = 0;
+  touchEndX = 0;
+  delete this.dataset.startX;
+  delete this.dataset.swiping;
+}
+
+function handleTouchCancel(e) {
+  this.style.transform = "translateX(0)";
+  this.style.transition = "transform 0.3s ease";
+  delete this.dataset.swiped;
+  this.querySelector(".swipe-delete-btn")?.remove();
+  touchStartX = 0;
+}
+
 // ========== Animation Helpers ==========
 function animateAddElement(element, enterClass) {
   element.classList.add(enterClass);
@@ -245,19 +341,16 @@ function renderRangeItems(rangeElement, rangeId) {
       itemContainer.classList.remove("item-thumbnail-enter");
     }, index * 50);
   });
+  initSwipeToDelete();
 }
 
 function buildItemThumbnailContent(item) {
   let contentHtml = "";
-  // اگر تصویر دارد و showText=true است، متن را اضافه کن (اگر متن وجود داشته باشد)
   if (item.image && item.image.showText && item.text) {
     contentHtml += `<div class="text-preview" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
-  }
-  // اگر تصویر ندارد ولی متن دارد، متن را اضافه کن
-  else if (item.text && !item.image) {
+  } else if (item.text && !item.image) {
     contentHtml += `<div class="text-preview" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
   }
-  // تصویر را همیشه اضافه کن (اگر وجود داشته باشد)
   if (item.image) {
     const imgAlign = item.image.align.toLowerCase();
     const marginClass =
@@ -458,6 +551,7 @@ function createRangeElement(rangeData = null) {
   }
   const el = buildRangeDOM(rangeData);
   attachRangeEvents(el, rangeData.id);
+  setTimeout(() => initSwipeToDelete(), 0);
   return el;
 }
 
@@ -657,18 +751,14 @@ function getAlignmentClass(align) {
 
 function renderItemForQuiz(item, rangeDesc) {
   let html = "";
-  // اگر تصویر دارد و showText=true است، متن را اضافه کن (از item.text یا rangeDesc)
   if (item.image && item.image.showText) {
     const text = item.text ? item.text.html : rangeDesc || "";
     if (text) {
       html += `<div style="text-align: ${item.text ? item.text.align.toLowerCase() : "right"};">${text}</div>`;
     }
-  }
-  // اگر تصویر ندارد ولی متن دارد، متن را اضافه کن
-  else if (item.text && !item.image) {
+  } else if (item.text && !item.image) {
     html += `<div style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
   }
-  // تصویر را همیشه اضافه کن (اگر وجود داشته باشد)
   if (item.image) {
     const img = item.image;
     html += `<img class="max-h-[${img.height}px] ${getAlignmentClass(
@@ -803,9 +893,8 @@ function openModalWithTempItem() {
   if (temp.image) {
     imageSettingsDiv.classList.remove("hidden");
     modalImgHeight.value = temp.image.height;
-
-    // کنترل ویرایشپذیری و کلاس غیرفعال
     modalTextEditor.contentEditable = temp.image.showText ? "true" : "false";
+
     if (!temp.image.showText) {
       modalTextEditor.classList.add("text-editor--disabled");
       modalTextEditor.setAttribute(
@@ -912,7 +1001,6 @@ function updateTempItemFromEditor() {
   }
 }
 
-// Modal editor buttons (با mousedown به جای click برای حفظ focus)
 document.querySelectorAll("[data-command]").forEach((btn) => {
   btn.addEventListener("mousedown", (e) => {
     e.preventDefault();
@@ -1006,7 +1094,6 @@ function toggleCropButtons(isActive) {
   saveCroppedImageBtn.classList[func]("hidden");
   cancelCropBtn.classList[func]("hidden");
 
-  // همه عناصر تعاملی (غیر از ویرایشگر متن) را غیرفعال/فعال کن
   const interactiveElements = [
     ...alignButtons,
     modalImgHeight,
@@ -1017,18 +1104,13 @@ function toggleCropButtons(isActive) {
   ];
 
   if (isActive) {
-    // غیرفعال‌سازی همه المان‌ها
     interactiveElements.forEach((el) => el && (el.disabled = true));
 
-    // غیرفعال‌سازی ویرایشگر متن (با contentEditable و کلاس)
     modalTextEditor.contentEditable = "false";
     modalTextEditor.classList.add("text-editor--disabled");
-    // (اختیاری) می‌توان placeholder را حفظ کرد یا حذف نمود
   } else {
-    // فعال‌سازی مجدد المان‌ها
     interactiveElements.forEach((el) => el && (el.disabled = false));
 
-    // بازیابی وضعیت ویرایشگر بر اساس showText
     const showText = appState.modal.tempItem?.image?.showText ?? true;
     modalTextEditor.contentEditable = showText ? "true" : "false";
 
@@ -1093,8 +1175,12 @@ saveModalBtn.addEventListener("click", () => {
 
 modalOverlay.addEventListener("click", closeModal);
 
-// ========== Drag & Drop Helpers ==========
+// ========== Drag & Drop Helpers (غیرفعال در موبایل) ==========
 function handleDragStart(e) {
+  if (window.innerWidth <= 768) {
+    e.preventDefault();
+    return;
+  }
   if (!e.target.classList.contains("range-item")) return;
   draggedElement = e.target;
   draggedElement.classList.add("opacity-50");
@@ -1102,12 +1188,20 @@ function handleDragStart(e) {
 }
 
 function handleDragOver(e) {
+  if (window.innerWidth <= 768) {
+    e.preventDefault();
+    return;
+  }
   if (isTouchDevice || !draggedElement) return;
   e.preventDefault();
   handleDragMove(e.clientY);
 }
 
 function handleDrop(e) {
+  if (window.innerWidth <= 768) {
+    e.preventDefault();
+    return;
+  }
   e.preventDefault();
 
   const items = [...rangesContainer.querySelectorAll(".range-item")];
@@ -1144,7 +1238,11 @@ function handleDrop(e) {
   dragCleanup();
 }
 
-function handleTouchStart(e) {
+function handleTouchStartDrag(e) {
+  if (window.innerWidth <= 768) {
+    e.preventDefault();
+    return;
+  }
   const target = e.target.closest(".range-item");
   if (!target) return;
   isTouchDevice = true;
@@ -1152,12 +1250,20 @@ function handleTouchStart(e) {
   draggedElement.classList.add("opacity-50");
 }
 
-function handleTouchMove(e) {
+function handleTouchMoveDrag(e) {
+  if (window.innerWidth <= 768) {
+    e.preventDefault();
+    return;
+  }
   if (!draggedElement) return;
   handleDragMove(e.touches[0].clientY);
 }
 
-function handleTouchEnd() {
+function handleTouchEndDrag() {
+  if (window.innerWidth <= 768) {
+    e.preventDefault();
+    return;
+  }
   const items = [...rangesContainer.querySelectorAll(".range-item")];
   const oldRects = items.map((el) => ({
     el,
@@ -1282,10 +1388,11 @@ function processImportedFile(fileContent) {
             el.classList.remove("range-item-enter");
           });
         });
-      }, index * 100); // تأخیر پشت سر هم برای انیمیشن تدریجی
+      }, index * 100);
     });
 
     renderNamesSection();
+    initSwipeToDelete();
   } catch (err) {
     console.error("Invalid JSON file:", err);
     showToast("فایل JSON نامعتبر است!", "error");
@@ -1370,13 +1477,13 @@ rangesContainer.addEventListener("dragstart", handleDragStart);
 rangesContainer.addEventListener("dragend", dragCleanup);
 rangesContainer.addEventListener("dragover", handleDragOver);
 rangesContainer.addEventListener("drop", handleDrop);
-rangesContainer.addEventListener("touchstart", handleTouchStart, {
+rangesContainer.addEventListener("touchstart", handleTouchStartDrag, {
   passive: true,
 });
-rangesContainer.addEventListener("touchmove", handleTouchMove, {
-  passive: true,
+rangesContainer.addEventListener("touchmove", handleTouchMoveDrag, {
+  passive: false,
 });
-rangesContainer.addEventListener("touchend", handleTouchEnd);
+rangesContainer.addEventListener("touchend", handleTouchEndDrag);
 
 // Font selector
 fontSelector.addEventListener("change", function (e) {
@@ -1409,5 +1516,6 @@ moveToTopBtn.addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-// Initialize font
+// Initialize
 document.body.style.fontFamily = appState.font;
+initSwipeToDelete();
