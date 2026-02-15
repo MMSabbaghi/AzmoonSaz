@@ -411,6 +411,7 @@ textarea:disabled {
   /* تنظیمات عمومی برای خوانایی بهتر */
   body {
     font-size: 14px;
+    padding: 0;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -658,6 +659,7 @@ textarea:disabled {
   /* مودال ویرایش (Bottom Sheet) */
   .modal {
     align-items: flex-end;
+    z-index: 100;
   }
 
   #modalContent {
