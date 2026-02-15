@@ -1,6 +1,8 @@
+// app.js
+
 // ---------- State Management ----------
 const appState = {
-  ranges: [], // { id, rangeName, count, score, desc, items: [] }
+  ranges: [], // هر range شامل { id, rangeName, count, score, desc, items, itemsCollapsed }
   names: [],
   namesCount: 1,
   font: "'Vazirmatn', sans-serif",
@@ -56,6 +58,10 @@ function reorderRangesInState(newOrderIds) {
 // ---------- Utility Functions ----------
 function toPersianDigits(str) {
   return (str + "").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+}
+
+function isMobile() {
+  return window.innerWidth <= 768;
 }
 
 function handleSwitchElement({ container, onChange }) {
@@ -172,13 +178,16 @@ let draggedElement = null;
 const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
-// ========== Swipe to Delete (Mobile only) ==========
+// ========== Swipe to Delete (بازنویسی شده برای رفع لرزش) ==========
 let touchStartX = 0;
-let touchEndX = 0;
+let touchStartY = 0;
+let touchCurrentX = 0;
+let isSwiping = false;
 const minSwipeDistance = 50;
+const maxVerticalDeviation = 20;
 
 function initSwipeToDelete() {
-  if (window.innerWidth > 768) return;
+  if (!isMobile()) return;
   const items = document.querySelectorAll(".item-thumbnail, .range-item");
   items.forEach((el) => {
     if (el.dataset.swipeInit === "true") return;
@@ -191,39 +200,58 @@ function initSwipeToDelete() {
 }
 
 function handleTouchStart(e) {
-  touchStartX = e.touches[0].clientX;
-  this.dataset.startX = touchStartX;
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchCurrentX = touchStartX;
+  isSwiping = false;
   this.dataset.swiping = "false";
+  this.style.transition = "none";
 }
 
 function handleTouchMove(e) {
   if (!touchStartX) return;
-  const currentX = e.touches[0].clientX;
-  const diff = currentX - touchStartX;
+  const touch = e.touches[0];
+  const diffX = touch.clientX - touchStartX;
+  const diffY = Math.abs(touch.clientY - touchStartY);
 
-  if (Math.abs(diff) > 10) {
+  if (diffY > maxVerticalDeviation) {
+    isSwiping = false;
+    return;
+  }
+
+  if (Math.abs(diffX) > 10) {
     e.preventDefault();
+    isSwiping = true;
     this.dataset.swiping = "true";
   }
 
-  if (diff < 0) {
-    const translateX = Math.max(diff, -80);
+  if (isSwiping) {
+    let translateX = diffX;
+    if (diffX < 0) {
+      translateX = Math.max(diffX, -80);
+    } else {
+      if (this.dataset.swiped === "true") {
+        translateX = Math.min(diffX, 0);
+      } else {
+        translateX = 0;
+      }
+    }
     this.style.transform = `translateX(${translateX}px)`;
-    this.style.transition = "none";
-  } else if (diff > 0 && this.dataset.swiped === "true") {
-    this.style.transform = "translateX(0)";
-    this.style.transition = "transform 0.3s ease";
-    delete this.dataset.swiped;
-    this.querySelector(".swipe-delete-btn")?.remove();
+    touchCurrentX = touch.clientX;
   }
 }
 
 function handleTouchEnd(e) {
-  if (!touchStartX) return;
-  touchEndX = e.changedTouches[0].clientX;
-  const diff = touchEndX - touchStartX;
+  if (!touchStartX || !isSwiping) {
+    resetSwipe(this);
+    touchStartX = 0;
+    return;
+  }
 
-  if (this.dataset.swiping === "true" && diff < -minSwipeDistance) {
+  const diffX = touchCurrentX - touchStartX;
+
+  if (diffX < -minSwipeDistance) {
     this.style.transform = "translateX(-80px)";
     this.style.transition = "transform 0.3s ease";
     this.dataset.swiped = "true";
@@ -241,31 +269,31 @@ function handleTouchEnd(e) {
           const removeRangeBtn = this.querySelector(".remove-range");
           if (removeRangeBtn) removeRangeBtn.click();
         }
-        this.style.transform = "translateX(0)";
-        delete this.dataset.swiped;
-        this.querySelector(".swipe-delete-btn")?.remove();
+        resetSwipe(this);
       };
       this.appendChild(deleteBtn);
     }
   } else {
-    this.style.transform = "translateX(0)";
-    this.style.transition = "transform 0.3s ease";
-    delete this.dataset.swiped;
-    this.querySelector(".swipe-delete-btn")?.remove();
+    resetSwipe(this);
   }
 
   touchStartX = 0;
-  touchEndX = 0;
-  delete this.dataset.startX;
+  isSwiping = false;
   delete this.dataset.swiping;
 }
 
 function handleTouchCancel(e) {
-  this.style.transform = "translateX(0)";
-  this.style.transition = "transform 0.3s ease";
-  delete this.dataset.swiped;
-  this.querySelector(".swipe-delete-btn")?.remove();
+  resetSwipe(this);
   touchStartX = 0;
+  isSwiping = false;
+}
+
+function resetSwipe(el) {
+  el.style.transform = "translateX(0)";
+  el.style.transition = "transform 0.3s ease";
+  delete el.dataset.swiped;
+  const btn = el.querySelector(".swipe-delete-btn");
+  if (btn) btn.remove();
 }
 
 // ========== Animation Helpers ==========
@@ -341,6 +369,13 @@ function renderRangeItems(rangeElement, rangeId) {
       itemContainer.classList.remove("item-thumbnail-enter");
     }, index * 50);
   });
+
+  if (range.itemsCollapsed) {
+    preview.classList.add("collapsed");
+  } else {
+    preview.classList.remove("collapsed");
+  }
+
   initSwipeToDelete();
 }
 
@@ -431,6 +466,10 @@ function getRangeHTML(rangeData) {
         <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
           <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
         </div>
+        <!-- دکمه آکاردئون (chevron) -->
+        <button class="toggle-items-btn ${rangeData.itemsCollapsed ? "collapsed" : ""}">
+          <i class="bi bi-chevron-up"></i>
+        </button>
       </div>
       <div class="flex items-center gap-2">
         <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
@@ -440,7 +479,7 @@ function getRangeHTML(rangeData) {
     <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
       <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
     </div>
-    <div class="items-preview"></div>
+    <div class="items-preview ${rangeData.itemsCollapsed ? "collapsed" : ""}"></div>
   `;
 }
 
@@ -484,6 +523,25 @@ function setupRangeButtons(rangeElement, rangeId) {
     const newItem = createTextItem();
     openModalForNewItem(rangeId, newItem);
   });
+
+  const toggleBtn = rangeElement.querySelector(".toggle-items-btn");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const range = appState.ranges.find((r) => r.id === rangeId);
+      if (range) {
+        range.itemsCollapsed = !range.itemsCollapsed;
+        const preview = rangeElement.querySelector(".items-preview");
+        if (range.itemsCollapsed) {
+          preview.classList.add("collapsed");
+          toggleBtn.classList.add("collapsed");
+        } else {
+          preview.classList.remove("collapsed");
+          toggleBtn.classList.remove("collapsed");
+        }
+      }
+    });
+  }
 }
 
 function setupFileUploadOnRange(rangeElement, rangeId) {
@@ -520,6 +578,10 @@ function attachRangeEvents(rangeElement, rangeId) {
     }
   });
 
+  if (isMobile()) {
+    rangeElement.draggable = false;
+  }
+
   setupSwitchOnRange(rangeElement);
   setupFileUploadOnRange(rangeElement, rangeId);
   setupRangeButtons(rangeElement, rangeId);
@@ -530,7 +592,7 @@ function attachRangeEvents(rangeElement, rangeId) {
 function buildRangeDOM(rangeData) {
   const div = document.createElement("div");
   div.id = rangeData.id;
-  div.draggable = true;
+  div.draggable = !isMobile();
   div.className = "range-item transition-transform duration-200 ease-out";
   div.innerHTML = getRangeHTML(rangeData);
   return div;
@@ -545,6 +607,7 @@ function createRangeElement(rangeData = null) {
       score: 1,
       desc: "",
       items: [],
+      itemsCollapsed: isMobile() ? true : false,
     };
     appState.ranges.push(newRange);
     rangeData = newRange;
@@ -587,9 +650,72 @@ function syncNamesFromTextarea() {
   renderNamesSection();
 }
 
+function setupMobileNamesBar() {
+  if (!isMobile()) return;
+
+  const bottomBar = document.getElementById("mobile-bottom-bar");
+  const namesTextareaMobile = document.getElementById("names-textarea-mobile");
+  const namesSwitchMobile = document.getElementById("names-switch-mobile");
+  const namesCountMobile = document.getElementById("names-count-mobile");
+
+  // Manual setup for mobile switch (using mobile-specific IDs)
+  const sw = document.getElementById("switch-mobile");
+  const knob = document.getElementById("knob-mobile");
+  if (!sw || !knob) return;
+
+  let on = false;
+  sw.addEventListener("click", () => {
+    on = !on;
+    if (on) {
+      sw.classList.add("bg-[#333]");
+      knob.classList.add("translate-x-4", "scale-105");
+    } else {
+      sw.classList.remove("bg-[#333]");
+      knob.classList.remove("translate-x-4", "scale-105");
+    }
+    // Toggle textarea visibility
+    namesTextareaMobile.classList.toggle("hidden", !on);
+    // Sync with desktop textarea
+    const textareaMobile = namesTextareaMobile.querySelector("textarea");
+    const textareaDesktop = document.querySelector("#names-textarea textarea");
+    if (textareaDesktop && textareaMobile) {
+      textareaDesktop.value = textareaMobile.value;
+    }
+    syncNamesFromTextarea();
+  });
+
+  namesCountMobile.value = appState.namesCount;
+  namesCountMobile.addEventListener("input", (e) => {
+    appState.namesCount = parseInt(e.target.value) || 1;
+    document.getElementById("names-count").value = e.target.value;
+  });
+
+  const textareaMobile = namesTextareaMobile.querySelector("textarea");
+  textareaMobile.value = appState.names.join("\n");
+  textareaMobile.addEventListener("input", () => {
+    appState.names = textareaMobile.value
+      .trim()
+      .split("\n")
+      .filter((n) => n);
+    document.querySelector("#names-textarea textarea").value =
+      textareaMobile.value;
+  });
+}
+
+function syncNamesElements() {
+  const countDesktop = document.getElementById("names-count");
+  const countMobile = document.getElementById("names-count-mobile");
+  if (countDesktop && countMobile) {
+    countMobile.value = countDesktop.value;
+    countMobile.addEventListener("input", (e) => {
+      countDesktop.value = e.target.value;
+      appState.namesCount = parseInt(e.target.value) || 1;
+    });
+  }
+}
+
 // ========== Paste Handler ==========
 async function handlePasteInModal(items) {
-  // اگر cropper فعال است، آن را نابود کن
   if (cropper) destroyCropper();
 
   let imageProcessed = false;
@@ -628,7 +754,6 @@ async function handlePasteInModal(items) {
   }
 
   if (!imageProcessed) {
-    // پردازش متن
     let html = null;
     let text = null;
     for (let i = 0; i < items.length; i++) {
@@ -905,6 +1030,10 @@ function openModalWithTempItem() {
       modalTextEditor.classList.remove("text-editor--disabled");
       modalTextEditor.removeAttribute("placeholder");
     }
+
+    if (isMobile()) {
+      modalPreviewCell.style.minHeight = "250px";
+    }
   } else {
     imageSettingsDiv.classList.add("hidden");
     modalTextEditor.contentEditable = "true";
@@ -1105,15 +1234,12 @@ function toggleCropButtons(isActive) {
 
   if (isActive) {
     interactiveElements.forEach((el) => el && (el.disabled = true));
-
     modalTextEditor.contentEditable = "false";
     modalTextEditor.classList.add("text-editor--disabled");
   } else {
     interactiveElements.forEach((el) => el && (el.disabled = false));
-
     const showText = appState.modal.tempItem?.image?.showText ?? true;
     modalTextEditor.contentEditable = showText ? "true" : "false";
-
     if (showText) {
       modalTextEditor.classList.remove("text-editor--disabled");
       modalTextEditor.removeAttribute("placeholder");
@@ -1131,13 +1257,20 @@ function destroyCropper() {
   cropper?.destroy();
   cropper = null;
   toggleCropButtons(false);
+  if (isMobile()) {
+    document.getElementById("modalContent").style.width = "";
+    document.getElementById("modalContent").style.height = "";
+    document.getElementById("modalContent").style.maxWidth = "";
+    document.getElementById("modalContent").style.borderRadius = "";
+  }
 }
 
 editCropBtn.addEventListener("click", () => {
   const imgElement = modalPreviewCell.querySelector("img");
   if (!imgElement) return;
   if (cropper) cropper.destroy();
-  cropper = new Cropper(imgElement, {
+
+  const cropperOptions = {
     aspectRatio: NaN,
     viewMode: 1,
     movable: true,
@@ -1145,8 +1278,19 @@ editCropBtn.addEventListener("click", () => {
     scalable: true,
     responsive: true,
     autoCropArea: 1,
-  });
+    touchDragZoom: true,
+    wheelZoom: false,
+  };
+
+  cropper = new Cropper(imgElement, cropperOptions);
   toggleCropButtons(true);
+
+  if (isMobile()) {
+    document.getElementById("modalContent").style.width = "100%";
+    document.getElementById("modalContent").style.height = "100%";
+    document.getElementById("modalContent").style.maxWidth = "100%";
+    document.getElementById("modalContent").style.borderRadius = "0";
+  }
 });
 
 saveCroppedImageBtn.addEventListener("click", () => {
@@ -1177,7 +1321,7 @@ modalOverlay.addEventListener("click", closeModal);
 
 // ========== Drag & Drop Helpers (غیرفعال در موبایل) ==========
 function handleDragStart(e) {
-  if (window.innerWidth <= 768) {
+  if (isMobile()) {
     e.preventDefault();
     return;
   }
@@ -1188,7 +1332,7 @@ function handleDragStart(e) {
 }
 
 function handleDragOver(e) {
-  if (window.innerWidth <= 768) {
+  if (isMobile()) {
     e.preventDefault();
     return;
   }
@@ -1198,7 +1342,7 @@ function handleDragOver(e) {
 }
 
 function handleDrop(e) {
-  if (window.innerWidth <= 768) {
+  if (isMobile()) {
     e.preventDefault();
     return;
   }
@@ -1239,7 +1383,7 @@ function handleDrop(e) {
 }
 
 function handleTouchStartDrag(e) {
-  if (window.innerWidth <= 768) {
+  if (isMobile()) {
     e.preventDefault();
     return;
   }
@@ -1251,7 +1395,7 @@ function handleTouchStartDrag(e) {
 }
 
 function handleTouchMoveDrag(e) {
-  if (window.innerWidth <= 768) {
+  if (isMobile()) {
     e.preventDefault();
     return;
   }
@@ -1260,7 +1404,7 @@ function handleTouchMoveDrag(e) {
 }
 
 function handleTouchEndDrag() {
-  if (window.innerWidth <= 768) {
+  if (isMobile()) {
     e.preventDefault();
     return;
   }
@@ -1367,6 +1511,7 @@ function importRangesFromData(data) {
       score: r.score || 1,
       desc: r.desc || "",
       items,
+      itemsCollapsed: isMobile() ? true : false,
     };
     appState.ranges.push(rangeWithId);
   });
@@ -1519,3 +1664,14 @@ moveToTopBtn.addEventListener("click", () => {
 // Initialize
 document.body.style.fontFamily = appState.font;
 initSwipeToDelete();
+setupMobileNamesBar();
+syncNamesElements();
+window.addEventListener("resize", () => {
+  const isNowMobile = window.innerWidth <= 768;
+  document.querySelectorAll(".range-item").forEach((el) => {
+    el.draggable = !isNowMobile;
+  });
+  if (isNowMobile) {
+    setupMobileNamesBar();
+  }
+});
