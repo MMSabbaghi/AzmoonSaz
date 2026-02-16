@@ -89,6 +89,7 @@ input:focus {
   border-radius: 6px;
   background: #f9f9f9;
   position: relative;
+  overflow: visible; /* changed from hidden to avoid clipping shadows/swipe */
 }
 
 .range-header {
@@ -120,7 +121,6 @@ input:focus {
     visibility: hidden;
   }
 
-  /* جلوگیری از بریده شدن جدول بین صفحات */
   #printable table {
     page-break-inside: avoid;
   }
@@ -173,6 +173,11 @@ input:focus {
 
 .modal--visible #modalContent {
   transform: scale(1);
+}
+
+/* Body scroll lock for modal */
+body.modal-open {
+  overflow: hidden;
 }
 
 .file {
@@ -371,7 +376,7 @@ input:focus + label {
     transform 0.2s ease;
 }
 
-/* استایل placeholder برای ویرایشگر متن (اختیاری) */
+/* استایل placeholder برای ویرایشگر متن */
 .text-editor-content[placeholder]:empty:before {
   content: attr(placeholder);
   color: #aaa;
@@ -493,9 +498,9 @@ textarea:disabled {
 
   /* کارت‌های مباحث (range-item) */
   .range-item {
-    padding: 16px 12px; /* افزایش فضای داخلی برای لمس بهتر */
+    padding: 16px 12px;
     margin-bottom: 12px;
-    overflow: hidden;
+    overflow: visible; /* هماهنگ با نسخه دسکتاپ */
   }
 
   .range-header {
@@ -512,7 +517,7 @@ textarea:disabled {
   /* فیلدهای ورودی در هر مبحث */
   .range-header input {
     height: 44px;
-    font-size: 16px; /* جلوگیری از زوم خودکار در iOS */
+    font-size: 16px;
     padding: 12px;
   }
 
@@ -547,14 +552,15 @@ textarea:disabled {
 
   /* دکمه‌های حذف و کپی مبحث */
   .range-header > .flex:last-child {
-    position: absolute;
-    top: 8px;
-    left: 8px;
+    /* position: absolute;  حذف شد */
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
   }
 
   .range-header > .flex:last-child button {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     font-size: 1.2rem;
   }
 
@@ -841,6 +847,7 @@ textarea:disabled {
     background: white;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
     padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom)); /* safe area */
     z-index: 1000;
     display: flex;
     flex-wrap: wrap;

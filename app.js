@@ -177,11 +177,11 @@ const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
 // ========== Swipe to Delete (بهبود یافته) ==========
-let touchStartX = 0;
-let touchStartY = 0;
-let touchCurrentX = 0;
+let touchStartX = null;
+let touchStartY = null;
+let touchCurrentX = null;
 let isSwiping = false;
-const minSwipeDistance = 80; // افزایش آستانه
+const minSwipeDistance = 80; // آستانه پایه (در صورت عدم محاسبه)
 const maxVerticalDeviation = 20;
 let justSwiped = false; // برای جلوگیری از کلیک تصادفی
 
@@ -207,10 +207,14 @@ function handleTouchStart(e) {
   this.dataset.swiping = "false";
   this.style.transition = "none";
   this.dataset.touchStartTime = Date.now();
+
+  // محاسبه فاصله سوایپ بر اساس عرض عنصر
+  const swipeDistance = Math.min(80, this.offsetWidth * 0.3);
+  this.dataset.swipeDistance = swipeDistance;
 }
 
 function handleTouchMove(e) {
-  if (!touchStartX) return;
+  if (touchStartX === null) return; // بررسی با null
   const touch = e.touches[0];
   const diffX = touch.clientX - touchStartX;
   const diffY = Math.abs(touch.clientY - touchStartY);
@@ -227,9 +231,10 @@ function handleTouchMove(e) {
   }
 
   if (isSwiping) {
+    const swipeDistance = parseFloat(this.dataset.swipeDistance) || 80;
     let translateX = diffX;
     if (diffX < 0) {
-      translateX = Math.max(diffX, -80);
+      translateX = Math.max(diffX, -swipeDistance);
     } else {
       if (this.dataset.swiped === "true") {
         translateX = Math.min(diffX, 0);
@@ -243,10 +248,12 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd(e) {
-  if (!touchStartX) return;
+  if (touchStartX === null) return;
   const timeDiff = Date.now() - this.dataset.touchStartTime;
   const diffX = touchCurrentX - touchStartX;
-  const wasSwiping = isSwiping || Math.abs(diffX) > minSwipeDistance;
+  const swipeDistance =
+    parseFloat(this.dataset.swipeDistance) || minSwipeDistance;
+  const wasSwiping = isSwiping || Math.abs(diffX) > swipeDistance;
 
   if (wasSwiping) {
     e.preventDefault();
@@ -255,8 +262,8 @@ function handleTouchEnd(e) {
       justSwiped = false;
     }, 300);
 
-    if (diffX < -minSwipeDistance) {
-      this.style.transform = "translateX(-80px)";
+    if (diffX < -swipeDistance) {
+      this.style.transform = `translateX(-${swipeDistance}px)`;
       this.style.transition = "transform 0.3s ease";
       this.dataset.swiped = "true";
 
@@ -284,14 +291,14 @@ function handleTouchEnd(e) {
     resetSwipe(this);
   }
 
-  touchStartX = 0;
+  touchStartX = null;
   isSwiping = false;
   delete this.dataset.swiping;
 }
 
 function handleTouchCancel(e) {
   resetSwipe(this);
-  touchStartX = 0;
+  touchStartX = null;
   isSwiping = false;
 }
 
@@ -436,7 +443,7 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
     if (
       justSwiped ||
       container.dataset.swiped === "true" ||
-      container.dataset.swiping === "true"
+      container.dataset.swiping === "true" // اضافه شد
     ) {
       e.preventDefault();
       e.stopPropagation();
@@ -536,6 +543,7 @@ function getRangeHTML(rangeData) {
         <div class="flex items-center gap-2">
           <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
           <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
+          <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded paste-range transition-all duration-500 ease-out"><i class="bi bi-clipboard-plus"></i></button>
         </div>
       </div>
       <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
@@ -632,9 +640,11 @@ function setupRangeButtons(rangeElement, rangeId) {
         if (range.itemsCollapsed) {
           preview.classList.add("collapsed");
           toggleBtn.classList.add("collapsed");
+          toggleBtn.setAttribute("aria-expanded", "false");
         } else {
           preview.classList.remove("collapsed");
           toggleBtn.classList.remove("collapsed");
+          toggleBtn.setAttribute("aria-expanded", "true");
         }
       }
     });
@@ -650,6 +660,7 @@ function setupRangeButtons(rangeElement, rangeId) {
       const details = rangeElement.querySelector(".range-details");
       details.classList.toggle("hidden", range.fieldsCollapsed);
       toggleFieldsBtn.classList.toggle("collapsed", !range.fieldsCollapsed);
+      toggleFieldsBtn.setAttribute("aria-expanded", !range.fieldsCollapsed);
     });
   }
 }
@@ -683,6 +694,12 @@ function setupSwitchOnRange(rangeElement) {
 
 function attachRangeEvents(rangeElement, rangeId) {
   rangeElement.addEventListener("click", (e) => {
+    // اگر سوایپ در حال انجام است، کلیک را نادیده بگیر
+    if (rangeElement.dataset.swiping === "true") {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     if (!e.target.closest("button")) {
       activeRangeId = rangeId;
     }
@@ -740,8 +757,27 @@ function addItemToRange(rangeId, item) {
   }
 }
 
-// ========== Names Section ==========
+// ========== Names Section - Unified State ==========
+function updateNamesFromElement(element) {
+  if (element && element.tagName === "TEXTAREA") {
+    const names = element.value
+      .trim()
+      .split("\n")
+      .filter((n) => n);
+    appState.names = names;
+  } else if (
+    element &&
+    element.tagName === "INPUT" &&
+    element.dataset.numberInput
+  ) {
+    const value = parseInt(element.value) || 1;
+    appState.namesCount = value;
+  }
+  renderNamesSection();
+}
+
 function renderNamesSection() {
+  // به‌روزرسانی textarea دسکتاپ
   namesTextarea.value = appState.names.join("\n");
   if (appState.names.length > 0) {
     namesCountEl.value = appState.names.length;
@@ -750,29 +786,35 @@ function renderNamesSection() {
     namesCountEl.value = appState.namesCount;
     namesCountEl.disabled = false;
   }
-  // همچنین در موبایل
+
+  // به‌روزرسانی نسخه موبایل اگر وجود داشته باشد
   const mobileTextarea = document.querySelector(
     "#names-textarea-mobile textarea",
   );
   if (mobileTextarea) {
     mobileTextarea.value = appState.names.join("\n");
   }
+  const mobileCount = document.getElementById("names-count-mobile");
+  if (mobileCount) {
+    if (appState.names.length > 0) {
+      mobileCount.value = appState.names.length;
+      mobileCount.disabled = true;
+    } else {
+      mobileCount.value = appState.namesCount;
+      mobileCount.disabled = false;
+    }
+  }
 }
 
-function syncNamesFromTextarea() {
-  const names = namesTextarea.value
-    .trim()
-    .split("\n")
-    .filter((n) => n);
-  appState.names = names;
-  renderNamesSection();
+function syncNamesFromTextarea(sourceElement) {
+  updateNamesFromElement(sourceElement || namesTextarea);
 }
 
 function setupMobileNamesBar() {
   if (!isMobile()) return;
 
   const bottomBar = document.getElementById("mobile-bottom-bar");
-  // پاک کردن محتوای قبلی برای جلوگیری از تکرار
+  // پاک کردن محتوای قبلی
   bottomBar.innerHTML = `
     <div class="names-controls"></div>
     <div class="mobile-actions">
@@ -824,40 +866,40 @@ function setupMobileNamesBar() {
       },
       isActive,
     });
-    syncNamesFromTextarea();
+    // همگام‌سازی state از textarea موبایل
+    const mobileTextarea = originalTextarea.querySelector("textarea");
+    updateNamesFromElement(mobileTextarea);
   });
 
   const textareaMobile = originalTextarea.querySelector("textarea");
-  textareaMobile.addEventListener("input", syncNamesFromTextarea);
+  textareaMobile.addEventListener("input", () =>
+    updateNamesFromElement(textareaMobile),
+  );
   textareaMobile.value = appState.names.join("\n");
 
-  // همگام‌سازی شمارنده
+  // همگام‌سازی شمارنده موبایل
   const countMobile = originalNamesSection.querySelector("#names-count");
   if (countMobile) {
     countMobile.id = "names-count-mobile";
     countMobile.value = appState.namesCount;
-    countMobile.addEventListener("input", (e) => {
-      appState.namesCount = parseInt(e.target.value) || 1;
-      document.getElementById("names-count").value = e.target.value;
-    });
+    countMobile.addEventListener("input", (e) =>
+      updateNamesFromElement(e.target),
+    );
   }
+
+  // اتصال دکمه‌های تولید و چاپ موبایل
+  bottomBar
+    .querySelector(".mobile-generate")
+    .addEventListener("click", handleGenerateClick);
+  bottomBar
+    .querySelector(".mobile-print")
+    .addEventListener("click", () => window.print());
 }
 
-function syncNamesElements() {
-  const countDesktop = document.getElementById("names-count");
-  const countMobile = document.getElementById("names-count-mobile");
-  if (countDesktop && countMobile) {
-    countMobile.value = countDesktop.value;
-    countMobile.addEventListener("input", (e) => {
-      countDesktop.value = e.target.value;
-      appState.namesCount = parseInt(e.target.value) || 1;
-    });
-  }
-}
+// حذف تابع syncNamesElements قبلی (اکنون با renderNamesSection یکپارچه شده)
 
 // ========== Paste Handler ==========
 async function handlePasteInModal(items) {
-  // unchanged
   if (cropper) destroyCropper();
 
   let imageProcessed = false;
@@ -1572,7 +1614,6 @@ function handleDrop(e) {
 
 function handleTouchStartDrag(e) {
   if (isMobile()) {
-    e.preventDefault();
     return;
   }
   const target = e.target.closest(".range-item");
@@ -1593,7 +1634,6 @@ function handleTouchMoveDrag(e) {
 
 function handleTouchEndDrag() {
   if (isMobile()) {
-    e.preventDefault();
     return;
   }
   const items = [...rangesContainer.querySelectorAll(".range-item")];
@@ -1789,12 +1829,11 @@ handleSwitchElement({
 });
 
 namesTextarea.addEventListener("input", () => {
-  syncNamesFromTextarea();
-  appState.namesCount = namesCountEl.value;
+  syncNamesFromTextarea(namesTextarea);
 });
 
 namesCountEl.addEventListener("input", (e) => {
-  appState.namesCount = parseInt(e.target.value) || 1;
+  updateNamesFromElement(e.target);
 });
 
 document.getElementById("generate").onclick = handleGenerateClick;
@@ -1862,7 +1901,6 @@ moveToTopBtn.addEventListener("click", () => {
 document.body.style.fontFamily = appState.font;
 initSwipeToDelete();
 setupMobileNamesBar();
-syncNamesElements();
 window.addEventListener("resize", () => {
   const isNowMobile = window.innerWidth <= 768;
   document.querySelectorAll(".range-item").forEach((el) => {
