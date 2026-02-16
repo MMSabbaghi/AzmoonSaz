@@ -185,19 +185,6 @@ const minSwipeDistance = 80; // آستانه پایه (در صورت عدم مح
 const maxVerticalDeviation = 20;
 let justSwiped = false; // برای جلوگیری از کلیک تصادفی
 
-function initSwipeToDelete() {
-  if (!isMobile()) return;
-  const items = document.querySelectorAll(".item-thumbnail, .range-item");
-  items.forEach((el) => {
-    if (el.dataset.swipeInit === "true") return;
-    el.dataset.swipeInit = "true";
-    el.addEventListener("touchstart", handleTouchStart, { passive: true });
-    el.addEventListener("touchmove", handleTouchMove, { passive: false });
-    el.addEventListener("touchend", handleTouchEnd);
-    el.addEventListener("touchcancel", handleTouchCancel);
-  });
-}
-
 function handleTouchStart(e) {
   const touch = e.touches[0];
   touchStartX = touch.clientX;
@@ -393,8 +380,6 @@ function renderRangeItems(rangeElement, rangeId) {
   } else {
     preview.classList.remove("collapsed");
   }
-
-  initSwipeToDelete();
 }
 
 function buildItemThumbnailContent(item) {
@@ -472,12 +457,12 @@ function getRangeHTML(rangeData) {
             <span class="range-total-badge">${toPersianDigits(rangeData.items.length)}</span>
           </div>
           <div class="range-actions">
+          <button class="toggle-fields-btn ${rangeData.fieldsCollapsed ? "" : "collapsed"}">
             <button class="remove-range"><i class="bi bi-trash3"></i></button>
             <button class="copy-range"><i class="bi bi-copy"></i></button>
             <button class="paste-range"><i class="bi bi-clipboard-plus"></i></button>
             <button class="move-up"><i class="bi bi-arrow-up"></i></button>
             <button class="move-down"><i class="bi bi-arrow-down"></i></button>
-            <button class="toggle-fields-btn ${rangeData.fieldsCollapsed ? "" : "collapsed"}">
               <i class="bi bi-chevron-down"></i>
             </button>
           </div>
@@ -720,7 +705,8 @@ function buildRangeDOM(rangeData) {
   const div = document.createElement("div");
   div.id = rangeData.id;
   div.draggable = !isMobile();
-  div.className = "range-item transition-transform duration-200 ease-out";
+  div.className =
+    "range-item transition-transform duration-200 ease-out overflow-auto";
   div.innerHTML = getRangeHTML(rangeData);
   return div;
 }
@@ -742,7 +728,6 @@ function createRangeElement(rangeData = null) {
   }
   const el = buildRangeDOM(rangeData);
   attachRangeEvents(el, rangeData.id);
-  setTimeout(() => initSwipeToDelete(), 0);
   return el;
 }
 
@@ -1625,7 +1610,6 @@ function handleTouchStartDrag(e) {
 
 function handleTouchMoveDrag(e) {
   if (isMobile()) {
-    e.preventDefault();
     return;
   }
   if (!draggedElement) return;
@@ -1766,7 +1750,6 @@ function processImportedFile(fileContent) {
     });
 
     renderNamesSection();
-    initSwipeToDelete();
   } catch (err) {
     console.error("Invalid JSON file:", err);
     showToast("فایل JSON نامعتبر است!", "error");
@@ -1899,7 +1882,6 @@ moveToTopBtn.addEventListener("click", () => {
 
 // Initialize
 document.body.style.fontFamily = appState.font;
-initSwipeToDelete();
 setupMobileNamesBar();
 window.addEventListener("resize", () => {
   const isNowMobile = window.innerWidth <= 768;
@@ -1948,5 +1930,4 @@ function moveRange(rangeId, direction) {
     const el = createRangeElement(r);
     rangesContainer.appendChild(el);
   });
-  initSwipeToDelete();
 }
