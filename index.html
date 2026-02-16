@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>ساخت کوییز</title>
   <link href="./utils/cropper/cropper.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="./icons/bootstrap-icons.min.css">
@@ -65,11 +65,11 @@
           </div>
         </div>
         <div>
-          <button id="generate" class="btn px-4 py-2 rounded mt-2 md:mb-2">
+          <button id="generate" class="btn px-4 py-2 rounded mt-2 md:mb-2 desktop-cta">
             <i class="bi bi-clipboard2-check"></i>
             <span>تولید آزمون</span>
           </button>
-          <button onclick="window.print()" class="btn px-4 py-2 rounded md:mt-2 mb-2">
+          <button onclick="window.print()" class="btn px-4 py-2 rounded md:mt-2 mb-2 desktop-cta">
             <i class="bi bi-printer"></i>
             <span>چاپ خروجی</span>
           </button>
@@ -85,24 +85,10 @@
 
     <!-- نوار پایین موبایل (جدید) -->
     <div id="mobile-bottom-bar">
-      <div class="names-controls">
-        <div>
-          <input value="1" data-number-input="true" data-float="false" type="text" id="names-count-mobile"
-            class="border rounded p-2 w-20" placeholder="تعداد">
-        </div>
-        <div id="names-switch-mobile" class="flex gap-1">
-          <label> نمایش اسامی: </label>
-          <div id="switch-mobile" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
-              transition-all duration-300 ease-out shadow-inner">
-            <div id="knob-mobile" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)]
-                transition-all duration-500 shadow-md">
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="names-textarea-mobile" class="hidden">
-        <textarea rows="3" class="w-full border rounded-[var(--radius)] p-3 text-sm focus:outline-none"
-          placeholder="نام دانش‌آموزان هر کدام در یک خط"></textarea>
+      <div class="names-controls"></div> <!-- place for cloned names section -->
+      <div class="mobile-actions">
+        <button class="btn mobile-generate"><i class="bi bi-clipboard2-check"></i> تولید آزمون</button>
+        <button class="btn mobile-print"><i class="bi bi-printer"></i> چاپ</button>
       </div>
     </div>
 

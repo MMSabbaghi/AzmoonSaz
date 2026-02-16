@@ -1,8 +1,6 @@
-// app.js
-
 // ---------- State Management ----------
 const appState = {
-  ranges: [], // هر range شامل { id, rangeName, count, score, desc, items, itemsCollapsed }
+  ranges: [], // هر range شامل { id, rangeName, count, score, desc, items, itemsCollapsed, fieldsCollapsed }
   names: [],
   namesCount: 1,
   font: "'Vazirmatn', sans-serif",
@@ -178,13 +176,14 @@ let draggedElement = null;
 const dragPlaceholder = document.createElement("div");
 dragPlaceholder.className = "placeholder";
 
-// ========== Swipe to Delete (بازنویسی شده برای رفع لرزش) ==========
+// ========== Swipe to Delete (بهبود یافته) ==========
 let touchStartX = 0;
 let touchStartY = 0;
 let touchCurrentX = 0;
 let isSwiping = false;
-const minSwipeDistance = 50;
+const minSwipeDistance = 80; // افزایش آستانه
 const maxVerticalDeviation = 20;
+let justSwiped = false; // برای جلوگیری از کلیک تصادفی
 
 function initSwipeToDelete() {
   if (!isMobile()) return;
@@ -207,6 +206,7 @@ function handleTouchStart(e) {
   isSwiping = false;
   this.dataset.swiping = "false";
   this.style.transition = "none";
+  this.dataset.touchStartTime = Date.now();
 }
 
 function handleTouchMove(e) {
@@ -220,7 +220,7 @@ function handleTouchMove(e) {
     return;
   }
 
-  if (Math.abs(diffX) > 10) {
+  if (Math.abs(diffX) > 15) {
     e.preventDefault();
     isSwiping = true;
     this.dataset.swiping = "true";
@@ -243,35 +243,42 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd(e) {
-  if (!touchStartX || !isSwiping) {
-    resetSwipe(this);
-    touchStartX = 0;
-    return;
-  }
-
+  if (!touchStartX) return;
+  const timeDiff = Date.now() - this.dataset.touchStartTime;
   const diffX = touchCurrentX - touchStartX;
+  const wasSwiping = isSwiping || Math.abs(diffX) > minSwipeDistance;
 
-  if (diffX < -minSwipeDistance) {
-    this.style.transform = "translateX(-80px)";
-    this.style.transition = "transform 0.3s ease";
-    this.dataset.swiped = "true";
+  if (wasSwiping) {
+    e.preventDefault();
+    justSwiped = true;
+    setTimeout(() => {
+      justSwiped = false;
+    }, 300);
 
-    if (!this.querySelector(".swipe-delete-btn")) {
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "swipe-delete-btn";
-      deleteBtn.innerHTML = '<i class="bi bi-trash3"></i>';
-      deleteBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (this.classList.contains("item-thumbnail")) {
-          const removeBtn = this.querySelector(".remove-item");
-          if (removeBtn) removeBtn.click();
-        } else if (this.classList.contains("range-item")) {
-          const removeRangeBtn = this.querySelector(".remove-range");
-          if (removeRangeBtn) removeRangeBtn.click();
-        }
-        resetSwipe(this);
-      };
-      this.appendChild(deleteBtn);
+    if (diffX < -minSwipeDistance) {
+      this.style.transform = "translateX(-80px)";
+      this.style.transition = "transform 0.3s ease";
+      this.dataset.swiped = "true";
+
+      if (!this.querySelector(".swipe-delete-btn")) {
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "swipe-delete-btn";
+        deleteBtn.innerHTML = '<i class="bi bi-trash3"></i>';
+        deleteBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (this.classList.contains("item-thumbnail")) {
+            const removeBtn = this.querySelector(".remove-item");
+            if (removeBtn) removeBtn.click();
+          } else if (this.classList.contains("range-item")) {
+            const removeRangeBtn = this.querySelector(".remove-range");
+            if (removeRangeBtn) removeRangeBtn.click();
+          }
+          resetSwipe(this);
+        };
+        this.appendChild(deleteBtn);
+      }
+    } else {
+      resetSwipe(this);
     }
   } else {
     resetSwipe(this);
@@ -357,17 +364,21 @@ function renderRangeItems(rangeElement, rangeId) {
   if (!range) return;
   const preview = rangeElement.querySelector(".items-preview");
   preview.innerHTML = "";
-  range.items.forEach((item, index) => {
+  const fragment = document.createDocumentFragment();
+  range.items.forEach((item) => {
     const itemContainer = createItemThumbnailElement(
       item,
       rangeElement,
       rangeId,
     );
     itemContainer.classList.add("item-thumbnail-enter");
-    preview.appendChild(itemContainer);
-    setTimeout(() => {
-      itemContainer.classList.remove("item-thumbnail-enter");
-    }, index * 50);
+    fragment.appendChild(itemContainer);
+  });
+  preview.appendChild(fragment);
+  requestAnimationFrame(() => {
+    preview.querySelectorAll(".item-thumbnail-enter").forEach((el) => {
+      el.classList.remove("item-thumbnail-enter");
+    });
   });
 
   if (range.itemsCollapsed) {
@@ -421,7 +432,16 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
     });
   };
 
-  container.addEventListener("click", () => {
+  container.addEventListener("click", (e) => {
+    if (
+      justSwiped ||
+      container.dataset.swiped === "true" ||
+      container.dataset.swiping === "true"
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     openItemModal(rangeId, item.id);
   });
 
@@ -436,92 +456,169 @@ function updateRangeItemCountBadge(rangeDiv) {
 
 // ========== Range DOM Building ==========
 function getRangeHTML(rangeData) {
-  const fileID = createRandomId("file");
-  return `
-    <div class="range-header my-1">
-      <div class="flex items-center gap-2">
-        <div>
-          <label class="font-normal text-[#777]"> مبحث: </label>
-          <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
-        </div>
-        <div>
-          <label class="font-normal text-[#777]"> تعداد: </label>
-          <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
-        </div>
-        <div>
-          <label class="font-normal text-[#777]" > نمره: </label>
-          <input value="${rangeData.score}" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
-        </div>
-        <div class="relative inline-block">
-          <div class="file-input">
-            <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
-            <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
+  if (isMobile()) {
+    return `
+      <div class="range-header-mobile my-1">
+        <div class="range-header-row">
+          <div class="range-title">
+            <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
+            <span class="range-total-badge">${toPersianDigits(rangeData.items.length)}</span>
           </div>
-          <span class="range-total absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-            ${toPersianDigits(rangeData.items.length)}
-          </span>
+          <div class="range-actions">
+            <button class="remove-range"><i class="bi bi-trash3"></i></button>
+            <button class="copy-range"><i class="bi bi-copy"></i></button>
+            <button class="paste-range"><i class="bi bi-clipboard-plus"></i></button>
+            <button class="move-up"><i class="bi bi-arrow-up"></i></button>
+            <button class="move-down"><i class="bi bi-arrow-down"></i></button>
+            <button class="toggle-fields-btn ${rangeData.fieldsCollapsed ? "" : "collapsed"}">
+              <i class="bi bi-chevron-down"></i>
+            </button>
+          </div>
         </div>
-        <button class="add-text-item btn px-3 py-2 rounded"><i class="bi bi-type"></i></button>
-        <label class="font-normal text-[#777]" > متن سوال: </label>
-        <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
-          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+        <div class="range-details ${rangeData.fieldsCollapsed ? "hidden" : ""}">
+          <div class="details-row">
+            <label>مبحث:</label> <input value="${rangeData.rangeName}" class="range-name border rounded p-2">
+            <label>تعداد:</label> <input value="${rangeData.count}" data-number-input="true" data-float="false" class="range-count border rounded p-2 w-20">
+            <label>نمره:</label> <input value="${rangeData.score}" data-number-input="true" class="range-score border rounded p-2 w-20">
+          </div>
+          <div class="details-row">
+            <div class="file-input">
+              <input type="file" class="range-images" accept="image/*" multiple><label class="btn px-3 py-2"><i class="bi bi-image"></i></label>
+            </div>
+            <button class="add-text-item btn px-3 py-2"><i class="bi bi-type"></i></button>
+            <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
+              <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+            </div>
+          </div>
         </div>
-        <!-- دکمه آکاردئون (chevron) -->
-        <button class="toggle-items-btn md:hidden ${rangeData.itemsCollapsed ? "collapsed" : ""}">
-          <i class="bi bi-chevron-up"></i>
-        </button>
+        <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
+          <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
-        <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
+      <div class="items-preview ${rangeData.itemsCollapsed ? "collapsed" : ""}"></div>
+    `;
+  } else {
+    const fileID = createRandomId("file");
+    return `
+      <div class="range-header my-1">
+        <div class="flex items-center gap-2">
+          <div>
+            <label class="font-normal text-[#777]"> مبحث: </label>
+            <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
+          </div>
+          <div>
+            <label class="font-normal text-[#777]"> تعداد: </label>
+            <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
+          </div>
+          <div>
+            <label class="font-normal text-[#777]" > نمره: </label>
+            <input value="${rangeData.score}" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
+          </div>
+          <div class="relative inline-block">
+            <div class="file-input">
+              <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
+              <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
+            </div>
+            <span class="range-total absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              ${toPersianDigits(rangeData.items.length)}
+            </span>
+          </div>
+          <button class="add-text-item btn px-3 py-2 rounded"><i class="bi bi-type"></i></button>
+          <label class="font-normal text-[#777]" > متن سوال: </label>
+          <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
+            <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+          </div>
+          <!-- دکمه آکاردئون (chevron) -->
+          <button class="toggle-items-btn md:hidden ${rangeData.itemsCollapsed ? "collapsed" : ""}">
+            <i class="bi bi-chevron-up"></i>
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
+          <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
+        </div>
       </div>
-    </div>
-    <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-      <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
-    </div>
-    <div class="items-preview ${rangeData.itemsCollapsed ? "collapsed" : ""}"></div>
-  `;
+      <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
+        <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+      </div>
+      <div class="items-preview ${rangeData.itemsCollapsed ? "collapsed" : ""}"></div>
+    `;
+  }
 }
 
 function setupRangeInputs(rangeElement, rangeId) {
-  rangeElement.querySelector(".range-name").addEventListener("input", (e) => {
-    updateRangeInState(rangeId, { rangeName: e.target.value });
+  rangeElement.querySelectorAll(".range-name").forEach((el) => {
+    el.addEventListener("input", (e) => {
+      updateRangeInState(rangeId, { rangeName: e.target.value });
+    });
   });
-  rangeElement.querySelector(".range-count").addEventListener("input", (e) => {
-    updateRangeInState(rangeId, { count: parseInt(e.target.value) || 0 });
+  rangeElement.querySelectorAll(".range-count").forEach((el) => {
+    el.addEventListener("input", (e) => {
+      updateRangeInState(rangeId, { count: parseInt(e.target.value) || 0 });
+    });
   });
-  rangeElement.querySelector(".range-score").addEventListener("input", (e) => {
-    updateRangeInState(rangeId, { score: e.target.value });
+  rangeElement.querySelectorAll(".range-score").forEach((el) => {
+    el.addEventListener("input", (e) => {
+      updateRangeInState(rangeId, { score: e.target.value });
+    });
   });
-  rangeElement.querySelector(".range-desc").addEventListener("input", (e) => {
+  rangeElement.querySelector(".range-desc")?.addEventListener("input", (e) => {
     updateRangeInState(rangeId, { desc: e.target.value });
   });
 }
 
 function setupRangeButtons(rangeElement, rangeId) {
-  rangeElement.querySelector(".remove-range").onclick = () => {
-    showConfirm({
-      msg: "آیا از حذف این مبحث اطمینان دارید؟",
-      on_confirm: () => {
-        animateRemoveRange(rangeElement, () => {
-          appState.ranges = appState.ranges.filter((r) => r.id !== rangeId);
-        });
-      },
-    });
-  };
-
-  rangeElement.querySelector(".copy-range").addEventListener("click", () => {
-    const items = appState.ranges.find((r) => r.id === rangeId)?.items || [];
-    if (items.length) {
-      copyToClipboard(JSON.stringify(items));
-    } else {
-      showToast("آیتمی برای کپی وجود ندارد.", "error");
-    }
+  rangeElement.querySelectorAll(".remove-range").forEach((btn) => {
+    btn.onclick = () => {
+      showConfirm({
+        msg: "آیا از حذف این مبحث اطمینان دارید؟",
+        on_confirm: () => {
+          animateRemoveRange(rangeElement, () => {
+            appState.ranges = appState.ranges.filter((r) => r.id !== rangeId);
+          });
+        },
+      });
+    };
   });
 
-  rangeElement.querySelector(".add-text-item").addEventListener("click", () => {
-    const newItem = createTextItem();
-    openModalForNewItem(rangeId, newItem);
+  rangeElement.querySelectorAll(".copy-range").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const items = appState.ranges.find((r) => r.id === rangeId)?.items || [];
+      if (items.length) {
+        copyToClipboard(JSON.stringify(items));
+      } else {
+        showToast("آیتمی برای کپی وجود ندارد.", "error");
+      }
+    });
+  });
+
+  // Paste button
+  rangeElement.querySelectorAll(".paste-range").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      pasteItemsToRange(rangeId);
+    });
+  });
+
+  // Move up/down
+  rangeElement.querySelectorAll(".move-up").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      moveRange(rangeId, "up");
+    });
+  });
+  rangeElement.querySelectorAll(".move-down").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      moveRange(rangeId, "down");
+    });
+  });
+
+  rangeElement.querySelectorAll(".add-text-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const newItem = createTextItem();
+      openModalForNewItem(rangeId, newItem);
+    });
   });
 
   const toggleBtn = rangeElement.querySelector(".toggle-items-btn");
@@ -540,6 +637,19 @@ function setupRangeButtons(rangeElement, rangeId) {
           toggleBtn.classList.remove("collapsed");
         }
       }
+    });
+  }
+
+  // Toggle fields (for mobile compact mode)
+  const toggleFieldsBtn = rangeElement.querySelector(".toggle-fields-btn");
+  if (toggleFieldsBtn) {
+    toggleFieldsBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const range = appState.ranges.find((r) => r.id === rangeId);
+      range.fieldsCollapsed = !range.fieldsCollapsed;
+      const details = rangeElement.querySelector(".range-details");
+      details.classList.toggle("hidden", range.fieldsCollapsed);
+      toggleFieldsBtn.classList.toggle("collapsed", !range.fieldsCollapsed);
     });
   }
 }
@@ -608,6 +718,7 @@ function createRangeElement(rangeData = null) {
       desc: "",
       items: [],
       itemsCollapsed: isMobile() ? true : false,
+      fieldsCollapsed: isMobile() ? true : false,
     };
     appState.ranges.push(newRange);
     rangeData = newRange;
@@ -639,6 +750,13 @@ function renderNamesSection() {
     namesCountEl.value = appState.namesCount;
     namesCountEl.disabled = false;
   }
+  // همچنین در موبایل
+  const mobileTextarea = document.querySelector(
+    "#names-textarea-mobile textarea",
+  );
+  if (mobileTextarea) {
+    mobileTextarea.value = appState.names.join("\n");
+  }
 }
 
 function syncNamesFromTextarea() {
@@ -654,52 +772,62 @@ function setupMobileNamesBar() {
   if (!isMobile()) return;
 
   const bottomBar = document.getElementById("mobile-bottom-bar");
-  const namesTextareaMobile = document.getElementById("names-textarea-mobile");
-  const namesSwitchMobile = document.getElementById("names-switch-mobile");
-  const namesCountMobile = document.getElementById("names-count-mobile");
+  const namesControlDiv = bottomBar.querySelector(".names-controls");
+  const originalNamesSection = document
+    .querySelector(".names-section-original")
+    .cloneNode(true);
+  originalNamesSection.classList.add("mobile-names-section");
+  namesControlDiv.innerHTML = "";
+  namesControlDiv.appendChild(originalNamesSection);
 
-  // Manual setup for mobile switch (using mobile-specific IDs)
-  const sw = document.getElementById("switch-mobile");
-  const knob = document.getElementById("knob-mobile");
-  if (!sw || !knob) return;
+  // انتقال switch و textarea با idهای جدید
+  const originalSwitch = document
+    .getElementById("names-switch")
+    .cloneNode(true);
+  originalSwitch.id = "names-switch-mobile";
+  const originalTextarea = document
+    .getElementById("names-textarea")
+    .cloneNode(true);
+  originalTextarea.id = "names-textarea-mobile";
 
-  let on = false;
-  sw.addEventListener("click", () => {
-    on = !on;
-    if (on) {
-      sw.classList.add("bg-[#333]");
-      knob.classList.add("translate-x-4", "scale-105");
-    } else {
-      sw.classList.remove("bg-[#333]");
-      knob.classList.remove("translate-x-4", "scale-105");
-    }
-    // Toggle textarea visibility
-    namesTextareaMobile.classList.toggle("hidden", !on);
-    // Sync with desktop textarea
-    const textareaMobile = namesTextareaMobile.querySelector("textarea");
-    const textareaDesktop = document.querySelector("#names-textarea textarea");
-    if (textareaDesktop && textareaMobile) {
-      textareaDesktop.value = textareaMobile.value;
-    }
+  bottomBar.appendChild(originalSwitch);
+  bottomBar.appendChild(originalTextarea);
+
+  // راه‌اندازی مجدد event listenerها برای switch و textarea
+  setupSwitchOnElement(originalSwitch, (isActive) => {
+    setElementState({
+      target: originalTextarea,
+      stateClasses: {
+        on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+        off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+      },
+      isActive,
+    });
     syncNamesFromTextarea();
   });
 
-  namesCountMobile.value = appState.namesCount;
-  namesCountMobile.addEventListener("input", (e) => {
-    appState.namesCount = parseInt(e.target.value) || 1;
-    document.getElementById("names-count").value = e.target.value;
-  });
-
-  const textareaMobile = namesTextareaMobile.querySelector("textarea");
+  const textareaMobile = originalTextarea.querySelector("textarea");
+  textareaMobile.addEventListener("input", syncNamesFromTextarea);
   textareaMobile.value = appState.names.join("\n");
-  textareaMobile.addEventListener("input", () => {
-    appState.names = textareaMobile.value
-      .trim()
-      .split("\n")
-      .filter((n) => n);
-    document.querySelector("#names-textarea textarea").value =
-      textareaMobile.value;
-  });
+
+  // دکمه‌های تولید و چاپ موبایل
+  document
+    .querySelector(".mobile-generate")
+    ?.addEventListener("click", handleGenerateClick);
+  document
+    .querySelector(".mobile-print")
+    ?.addEventListener("click", () => window.print());
+
+  // همگام‌سازی شمارنده
+  const countMobile = originalNamesSection.querySelector("#names-count");
+  if (countMobile) {
+    countMobile.id = "names-count-mobile";
+    countMobile.value = appState.namesCount;
+    countMobile.addEventListener("input", (e) => {
+      appState.namesCount = parseInt(e.target.value) || 1;
+      document.getElementById("names-count").value = e.target.value;
+    });
+  }
 }
 
 function syncNamesElements() {
@@ -716,6 +844,7 @@ function syncNamesElements() {
 
 // ========== Paste Handler ==========
 async function handlePasteInModal(items) {
+  // unchanged
   if (cropper) destroyCropper();
 
   let imageProcessed = false;
@@ -836,6 +965,31 @@ document.addEventListener("paste", async (e) => {
     await handlePasteOutsideModal(items);
   }
 });
+
+// تابع جدید برای چسباندن آیتم‌ها از کلیپ‌بورد
+async function pasteItemsToRange(rangeId) {
+  try {
+    const text = await navigator.clipboard.readText();
+    const items = JSON.parse(text);
+    if (!Array.isArray(items)) throw new Error("Not an array");
+    items.forEach((item) => {
+      const newItem = {
+        id: item.id || createRandomId("item"),
+        text: item.text ? { ...item.text } : null,
+        image: item.image
+          ? {
+              ...item.image,
+              imageId: item.image.imageId || createRandomId("img"),
+            }
+          : null,
+      };
+      addItemToRange(rangeId, newItem);
+    });
+    showToast("آیتم‌ها با موفقیت اضافه شدند.");
+  } catch (err) {
+    showToast("محتوای کلیپ‌بورد معتبر نیست.", "error");
+  }
+}
 
 // ========== Quiz Generation ==========
 function fisherYatesShuffle(arr) {
@@ -1043,6 +1197,20 @@ function openModalWithTempItem() {
 
   updateModalPreviewFromTemp();
 
+  // قفل اسکرول body
+  document.body.classList.add("modal-open");
+
+  // تنظیم ارتفاع مودال بر اساس viewport
+  if (window.visualViewport) {
+    const onViewportResize = () => {
+      document.getElementById("modalContent").style.height =
+        window.visualViewport.height + "px";
+    };
+    window.visualViewport.addEventListener("resize", onViewportResize);
+    window.__viewportHandler = onViewportResize;
+    onViewportResize();
+  }
+
   modal.style.display = "flex";
   setTimeout(() => modal.classList.add("modal--visible"), 10);
 }
@@ -1110,6 +1278,13 @@ function closeModal() {
   appState.modal.itemId = null;
   appState.modal.tempItem = null;
   modal.classList.remove("modal--visible");
+  document.body.classList.remove("modal-open");
+  if (window.__viewportHandler) {
+    window.visualViewport?.removeEventListener(
+      "resize",
+      window.__viewportHandler,
+    );
+  }
   setTimeout(() => {
     modal.style.display = "none";
     modalTextEditor.innerHTML = "";
@@ -1512,6 +1687,7 @@ function importRangesFromData(data) {
       desc: r.desc || "",
       items,
       itemsCollapsed: isMobile() ? true : false,
+      fieldsCollapsed: isMobile() ? true : false,
     };
     appState.ranges.push(rangeWithId);
   });
@@ -1646,6 +1822,14 @@ const observer = new IntersectionObserver(
 );
 observer.observe(sentinel);
 
+function updateToTopPosition() {
+  const bottomBar = document.getElementById("mobile-bottom-bar");
+  if (bottomBar) {
+    const barHeight = bottomBar.offsetHeight;
+    moveToTopBtn.style.bottom = barHeight + 16 + "px";
+  }
+}
+
 window.addEventListener("scroll", () => {
   setElementState({
     target: moveToTopBtn,
@@ -1674,4 +1858,44 @@ window.addEventListener("resize", () => {
   if (isNowMobile) {
     setupMobileNamesBar();
   }
+  updateToTopPosition();
 });
+
+// تابع کمکی برای setup switch روی المان‌های کلون‌شده
+function setupSwitchOnElement(container, onChange) {
+  const sw = container.querySelector("#switch");
+  const knob = container.querySelector("#knob");
+  let on = false;
+  sw.addEventListener("click", () => {
+    on = !on;
+    const func = on ? "add" : "remove";
+    sw.classList[func]("bg-[#333]");
+    knob.classList[func]("translate-x-4", "scale-105");
+    onChange(on);
+  });
+}
+
+// تابع جابجایی مباحث
+function moveRange(rangeId, direction) {
+  const index = appState.ranges.findIndex((r) => r.id === rangeId);
+  if (direction === "up" && index > 0) {
+    [appState.ranges[index - 1], appState.ranges[index]] = [
+      appState.ranges[index],
+      appState.ranges[index - 1],
+    ];
+  } else if (direction === "down" && index < appState.ranges.length - 1) {
+    [appState.ranges[index + 1], appState.ranges[index]] = [
+      appState.ranges[index],
+      appState.ranges[index + 1],
+    ];
+  } else {
+    return;
+  }
+  // بازسازی DOM
+  rangesContainer.innerHTML = "";
+  appState.ranges.forEach((r) => {
+    const el = createRangeElement(r);
+    rangesContainer.appendChild(el);
+  });
+  initSwipeToDelete();
+}
