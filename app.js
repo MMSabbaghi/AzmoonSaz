@@ -639,8 +639,17 @@ function setupRangeButtons(rangeElement, rangeId) {
   const toggleFieldsBtn = rangeElement.querySelector(".toggle-fields-btn");
   if (toggleFieldsBtn) {
     toggleFieldsBtn.addEventListener("click", (e) => {
+      // اگر کلیک روی دکمه‌های داخلی (حذف، کپی، ...) باشد، توگل نکن
+      if (
+        e.target.closest(
+          ".remove-range, .copy-range, .paste-range, .move-up, .move-down",
+        )
+      ) {
+        return;
+      }
       e.stopPropagation();
       const range = appState.ranges.find((r) => r.id === rangeId);
+      if (!range) return;
       range.fieldsCollapsed = !range.fieldsCollapsed;
       const details = rangeElement.querySelector(".range-details");
       details.classList.toggle("hidden", range.fieldsCollapsed);
@@ -795,82 +804,82 @@ function syncNamesFromTextarea(sourceElement) {
   updateNamesFromElement(sourceElement || namesTextarea);
 }
 
+// تابع کمکی برای تنظیم padding-bottom بر اساس ارتفاع منوی موبایل
+function adjustMobilePadding() {
+  if (!isMobile()) return;
+  const bottomBar = document.getElementById("mobile-bottom-bar");
+  if (!bottomBar) return;
+  const barHeight = bottomBar.offsetHeight;
+  document.getElementById("app-container").style.paddingBottom =
+    barHeight + "px";
+  updateToTopPosition(); // هماهنگ‌سازی دکمه برگشت به بالا
+}
+
 function setupMobileNamesBar() {
   if (!isMobile()) return;
 
   const bottomBar = document.getElementById("mobile-bottom-bar");
-  // پاک کردن محتوای قبلی
+  // اگر محتوا از قبل ساخته شده، فقط آپدیت کن (جلوگیری از بازسازی مکرر)
+  if (bottomBar.querySelector(".mobile-names-section-custom")) {
+    return;
+  }
+
   bottomBar.innerHTML = `
-    <div class="names-controls"></div>
+    <div class="names-controls mobile-names-section-custom">
+      <div class="flex items-center gap-2">
+        <div id="names-switch-mobile" class="flex gap-1">
+          <label> نمایش اسامی: </label>
+          <div id="switch-mobile" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
+            <div id="knob-mobile" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="mobile-actions">
       <button class="btn mobile-generate"><i class="bi bi-clipboard2-check"></i> تولید آزمون</button>
       <button class="btn mobile-print"><i class="bi bi-printer"></i> چاپ</button>
     </div>
+    <div id="names-textarea-mobile" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
+      <textarea rows="5" class="w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="نام دانش‌آموزان هر کدام در یک خط"></textarea>
+    </div>
   `;
 
-  const namesControlDiv = bottomBar.querySelector(".names-controls");
-  const originalNamesSection = document
-    .querySelector(".names-section-original")
-    .cloneNode(true);
-  originalNamesSection.classList.add("mobile-names-section");
-  namesControlDiv.appendChild(originalNamesSection);
-
-  // انتقال switch و textarea با idهای جدید
-  const originalSwitch = document
-    .getElementById("names-switch")
-    .cloneNode(true);
-  originalSwitch.id = "names-switch-mobile";
-  const originalTextarea = document
-    .getElementById("names-textarea")
-    .cloneNode(true);
-  originalTextarea.id = "names-textarea-mobile";
-
-  bottomBar.appendChild(originalSwitch);
-  bottomBar.appendChild(originalTextarea);
-
-  // راه‌اندازی مجدد رویدادها برای switch
-  function setupSwitchOnElement(container, onChange) {
-    const sw = container.querySelector("#switch");
-    const knob = container.querySelector("#knob");
+  // راه‌اندازی سوییچ موبایل با idهای جدید
+  function setupMobileSwitch() {
+    const sw = document.getElementById("switch-mobile");
+    const knob = document.getElementById("knob-mobile");
     let on = false;
     sw.addEventListener("click", () => {
       on = !on;
       const func = on ? "add" : "remove";
       sw.classList[func]("bg-[#333]");
       knob.classList[func]("translate-x-4", "scale-105");
-      onChange(on);
+      // اعمال تغییر به textarea
+      setElementState({
+        target: document.getElementById("names-textarea-mobile"),
+        stateClasses: {
+          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+        },
+        isActive: on,
+      });
+      // همگام‌سازی state
+      updateNamesFromElement(
+        document.querySelector("#names-textarea-mobile textarea"),
+      );
+      // به‌روزرسانی padding bottom پس از تغییر ارتفاع منو
+      adjustMobilePadding();
     });
   }
+  setupMobileSwitch();
 
-  setupSwitchOnElement(originalSwitch, (isActive) => {
-    setElementState({
-      target: originalTextarea,
-      stateClasses: {
-        on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-        off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-      },
-      isActive,
-    });
-    // همگام‌سازی state از textarea موبایل
-    const mobileTextarea = originalTextarea.querySelector("textarea");
-    updateNamesFromElement(mobileTextarea);
-  });
-
-  const textareaMobile = originalTextarea.querySelector("textarea");
+  const textareaMobile = document.querySelector(
+    "#names-textarea-mobile textarea",
+  );
   textareaMobile.addEventListener("input", () =>
     updateNamesFromElement(textareaMobile),
   );
   textareaMobile.value = appState.names.join("\n");
-
-  // همگام‌سازی شمارنده موبایل
-  const countMobile = originalNamesSection.querySelector("#names-count");
-  if (countMobile) {
-    countMobile.id = "names-count-mobile";
-    countMobile.value = appState.namesCount;
-    countMobile.addEventListener("input", (e) =>
-      updateNamesFromElement(e.target),
-    );
-  }
 
   // اتصال دکمه‌های تولید و چاپ موبایل
   bottomBar
@@ -879,9 +888,10 @@ function setupMobileNamesBar() {
   bottomBar
     .querySelector(".mobile-print")
     .addEventListener("click", () => window.print());
-}
 
-// حذف تابع syncNamesElements قبلی (اکنون با renderNamesSection یکپارچه شده)
+  // مقداردهی اولیه padding
+  adjustMobilePadding();
+}
 
 // ========== Paste Handler ==========
 async function handlePasteInModal(items) {
@@ -1251,6 +1261,35 @@ function openModalWithTempItem() {
     onViewportResize();
   }
 
+  // مدیریت دکمه ذخیره در موبایل
+  if (isMobile()) {
+    // مخفی کردن دکمه ذخیره اصلی
+    const originalSaveBtn = document.getElementById("save-modal-btn");
+    if (originalSaveBtn) originalSaveBtn.style.display = "none";
+
+    // افزودن دکمه ذخیره در پایین مودال (اگر وجود نداشته باشد)
+    let bottomSaveBtn = document.getElementById("modal-save-bottom");
+    if (!bottomSaveBtn) {
+      bottomSaveBtn = document.createElement("button");
+      bottomSaveBtn.id = "modal-save-bottom";
+      bottomSaveBtn.className = "btn w-full mt-4 py-3 text-lg";
+      bottomSaveBtn.innerHTML = '<i class="bi bi-floppy"></i> ذخیره';
+      bottomSaveBtn.addEventListener("click", () => {
+        showConfirm({
+          msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
+          on_confirm: saveModalChanges,
+        });
+      });
+      document.getElementById("modalContent").appendChild(bottomSaveBtn);
+    }
+  } else {
+    // در دسکتاپ دکمه اصلی را نشان بده و دکمه پایین را حذف کن
+    const originalSaveBtn = document.getElementById("save-modal-btn");
+    if (originalSaveBtn) originalSaveBtn.style.display = "";
+    const bottomSaveBtn = document.getElementById("modal-save-bottom");
+    if (bottomSaveBtn) bottomSaveBtn.remove();
+  }
+
   modal.style.display = "flex";
   setTimeout(() => modal.classList.add("modal--visible"), 10);
 }
@@ -1314,6 +1353,10 @@ function saveModalChanges() {
 
 function closeModal() {
   destroyCropper();
+  // حذف دکمه ذخیره پایین اگر وجود دارد
+  const bottomSaveBtn = document.getElementById("modal-save-bottom");
+  if (bottomSaveBtn) bottomSaveBtn.remove();
+
   appState.modal.rangeId = null;
   appState.modal.itemId = null;
   appState.modal.tempItem = null;
@@ -1891,6 +1934,7 @@ window.addEventListener("resize", () => {
   if (isNowMobile) {
     setupMobileNamesBar();
   }
+  adjustMobilePadding(); // اضافه شد
   updateToTopPosition();
 });
 

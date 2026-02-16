@@ -1001,4 +1001,12 @@ textarea:disabled {
   .range-header select {
     height: 44px;
   }
+  #modal-preview-cell {
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+  #modal-preview-cell img {
+    max-height: 100%;
+    width: auto;
+  }
 }
