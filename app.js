@@ -467,7 +467,7 @@ function getRangeHTML(rangeData) {
           <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
         </div>
         <!-- دکمه آکاردئون (chevron) -->
-        <button class="toggle-items-btn ${rangeData.itemsCollapsed ? "collapsed" : ""}">
+        <button class="toggle-items-btn md:hidden ${rangeData.itemsCollapsed ? "collapsed" : ""}">
           <i class="bi bi-chevron-up"></i>
         </button>
       </div>
