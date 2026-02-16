@@ -772,12 +772,20 @@ function setupMobileNamesBar() {
   if (!isMobile()) return;
 
   const bottomBar = document.getElementById("mobile-bottom-bar");
+  // پاک کردن محتوای قبلی برای جلوگیری از تکرار
+  bottomBar.innerHTML = `
+    <div class="names-controls"></div>
+    <div class="mobile-actions">
+      <button class="btn mobile-generate"><i class="bi bi-clipboard2-check"></i> تولید آزمون</button>
+      <button class="btn mobile-print"><i class="bi bi-printer"></i> چاپ</button>
+    </div>
+  `;
+
   const namesControlDiv = bottomBar.querySelector(".names-controls");
   const originalNamesSection = document
     .querySelector(".names-section-original")
     .cloneNode(true);
   originalNamesSection.classList.add("mobile-names-section");
-  namesControlDiv.innerHTML = "";
   namesControlDiv.appendChild(originalNamesSection);
 
   // انتقال switch و textarea با idهای جدید
@@ -793,7 +801,20 @@ function setupMobileNamesBar() {
   bottomBar.appendChild(originalSwitch);
   bottomBar.appendChild(originalTextarea);
 
-  // راه‌اندازی مجدد event listenerها برای switch و textarea
+  // راه‌اندازی مجدد رویدادها برای switch
+  function setupSwitchOnElement(container, onChange) {
+    const sw = container.querySelector("#switch");
+    const knob = container.querySelector("#knob");
+    let on = false;
+    sw.addEventListener("click", () => {
+      on = !on;
+      const func = on ? "add" : "remove";
+      sw.classList[func]("bg-[#333]");
+      knob.classList[func]("translate-x-4", "scale-105");
+      onChange(on);
+    });
+  }
+
   setupSwitchOnElement(originalSwitch, (isActive) => {
     setElementState({
       target: originalTextarea,
@@ -809,14 +830,6 @@ function setupMobileNamesBar() {
   const textareaMobile = originalTextarea.querySelector("textarea");
   textareaMobile.addEventListener("input", syncNamesFromTextarea);
   textareaMobile.value = appState.names.join("\n");
-
-  // دکمه‌های تولید و چاپ موبایل
-  document
-    .querySelector(".mobile-generate")
-    ?.addEventListener("click", handleGenerateClick);
-  document
-    .querySelector(".mobile-print")
-    ?.addEventListener("click", () => window.print());
 
   // همگام‌سازی شمارنده
   const countMobile = originalNamesSection.querySelector("#names-count");
