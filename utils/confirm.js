@@ -12,7 +12,7 @@
       display: none;
       align-items: flex-start;
       justify-content: center;
-      z-index: 900;
+      z-index: 2000;
       animation: fadeIn 0.3s ease-out;
     }
 
