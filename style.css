@@ -89,7 +89,7 @@ input:focus {
   border-radius: 6px;
   background: #f9f9f9;
   position: relative;
-  overflow: visible; /* changed from hidden to avoid clipping shadows/swipe */
+  overflow: visible;
 }
 
 .range-header {
@@ -500,7 +500,7 @@ textarea:disabled {
   .range-item {
     padding: 16px 12px;
     margin-bottom: 12px;
-    overflow: visible; /* هماهنگ با نسخه دسکتاپ */
+    overflow: visible;
   }
 
   .range-header {
@@ -552,7 +552,6 @@ textarea:disabled {
 
   /* دکمه‌های حذف و کپی مبحث */
   .range-header > .flex:last-child {
-    /* position: absolute;  حذف شد */
     display: flex;
     gap: 0.5rem;
     margin-top: 0.5rem;
@@ -685,16 +684,16 @@ textarea:disabled {
   }
 
   /* نوار ابزار ویرایشگر */
-  .text-editor-toolbar {
+  .toolbar {
     flex-wrap: wrap;
     justify-content: center;
   }
 
-  .text-editor-toolbar button {
-    min-width: 48px;
-    min-height: 48px;
+  .tool-btn {
+    min-width: 44px;
+    min-height: 44px;
     font-size: 1.2rem;
-    padding: 0;
+    padding: 8px;
   }
 
   /* دکمه‌های تنظیمات مودال */
@@ -726,35 +725,16 @@ textarea:disabled {
   }
 
   /* تنظیمات تصویر */
-  .image-settings {
+  .image-floatbar,
+  #componentImageToolbar {
     flex-wrap: wrap;
-    gap: 0.75rem;
-    justify-content: space-between;
-  }
-
-  .image-settings > div {
-    display: flex;
-    align-items: center;
     gap: 0.5rem;
+    justify-content: center;
   }
 
-  .image-settings input {
-    width: 70px;
-    height: 44px;
-  }
-
-  .image-settings button {
-    min-width: 44px;
-    height: 44px;
-  }
-
-  /* دکمه‌های برش بزرگتر */
-  #editCropBtn,
-  #saveCroppedImageBtn,
-  #cancelCropBtn {
-    min-width: 56px;
-    min-height: 48px;
-    font-size: 1.2rem;
+  .image-floatbar .img-ctrl {
+    flex: 1 1 auto;
+    min-width: 120px;
   }
 
   /* دکمه بازگشت به بالا */
@@ -847,7 +827,7 @@ textarea:disabled {
     background: white;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
     padding: 12px 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom)); /* safe area */
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 1000;
     display: flex;
     flex-wrap: wrap;
@@ -1009,4 +989,223 @@ textarea:disabled {
     max-height: 100%;
     width: auto;
   }
+}
+
+/* ========== استایل‌های ویرایشگرهای جدید ========== */
+.editor-container {
+  width: 100%;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.toolbar {
+  background: #f8fafc;
+  padding: 8px 6px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.tool-btn {
+  background: #f8fafc;
+  border: 1px solid #e9eef2;
+  border-radius: 40px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  color: #1e293b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.tool-btn i {
+  font-size: 1.2rem;
+}
+.tool-btn:active {
+  background: #e6edf5;
+  transform: scale(0.96);
+}
+
+select.tool-btn,
+input.tool-btn[type="color"] {
+  padding: 6px 10px;
+}
+input.tool-btn[type="color"] {
+  width: 48px;
+  padding: 4px;
+}
+
+.editor-box {
+  flex: 1;
+  background: white;
+  padding: 16px;
+  overflow-y: auto;
+  min-height: 150px;
+  max-height: 300px;
+  font-family: "Arial", sans-serif;
+  direction: rtl;
+  outline: none;
+  resize: vertical;
+}
+.editor-box[contenteditable="true"]:empty:before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  font-style: italic;
+  pointer-events: none;
+  display: block;
+}
+.editor-box img {
+  max-width: 100%;
+  display: inline-block;
+  margin: 4px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  vertical-align: middle;
+  user-select: none;
+  -webkit-user-drag: element;
+}
+.editor-box img.selected-for-resize {
+  outline: 3px dashed #3b82f6;
+  outline-offset: 4px;
+  touch-action: none;
+}
+
+.image-floatbar {
+  background: #1e293be6;
+  backdrop-filter: blur(16px);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 40px;
+  margin: 8px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-around;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 30;
+  position: sticky;
+  bottom: 10px;
+}
+.image-floatbar.hidden {
+  display: none;
+}
+
+.img-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff20;
+  padding: 4px 12px;
+  border-radius: 40px;
+  color: white;
+  font-size: 0.9rem;
+}
+.img-ctrl input[type="range"] {
+  width: 60px;
+  height: 6px;
+}
+
+/* مودال کراپ */
+.crop-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.crop-modal.hidden {
+  display: none !important;
+}
+.crop-panel {
+  background: #1e293b;
+  border-radius: 48px;
+  padding: 24px;
+  width: 100%;
+  max-width: 450px;
+  color: white;
+}
+.crop-container {
+  width: 100%;
+  max-height: 300px;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #0f172a;
+  margin-bottom: 20px;
+}
+#cropImage,
+#componentCropImage {
+  display: block;
+  max-width: 100%;
+}
+.crop-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+.crop-actions button {
+  flex: 1;
+  background: #3b82f6;
+  border: none;
+  padding: 14px;
+  border-radius: 40px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+#cancelCrop {
+  background: #64748b;
+}
+
+/* استایل ویرایشگر تصویر */
+#imageEditorComponent {
+  border: 1px solid #ddd;
+  background: #fff;
+}
+#componentImageBox .image-container {
+  display: inline-block;
+  position: relative;
+  margin: 4px;
+}
+#componentImageBox .image-container.selected {
+  outline: 3px dashed #3b82f6;
+  outline-offset: 4px;
+}
+#componentImageBox img {
+  max-width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.align-left {
+  float: right;
+  margin-left: 16px;
+}
+.align-right {
+  float: left;
+  margin-right: 16px;
+}
+.align-center {
+  float: none;
+  display: block;
+  margin: 0 auto;
 }

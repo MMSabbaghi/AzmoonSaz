@@ -99,76 +99,147 @@
     </div>
   </div>
 
-  <!-- مودال ویرایش آیتم -->
+  <!-- مودال ویرایش آیتم (با ادیتورهای جدید) -->
   <div id="modal" class="modal" style="display: none;">
     <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
-    <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg"
-      style="transition: transform 0.3s ease-out;">
-      <!-- نوار ابزار و تنظیمات -->
-      <div>
-        <!-- ویرایشگر متن -->
-        <div class="mb-2">
-          <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
-            <div class="text-editor-toolbar">
-              <button type="button" data-command="bold" title="پررنگ"><i class="bi bi-type-bold"></i></button>
-              <button type="button" data-command="italic" title="ایتالیک"><i class="bi bi-type-italic"></i></button>
-              <button type="button" data-command="underline" title="زیرخط"><i class="bi bi-type-underline"></i></button>
-              <button type="button" data-command="justifyleft" title="چینش راست"><i
-                  class="bi bi-align-start"></i></button>
-              <button type="button" data-command="justifycenter" title="چینش وسط"><i
-                  class="bi bi-align-middle"></i></button>
-              <button type="button" data-command="justifyright" title="چینش چپ"><i class="bi bi-align-end"></i></button>
-            </div>
-            <div class="flex items-center gap-4">
-              <label class="flex items-center gap-1">
-                <input type="checkbox" id="modal-show-text" class="w-5 h-5">
-                <span>نمایش متن سوال</span>
-              </label>
-              <button id="add-image-in-modal" class="btn px-3 py-1" title="افزودن/تغییر تصویر">
-                <i class="bi bi-image"></i> تصویر
-              </button>
-              <div class="flex">
-                <button id="save-modal-btn" class="btn px-3 py-1">
-                  <i class="bi bi-floppy"></i>
-                  ذخیره
-                </button>
-              </div>
-              <input type="file" id="modal-image-upload" accept="image/*" class="hidden">
-            </div>
-          </div>
-          <div id="modal-text-editor" class="h-[100px] md:h-[50px] text-editor-content" contenteditable="true"></div>
+    <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg" style="transition: transform 0.3s ease-out;">
+      
+      <!-- ========== ویرایشگر متن جدید (بدون interact.js) ========== -->
+      <div class="editor-container mb-4">
+        <div class="toolbar" id="mainToolbar">
+          <button class="tool-btn" id="alignLeft" title="چپ‌چین"><i class="bi bi-text-left"></i></button>
+          <button class="tool-btn" id="alignCenter" title="وسط‌چین"><i class="bi bi-text-center"></i></button>
+          <button class="tool-btn" id="alignRight" title="راست‌چین"><i class="bi bi-text-right"></i></button>
+          <button class="tool-btn" id="alignJustify" title="هم‌تراز"><i class="bi bi-justify"></i></button>
+
+          <input type="color" id="textColor" class="tool-btn" value="#1e293b" title="رنگ متن">
+          <select id="fontSize" class="tool-btn" title="سایز قلم">
+            <option value="3">معمولی</option>
+            <option value="4">متوسط</option>
+            <option value="5">بزرگ</option>
+            <option value="6">بسیار بزرگ</option>
+          </select>
+
+          <select id="fontFamily" class="tool-btn" title="نوع قلم">
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Times New Roman', serif">Times</option>
+            <option value="'Courier New', monospace">Courier</option>
+            <option value="'Georgia', serif">Georgia</option>
+            <option value="'Vazir', system-ui">Vazir</option>
+          </select>
+
+          <button class="tool-btn" id="undoBtn" title="واگرد"><i class="bi bi-arrow-counterclockwise"></i></button>
+          <button class="tool-btn" id="redoBtn" title="پیش‌گرد"><i class="bi bi-arrow-clockwise"></i></button>
+
+          <!-- دکمه آپلود عکس (افزودن تصویر به متن) -->
+          <button class="tool-btn" id="uploadImage" title="افزودن عکس"><i class="bi bi-image"></i></button>
+          <input type="file" id="imageUploadInput" accept="image/*" style="display: none;">
         </div>
 
-        <!-- تنظیمات تصویر -->
-        <div id="image-settings" class="image-settings hidden">
-          <div>
-            <label>ارتفاع تصویر:</label>
-            <input type="text" data-number-input="true" data-float="false" id="modal-imgHeight"
-              class="border rounded p-2 w-20" value="75" min="10" max="500">
+        <!-- باکس ویرایش متن -->
+        <div id="editor" class="editor-box" contenteditable="true" data-placeholder="متن خود را بنویسید یا عکس اضافه کنید..."></div>
+
+        <!-- نوار ابزار شناور تصویر (درون متن) - با اسلایدر ارتفاع اضافه شده -->
+        <div id="imageToolbar" class="image-floatbar hidden">
+          <div class="img-ctrl">
+            <label>ارتفاع</label>
+            <input type="range" id="imgHeightRange" min="20" max="800" value="300" class="w-16">
+            <span id="imgHeightValue" class="text-xs">300px</span>
           </div>
-          <div>
-            <label>تراز تصویر:</label>
-            <button class="align-btn btn px-3 py-1" data-align="RIGHT"><i class="bi bi-align-start"></i></button>
-            <button class="align-btn btn px-3 py-1" data-align="CENTER"><i class="bi bi-align-middle"></i></button>
-            <button class="align-btn btn px-3 py-1" data-align="LEFT"><i class="bi bi-align-end"></i></button>
+          <div class="img-ctrl">
+            <label>روشنایی</label>
+            <input type="range" id="imgBrightness" min="0" max="200" value="100" class="w-16">
           </div>
-          <div class="mr-auto">
-            <button id="editCropBtn" class="btn px-3 py-1"><i class="bi bi-crop"></i> برش</button>
-            <button id="saveCroppedImageBtn" class="btn px-3 py-1 hidden"><i class="bi bi-check"></i> اعمال</button>
-            <button id="cancelCropBtn" class="btn px-3 py-1 hidden"><i class="bi bi-x"></i> لغو</button>
+          <div class="img-ctrl">
+            <label>کنتراست</label>
+            <input type="range" id="imgContrast" min="0" max="200" value="100" class="w-16">
+          </div>
+          <button class="tool-btn" id="floatLeft" style="background:#3b82f6; color:white;"><i class="bi bi-arrow-left-square"></i> چپ</button>
+          <button class="tool-btn" id="floatCenter" style="background:#3b82f6; color:white;"><i class="bi bi-arrows-expand"></i> وسط</button>
+          <button class="tool-btn" id="floatRight" style="background:#3b82f6; color:white;"><i class="bi bi-arrow-right-square"></i> راست</button>
+          <button class="tool-btn" id="cropBtn" style="background:#ef4444; color:white;"><i class="bi bi-crop"></i> کراپ</button>
+        </div>
+      </div>
+
+      <!-- ========== ویرایشگر تصویر جدید (برگرفته از image.txt) ========== -->
+      <div id="imageEditorComponent" class="w-full bg-white rounded-xl border border-gray-200 p-3 mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-medium">تنظیمات تصویر</span>
+          <label for="componentImageUpload" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm cursor-pointer">
+            <i class="bi bi-cloud-upload"></i> انتخاب تصویر
+          </label>
+          <input type="file" id="componentImageUpload" accept="image/*" class="hidden">
+        </div>
+        <div id="componentImageBox" class="min-h-[100px] bg-gray-50 rounded-lg p-2 flex flex-wrap gap-2"></div>
+        <div id="componentImageToolbar" class="hidden mt-3 flex flex-wrap items-center gap-2 p-2 bg-gray-100 rounded-lg">
+          <button class="align-btn bg-blue-600 text-white p-1 rounded w-8 h-8" data-align="left"><i class="bi bi-text-left"></i></button>
+          <button class="align-btn bg-blue-600 text-white p-1 rounded w-8 h-8" data-align="center"><i class="bi bi-text-center"></i></button>
+          <button class="align-btn bg-blue-600 text-white p-1 rounded w-8 h-8" data-align="right"><i class="bi bi-text-right"></i></button>
+          <div class="flex items-center gap-1">
+            <i class="bi bi-arrows-vertical"></i>
+            <input type="range" id="componentHeightRange" min="20" max="800" value="300" class="w-16">
+            <span id="componentHeightValue" class="text-xs">300px</span>
+          </div>
+          <button id="componentChangeBtn" class="bg-purple-600 text-white px-2 py-1 rounded text-sm"><i class="bi bi-arrow-repeat"></i> تعویض</button>
+          <input type="file" id="componentChangeInput" accept="image/*" class="hidden">
+          <div class="flex items-center gap-1">
+            <i class="bi bi-brightness-high"></i>
+            <input type="range" id="componentBrightness" min="0" max="200" value="100" class="w-16">
+          </div>
+          <div class="flex items-center gap-1">
+            <i class="bi bi-contrast"></i>
+            <input type="range" id="componentContrast" min="0" max="200" value="100" class="w-16">
+          </div>
+          <button id="componentCropBtn" class="bg-red-500 text-white px-2 py-1 rounded text-sm"><i class="bi bi-crop"></i> کراپ</button>
+        </div>
+      </div>
+
+      <!-- چک‌باکس نمایش متن و دکمه ذخیره (حفظ شده) -->
+      <div class="flex items-center justify-between mb-2">
+        <label class="flex items-center gap-1">
+          <input type="checkbox" id="modal-show-text" class="w-5 h-5">
+          <span>نمایش متن سوال</span>
+        </label>
+        <button id="save-modal-btn" class="btn px-3 py-1">
+          <i class="bi bi-floppy"></i> ذخیره
+        </button>
+      </div>
+
+      <!-- جدول پیش‌نمایش (حفظ شده) -->
+      <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
+        <tr>
+          <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold"></td>
+          <td class="p-2" id="modal-preview-cell"></td>
+        </tr>
+      </table>
+
+      <!-- مودال کراپ برای ویرایشگر متن -->
+      <div id="cropModal" class="crop-modal hidden">
+        <div class="crop-panel">
+          <h3><i class="bi bi-crop"></i> برش تصویر</h3>
+          <div class="crop-container">
+            <img id="cropImage" src="" alt="برای کراپ">
+          </div>
+          <div class="crop-actions">
+            <button id="applyCrop">اعمال برش</button>
+            <button id="cancelCrop">لغو</button>
           </div>
         </div>
       </div>
 
-      <!-- پیش‌نمایش جدول -->
-      <table class="w-full border-collapse bg-white mt-2" style="border: 1px solid #333;">
-        <tr>
-          <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold"></td>
-          <td class="p-2" id="modal-preview-cell">
-            <!-- محتوای پیش‌نمایش به صورت داینامیک پر می‌شود -->
-          </td>
-        </tr>
-      </table>
+      <!-- مودال کراپ برای ویرایشگر تصویر -->
+      <div id="componentCropModal" class="hidden crop-modal">
+        <div class="bg-slate-800 rounded-3xl p-5 w-full max-w-md text-white">
+          <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><i class="bi bi-crop"></i> برش تصویر</h3>
+          <div class="w-full max-h-64 overflow-hidden rounded-2xl bg-slate-900 mb-4">
+            <img id="componentCropImage" src="" alt="برای کراپ" class="max-w-full">
+          </div>
+          <div class="flex gap-3">
+            <button id="componentApplyCrop" class="flex-1 bg-blue-600 py-3 rounded-xl font-semibold">اعمال برش</button>
+            <button id="componentCancelCrop" class="flex-1 bg-slate-600 py-3 rounded-xl font-semibold">لغو</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
