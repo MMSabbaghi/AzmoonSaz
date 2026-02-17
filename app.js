@@ -457,24 +457,24 @@ function getRangeHTML(rangeData) {
             <span class="range-total-badge">${toPersianDigits(rangeData.items.length)}</span>
           </div>
           <div class="range-actions">
-          <button class="toggle-fields-btn ${rangeData.fieldsCollapsed ? "" : "collapsed"}">
             <button class="remove-range"><i class="bi bi-trash3"></i></button>
             <button class="copy-range"><i class="bi bi-copy"></i></button>
             <button class="paste-range"><i class="bi bi-clipboard-plus"></i></button>
             <button class="move-up"><i class="bi bi-arrow-up"></i></button>
             <button class="move-down"><i class="bi bi-arrow-down"></i></button>
+            <button class="toggle-fields-btn ${rangeData.fieldsCollapsed ? "" : "collapsed"}">
               <i class="bi bi-chevron-down"></i>
+            </button>
+            <button class="toggle-items-btn ${rangeData.itemsCollapsed ? "collapsed" : ""}">
+              <i class="bi bi-chevron-up"></i>
             </button>
           </div>
         </div>
         <div class="range-details ${rangeData.fieldsCollapsed ? "hidden" : ""}">
           <div class="details-row">
-            <label>مبحث:</label> <input value="${rangeData.rangeName}" class="range-name border rounded p-2">
-            <label>تعداد:</label> <input value="${rangeData.count}" data-number-input="true" data-float="false" class="range-count border rounded p-2 w-20">
-            <label>نمره:</label> <input value="${rangeData.score}" data-number-input="true" class="range-score border rounded p-2 w-20">
-          </div>
-          <div class="details-row">
-            <div class="file-input">
+            <label>تعداد:</label> <input value="${rangeData.count}" data-number-input="true" data-float="false" class="range-count border rounded p-2 w-10">
+            <label>نمره:</label> <input value="${rangeData.score}" data-number-input="true" class="range-score border rounded p-2 w-10">
+            <div class="file-input hidden">
               <input type="file" class="range-images" accept="image/*" multiple><label class="btn px-3 py-2"><i class="bi bi-image"></i></label>
             </div>
             <button class="add-text-item btn px-3 py-2"><i class="bi bi-type"></i></button>
@@ -490,6 +490,7 @@ function getRangeHTML(rangeData) {
       <div class="items-preview ${rangeData.itemsCollapsed ? "collapsed" : ""}"></div>
     `;
   } else {
+    // نسخه دسکتاپ بدون تغییر
     const fileID = createRandomId("file");
     return `
       <div class="range-header my-1">
@@ -520,10 +521,6 @@ function getRangeHTML(rangeData) {
           <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
             <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
           </div>
-          <!-- دکمه آکاردئون (chevron) -->
-          <button class="toggle-items-btn md:hidden ${rangeData.itemsCollapsed ? "collapsed" : ""}">
-            <i class="bi bi-chevron-up"></i>
-          </button>
         </div>
         <div class="flex items-center gap-2">
           <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
@@ -542,7 +539,12 @@ function getRangeHTML(rangeData) {
 function setupRangeInputs(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".range-name").forEach((el) => {
     el.addEventListener("input", (e) => {
-      updateRangeInState(rangeId, { rangeName: e.target.value });
+      const newVal = e.target.value;
+      updateRangeInState(rangeId, { rangeName: newVal });
+      // همگام‌سازی تمام ورودی‌های عنوان مبحث در این رنج
+      rangeElement.querySelectorAll(".range-name").forEach((other) => {
+        if (other !== e.target) other.value = newVal;
+      });
     });
   });
   rangeElement.querySelectorAll(".range-count").forEach((el) => {
@@ -729,8 +731,8 @@ function createRangeElement(rangeData = null) {
       score: 1,
       desc: "",
       items: [],
-      itemsCollapsed: isMobile() ? true : false,
-      fieldsCollapsed: isMobile() ? true : false,
+      itemsCollapsed: false, // تغییر: false به جای isMobile()
+      fieldsCollapsed: false, // تغییر: false به جای isMobile()
     };
     appState.ranges.push(newRange);
     rangeData = newRange;
@@ -1766,8 +1768,8 @@ function importRangesFromData(data) {
       score: r.score || 1,
       desc: r.desc || "",
       items,
-      itemsCollapsed: isMobile() ? true : false,
-      fieldsCollapsed: isMobile() ? true : false,
+      itemsCollapsed: false, // تغییر: false به جای isMobile()
+      fieldsCollapsed: false, // تغییر: false به جای isMobile()
     };
     appState.ranges.push(rangeWithId);
   });
