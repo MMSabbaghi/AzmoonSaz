@@ -697,9 +697,10 @@ textarea:disabled {
 
   /* دکمه‌های تنظیمات مودال */
   #modalContent .flex.items-center.gap-4 {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-start;
     gap: 0.5rem;
+    overflow: auto;
   }
 
   #modalContent .flex.items-center.gap-4 button,
@@ -983,6 +984,7 @@ textarea:disabled {
   #modal-preview-cell {
     max-height: 40vh;
     overflow-y: auto;
+    display: block;
   }
   #modal-preview-cell img {
     max-height: 100%;

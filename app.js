@@ -158,17 +158,19 @@ const fontSelector = document.getElementById("fontSelector");
 const modalQscore = document.getElementById("modal-Qscore");
 const modalPreviewCell = document.getElementById("modal-preview-cell");
 const modalShowText = document.getElementById("modal-show-text");
-
-// ویرایشگر متن جدید
 const modalTextEditor = document.getElementById("modal-text-editor");
-
-// نوار ابزار شناور تصویر در پیش‌نمایش
 const previewImageToolbar = document.getElementById("previewImageToolbar");
 const previewImgHeight = document.getElementById("previewImgHeight");
 const previewImgHeightValue = document.getElementById("previewImgHeightValue");
 const previewImgBrightness = document.getElementById("previewImgBrightness");
 const previewImgContrast = document.getElementById("previewImgContrast");
 const previewCropBtn = document.getElementById("previewCropBtn");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const modalImageUpload = document.getElementById("modalImageUpload");
+const modalImageUploadContainer = document.getElementById(
+  "modalImageUploadContainer",
+);
+const removeImageBtn = document.getElementById("removeImageBtn");
 
 // متغیرهای داخلی برای ویرایشگر متن و تصویر پیش‌نمایش
 let selectedPreviewImage = null; // تصویر انتخاب‌شده در جدول پیش‌نمایش
@@ -904,8 +906,6 @@ async function handlePasteInModal(items) {
           };
           // به‌روزرسانی پیش‌نمایش
           updateModalPreviewFromTemp();
-          // اتصال مجدد رویداد کلیک به تصویر جدید
-          attachPreviewImageHandlers();
         } else {
           showConfirm({
             msg: "آیا تصویر فعلی جایگزین شود؟",
@@ -914,7 +914,6 @@ async function handlePasteInModal(items) {
               temp.image.src = src;
               temp.image.imageId = createRandomId("img");
               updateModalPreviewFromTemp();
-              attachPreviewImageHandlers();
             },
           });
         }
@@ -1210,62 +1209,44 @@ function openModalWithTempItem() {
     modalTextEditor.style.textAlign = "right";
   }
 
-  // به‌روزرسانی پیش‌نمایش
   updateModalPreviewFromTemp();
+  updateModalImageUI();
 
   // مقداردهی چک‌باکس نمایش متن
   modalShowText.checked = temp.image ? temp.image.showText : false;
 
-  // اتصال رویداد کلیک به تصویر پیش‌نمایش
-  attachPreviewImageHandlers();
-
   document.body.classList.add("modal-open");
   modal.style.display = "flex";
   setTimeout(() => modal.classList.add("modal--visible"), 10);
-
-  // پنهان کردن نوار ابزار تصویر در ابتدا
-  hidePreviewImageToolbar();
 }
 
-function attachPreviewImageHandlers() {
-  const previewCell = document.getElementById("modal-preview-cell");
-  const img = previewCell.querySelector("img");
-  if (img) {
-    img.addEventListener("click", (e) => {
-      e.stopPropagation();
-      showPreviewImageToolbar(img);
-    });
-  } else {
-    hidePreviewImageToolbar();
+function updateModalImageUI() {
+  const hasImage = appState.modal.tempItem && appState.modal.tempItem.image;
+  modalImageUploadContainer.classList.toggle("hidden", hasImage);
+  previewImageToolbar.classList.toggle("hidden", !hasImage);
+
+  if (hasImage) {
+    // همگام‌سازی اسلایدرها با مقادیر فعلی تصویر
+    const img = modalPreviewCell.querySelector("img");
+    if (img) {
+      const height =
+        parseInt(img.style.height) ||
+        appState.modal.tempItem.image.height ||
+        300;
+      previewImgHeight.value = height;
+      previewImgHeightValue.textContent = height + "px";
+
+      const filter = img.style.filter || "";
+      const brightnessMatch = filter.match(/brightness\((\d+)%\)/);
+      const contrastMatch = filter.match(/contrast\((\d+)%\)/);
+      previewImgBrightness.value = brightnessMatch
+        ? parseInt(brightnessMatch[1])
+        : 100;
+      previewImgContrast.value = contrastMatch
+        ? parseInt(contrastMatch[1])
+        : 100;
+    }
   }
-}
-
-function showPreviewImageToolbar(img) {
-  selectedPreviewImage = img;
-  const rect = img.getBoundingClientRect();
-  const modalRect = modal.getBoundingClientRect();
-
-  // موقعیت‌یابی نوار ابزار نسبت به مودال
-  previewImageToolbar.style.top =
-    rect.top - modalRect.top + rect.height + 10 + "px";
-  previewImageToolbar.style.left = rect.left - modalRect.left + "px";
-  previewImageToolbar.classList.remove("hidden");
-
-  // مقداردهی اولیه اسلایدرها بر اساس تصویر
-  const height = parseInt(img.style.height) || 300;
-  previewImgHeight.value = height;
-  previewImgHeightValue.textContent = height + "px";
-
-  const filter = img.style.filter || "";
-  const b = filter.match(/brightness\((\d+)%\)/);
-  const c = filter.match(/contrast\((\d+)%\)/);
-  previewImgBrightness.value = b ? parseInt(b[1]) : 100;
-  previewImgContrast.value = c ? parseInt(c[1]) : 100;
-}
-
-function hidePreviewImageToolbar() {
-  previewImageToolbar.classList.add("hidden");
-  selectedPreviewImage = null;
 }
 
 function updateModalPreviewFromTemp() {
@@ -1296,9 +1277,6 @@ function updateModalPreviewFromTemp() {
     content += `<img class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}" src="${img.src}" alt="" style="height: ${img.height}px;">`;
   }
   modalPreviewCell.innerHTML = content;
-
-  // دوباره اتصال رویداد کلیک به تصویر
-  attachPreviewImageHandlers();
 }
 
 function saveModalChanges() {
@@ -1324,7 +1302,6 @@ function saveModalChanges() {
 }
 
 function closeModal() {
-  hidePreviewImageToolbar();
   if (cropper) {
     cropper.destroy();
     cropper = null;
@@ -1849,6 +1826,39 @@ function initRichTextEditor() {
   modalTextEditor.addEventListener("mouseup", updateToolbarState);
   modalTextEditor.addEventListener("keyup", updateToolbarState);
 
+  // آپلود تصویر
+  modalImageUpload.addEventListener("change", function (e) {
+    const file = e.target.files[0];
+    if (file && appState.modal.tempItem) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        appState.modal.tempItem.image = {
+          src: ev.target.result,
+          height: IMAGE_DEFAULTS.height,
+          align: IMAGE_DEFAULTS.align,
+          showText: modalShowText.checked,
+          imageId: createRandomId("img"),
+        };
+        updateModalPreviewFromTemp();
+        updateModalImageUI();
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = ""; // ریست اینپوت برای آپلود مجدد
+  });
+
+  // حذف تصویر
+  removeImageBtn.addEventListener("click", () => {
+    if (appState.modal.tempItem) {
+      appState.modal.tempItem.image = null;
+      updateModalPreviewFromTemp();
+      updateModalImageUI();
+    }
+  });
+
+  // دکمه بستن مودال
+  closeModalBtn.addEventListener("click", closeModal);
+
   // اضافه کردن شنونده رویداد input برای تایپ مستقیم
   modalTextEditor.addEventListener("input", updateTempItemFromTextEditor);
 
@@ -1860,53 +1870,44 @@ function initRichTextEditor() {
 function initPreviewImageToolbar() {
   // تغییر ارتفاع
   previewImgHeight.addEventListener("input", (e) => {
-    if (!selectedPreviewImage) return;
+    const img = modalPreviewCell.querySelector("img");
+    if (!img) return;
     const val = e.target.value;
-    selectedPreviewImage.style.height = val + "px";
-    selectedPreviewImage.style.width = "auto";
+    img.style.height = val + "px";
+    img.style.width = "auto";
     previewImgHeightValue.textContent = val + "px";
-    // به‌روزرسانی tempItem
     if (appState.modal.tempItem?.image) {
       appState.modal.tempItem.image.height = parseInt(val);
     }
   });
 
-  // تغییر روشنایی
-  previewImgBrightness.addEventListener("input", () => {
-    if (!selectedPreviewImage) return;
-    applyPreviewImageFilters();
-  });
-
-  // تغییر کنتراست
-  previewImgContrast.addEventListener("input", () => {
-    if (!selectedPreviewImage) return;
-    applyPreviewImageFilters();
-  });
+  // تغییر روشنایی و کنتراست
+  previewImgBrightness.addEventListener("input", applyPreviewImageFilters);
+  previewImgContrast.addEventListener("input", applyPreviewImageFilters);
 
   function applyPreviewImageFilters() {
+    const img = modalPreviewCell.querySelector("img");
+    if (!img) return;
     const b = previewImgBrightness.value;
     const c = previewImgContrast.value;
-    selectedPreviewImage.style.filter = `brightness(${b}%) contrast(${c}%)`;
-    if (appState.modal.tempItem?.image) {
-      // فیلترها در tempItem ذخیره نمی‌شوند، فقط در لحظه اعمال می‌شوند
-    }
+    img.style.filter = `brightness(${b}%) contrast(${c}%)`;
+    // در صورت نیاز می‌توان فیلترها را در tempItem ذخیره کرد
   }
 
   // دکمه‌های تراز
   document.querySelectorAll("[data-align]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
-      if (!selectedPreviewImage) return;
+      const img = modalPreviewCell.querySelector("img");
+      if (!img) return;
       const align = e.target.dataset.align; // left, center, right
-      // حذف کلاس‌های قبلی
-      selectedPreviewImage.classList.remove("ml-auto", "mr-auto", "mx-auto");
+      img.classList.remove("ml-auto", "mr-auto", "mx-auto");
       if (align === "left") {
-        selectedPreviewImage.classList.add("mr-auto"); // برای راست‌چین بودن، left به معنی margin-right:auto
+        img.classList.add("mr-auto"); // برای راست‌چین بودن
       } else if (align === "center") {
-        selectedPreviewImage.classList.add("mx-auto");
+        img.classList.add("mx-auto");
       } else if (align === "right") {
-        selectedPreviewImage.classList.add("ml-auto");
+        img.classList.add("ml-auto");
       }
-      // ذخیره در tempItem
       if (appState.modal.tempItem?.image) {
         appState.modal.tempItem.image.align = align.toUpperCase();
       }
@@ -1915,8 +1916,9 @@ function initPreviewImageToolbar() {
 
   // دکمه برش
   previewCropBtn.addEventListener("click", () => {
-    if (!selectedPreviewImage) return;
-    document.getElementById("cropImage").src = selectedPreviewImage.src;
+    const img = modalPreviewCell.querySelector("img");
+    if (!img) return;
+    document.getElementById("cropImage").src = img.src;
     cropModal.classList.remove("hidden");
     document.getElementById("cropImage").onload = () => {
       if (cropper) cropper.destroy();

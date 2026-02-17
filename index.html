@@ -105,6 +105,20 @@
     <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg"
       style="transition: transform 0.3s ease-out;">
 
+      <!-- هدر مودال -->
+      <div class="flex items-center justify-between mb-4 pb-2 border-b">
+        <h2 class="text-xl font-bold">ویرایش سوال</h2>
+        <button id="closeModalBtn" class="text-2xl leading-none hover:text-gray-600">&times;</button>
+      </div>
+
+      <!-- دکمه آپلود تصویر (در صورت نبود تصویر) -->
+      <div id="modalImageUploadContainer" class="mb-2">
+        <input type="file" id="modalImageUpload" accept="image/*" class="hidden">
+        <label for="modalImageUpload" class="btn px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
+          <i class="bi bi-image"></i> افزودن تصویر
+        </label>
+      </div>
+
       <!-- ========== ویرایشگر متن پیشرفته (Rich Text) ========== -->
       <div class="rich-editor-wrapper relative w-full bg-white border border-gray-300 overflow-hidden mb-4" dir="rtl">
         <!-- تولبار موبایل -->
@@ -260,7 +274,33 @@
           id="modal-text-editor" contenteditable="true" data-placeholder="متن خود را بنویسید..."></div>
       </div>
 
-      <!-- ========== جدول پیش‌نمایش (با قابلیت ویرایش تصویر) ========== -->
+      <!-- نوار ابزار تنظیمات تصویر (فقط زمانی نمایش داده می‌شود که تصویر وجود دارد) -->
+      <div id="previewImageToolbar" class="hidden bg-gray-100 p-3 flex flex-wrap items-center gap-4 mb-4">
+        <div class="flex items-center gap-2">
+          <label class="text-sm">ارتفاع:</label>
+          <input type="range" id="previewImgHeight" min="20" max="800" value="300" class="w-24">
+          <span id="previewImgHeightValue" class="text-xs w-12">300px</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm">روشنایی:</label>
+          <input type="range" id="previewImgBrightness" min="0" max="200" value="100" class="w-24">
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm">کنتراست:</label>
+          <input type="range" id="previewImgContrast" min="0" max="200" value="100" class="w-24">
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="btn px-3 py-1 rounded text-sm" data-align="right"><i class="bi bi-align-start"></i></button>
+          <button class="btn px-3 py-1  rounded text-sm" data-align="center"><i class="bi bi-align-middle"></i></button>
+          <button class="btn px-3 py-1 rounded text-sm" data-align="left"><i class="bi bi-align-end"></i></button>
+        </div>
+        <button id="previewCropBtn" class="btn px-3 py-1 text-sm"><i class="bi bi-crop"></i>
+          برش</button>
+        <button id="removeImageBtn" class="btn px-3 py-1 rounded text-sm"><i class="bi bi-trash"></i>
+          حذف تصویر</button>
+      </div>
+
+      <!-- ========== جدول پیش‌نمایش ========== -->
       <div class="mb-4 relative">
         <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
           <tr>
@@ -270,32 +310,6 @@
             </td>
           </tr>
         </table>
-
-        <!-- نوار ابزار شناور برای ویرایش تصویر درون پیش‌نمایش -->
-        <div id="previewImageToolbar"
-          class="hidden absolute bg-white shadow-lg rounded-lg border border-gray-200 p-3 flex flex-col gap-3 z-50"
-          style="min-width: 200px;">
-          <div class="flex items-center gap-2">
-            <label class="text-sm قبw-16">ارتفاع:</label>
-            <input type="range" id="previewImgHeight" min="20" max="800" value="300" class="flex-1">
-            <span id="previewImgHeightValue" class="text-xs w-12">300px</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-sm w-16">روشنایی:</label>
-            <input type="range" id="previewImgBrightness" min="0" max="200" value="100" class="flex-1">
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-sm w-16">کنتراست:</label>
-            <input type="range" id="previewImgContrast" min="0" max="200" value="100" class="flex-1">
-          </div>
-          <div class="flex items-center justify-around gap-1">
-            <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm" data-align="left">چپ</button>
-            <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm" data-align="center">وسط</button>
-            <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm" data-align="right">راست</button>
-          </div>
-          <button id="previewCropBtn" class="w-full px-3 py-1 bg-red-500 text-white rounded text-sm"><i
-              class="bi bi-crop"></i> برش</button>
-        </div>
       </div>
 
       <!-- چک‌باکس نمایش متن و دکمه ذخیره -->
