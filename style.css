@@ -340,7 +340,6 @@ input:focus + label {
   padding: 8px;
   overflow-y: auto;
   background: white;
-  font-family: inherit;
 }
 
 .text-editor-content:focus {
@@ -1055,7 +1054,6 @@ input.tool-btn[type="color"] {
   overflow-y: auto;
   min-height: 150px;
   max-height: 300px;
-  font-family: "Arial", sans-serif;
   direction: rtl;
   outline: none;
   resize: vertical;

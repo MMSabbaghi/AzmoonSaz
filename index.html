@@ -99,102 +99,206 @@
     </div>
   </div>
 
-  <!-- مودال ویرایش آیتم (با ادیتورهای جدید) -->
+  <!-- ========== مودال ویرایش آیتم (بازطراحی شده) ========== -->
   <div id="modal" class="modal" style="display: none;">
     <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
-    <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg" style="transition: transform 0.3s ease-out;">
-      
-      <!-- ========== ویرایشگر متن جدید (بدون interact.js) ========== -->
-      <div class="editor-container mb-4">
-        <div class="toolbar" id="mainToolbar">
-          <button class="tool-btn" id="alignLeft" title="چپ‌چین"><i class="bi bi-text-left"></i></button>
-          <button class="tool-btn" id="alignCenter" title="وسط‌چین"><i class="bi bi-text-center"></i></button>
-          <button class="tool-btn" id="alignRight" title="راست‌چین"><i class="bi bi-text-right"></i></button>
-          <button class="tool-btn" id="alignJustify" title="هم‌تراز"><i class="bi bi-justify"></i></button>
+    <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg"
+      style="transition: transform 0.3s ease-out;">
 
-          <input type="color" id="textColor" class="tool-btn" value="#1e293b" title="رنگ متن">
-          <select id="fontSize" class="tool-btn" title="سایز قلم">
-            <option value="3">معمولی</option>
-            <option value="4">متوسط</option>
-            <option value="5">بزرگ</option>
-            <option value="6">بسیار بزرگ</option>
-          </select>
+      <!-- ========== ویرایشگر متن پیشرفته (Rich Text) ========== -->
+      <div class="rich-editor-wrapper relative w-full bg-white border border-gray-300 overflow-hidden mb-4" dir="rtl">
+        <!-- تولبار موبایل -->
+        <div
+          class="rich-editor-toolbar-mobile block md:hidden bg-gray-100 border-b border-gray-300 p-2 overflow-x-auto whitespace-nowrap"
+          id="mobile-toolbar-modal">
+          <div class="toolbar-scroll inline-flex items-center gap-1">
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="bold" title="پررنگ"><i class="bi bi-type-bold"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="italic" title="ایتالیک"><i class="bi bi-type-italic"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="underline" title="زیرخط"><i class="bi bi-type-underline"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="strikeThrough" title="خط خورده"><i class="bi bi-type-strikethrough"></i></button>
 
-          <select id="fontFamily" class="tool-btn" title="نوع قلم">
-            <option value="Arial, sans-serif">Arial</option>
-            <option value="'Times New Roman', serif">Times</option>
-            <option value="'Courier New', monospace">Courier</option>
-            <option value="'Georgia', serif">Georgia</option>
-            <option value="'Vazir', system-ui">Vazir</option>
-          </select>
+            <span class="toolbar-divider w-px h-6 bg-gray-400 mx-1 inline-block"></span>
 
-          <button class="tool-btn" id="undoBtn" title="واگرد"><i class="bi bi-arrow-counterclockwise"></i></button>
-          <button class="tool-btn" id="redoBtn" title="پیش‌گرد"><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="justifyRight" title="راست چین"><i class="bi bi-align-start"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="justifyCenter" title="وسط چین"><i class="bi bi-align-middle"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="justifyLeft" title="چپ چین"><i class="bi bi-align-end"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="justifyFull" title="هم‌تراز"><i class="bi bi-justify"></i></button>
 
-          <!-- دکمه آپلود عکس (افزودن تصویر به متن) -->
-          <button class="tool-btn" id="uploadImage" title="افزودن عکس"><i class="bi bi-image"></i></button>
-          <input type="file" id="imageUploadInput" accept="image/*" style="display: none;">
+            <span class="toolbar-divider w-px h-6 bg-gray-400 mx-1 inline-block"></span>
+
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="insertUnorderedList" title="لیست نامرتب"><i class="bi bi-list-ul"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="insertOrderedList" title="لیست مرتب"><i class="bi bi-list-ol"></i></button>
+
+            <span class="toolbar-divider w-px h-6 bg-gray-400 mx-1 inline-block"></span>
+
+            <div class="toolbar-color-picker relative inline-flex items-center">
+              <input type="color" id="modal-text-color" class="color-input absolute opacity-0 w-0 h-0" value="#333333">
+              <label for="modal-text-color"
+                class="color-label inline-flex items-center gap-1 px-2 h-9 rounded bg-transparent text-gray-600 cursor-pointer hover:bg-gray-200 hover:text-gray-800 text-sm"><i
+                  class="bi bi-palette"></i></label>
+            </div>
+
+            <div class="toolbar-font-size inline-block">
+              <select id="modal-font-size"
+                class="font-size-select h-9 px-2 border border-gray-300 rounded bg-white text-gray-600 text-sm cursor-pointer outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-300"
+                title="اندازه فونت">
+                <option value="12">۱۲</option>
+                <option value="14">۱۴</option>
+                <option value="16" selected>۱۶</option>
+                <option value="18">۱۸</option>
+                <option value="20">۲۰</option>
+                <option value="24">۲۴</option>
+                <option value="28">۲۸</option>
+                <option value="32">۳۲</option>
+              </select>
+            </div>
+
+            <span class="toolbar-divider w-px h-6 bg-gray-400 mx-1 inline-block"></span>
+
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-action="undo" title="بازگشت"><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-action="redo" title="انجام دوباره"><i class="bi bi-arrow-clockwise"></i></button>
+          </div>
+        </div>
+
+        <!-- تولبار دسکتاپ -->
+        <div
+          class="rich-editor-toolbar-desktop hidden md:flex flex-wrap items-center gap-3 bg-gray-100 p-2 px-3 border-b border-gray-300"
+          id="desktop-toolbar-modal">
+          <div class="toolbar-group flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="bold"><i class="bi bi-type-bold"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="italic"><i class="bi bi-type-italic"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="underline"><i class="bi bi-type-underline"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="strikeThrough"><i class="bi bi-type-strikethrough"></i></button>
+          </div>
+          <div class="toolbar-group flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="justifyRight"><i class="bi bi-align-start"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="justifyCenter"><i class="bi bi-align-middle"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="justifyLeft"><i class="bi bi-align-end"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="justifyFull"><i class="bi bi-justify"></i></button>
+          </div>
+          <div class="toolbar-group flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="insertUnorderedList"><i class="bi bi-list-ul"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-command="insertOrderedList"><i class="bi bi-list-ol"></i></button>
+          </div>
+          <div class="toolbar-group flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
+            <div class="toolbar-color-picker relative inline-flex items-center">
+              <input type="color" id="desktop-modal-text-color" class="color-input absolute opacity-0 w-0 h-0"
+                value="#333333">
+              <label for="desktop-modal-text-color"
+                class="color-label inline-flex items-center gap-1 px-2 h-9 rounded bg-transparent text-gray-600 cursor-pointer hover:bg-gray-200 hover:text-gray-800 text-sm"><i
+                  class="bi bi-palette"></i> رنگ</label>
+            </div>
+            <select id="desktop-modal-font-size"
+              class="font-size-select h-9 px-2 border border-gray-300 rounded bg-white text-gray-600 text-sm cursor-pointer outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-300">
+              <option value="12">۱۲</option>
+              <option value="14">۱۴</option>
+              <option value="16" selected>۱۶</option>
+              <option value="18">۱۸</option>
+              <option value="20">۲۰</option>
+              <option value="24">۲۴</option>
+              <option value="28">۲۸</option>
+              <option value="32">۳۲</option>
+            </select>
+          </div>
+          <div class="toolbar-group flex items-center gap-0.5 px-1 last:border-l-0">
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-action="undo"><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button type="button"
+              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
+              data-action="redo"><i class="bi bi-arrow-clockwise"></i></button>
+          </div>
         </div>
 
         <!-- باکس ویرایش متن -->
-        <div id="editor" class="editor-box" contenteditable="true" data-placeholder="متن خود را بنویسید یا عکس اضافه کنید..."></div>
+        <div
+          class="rich-editor-content relative min-h-[150px] max-h-[300px] overflow-y-auto p-4 leading-relaxed outline-none bg-white focus:shadow-inner"
+          id="modal-text-editor" contenteditable="true" data-placeholder="متن خود را بنویسید..."></div>
+      </div>
 
-        <!-- نوار ابزار شناور تصویر (درون متن) - با اسلایدر ارتفاع اضافه شده -->
-        <div id="imageToolbar" class="image-floatbar hidden">
-          <div class="img-ctrl">
-            <label>ارتفاع</label>
-            <input type="range" id="imgHeightRange" min="20" max="800" value="300" class="w-16">
-            <span id="imgHeightValue" class="text-xs">300px</span>
+      <!-- ========== جدول پیش‌نمایش (با قابلیت ویرایش تصویر) ========== -->
+      <div class="mb-4 relative">
+        <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
+          <tr>
+            <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold"></td>
+            <td class="p-2 relative" id="modal-preview-cell">
+              <!-- محتوای پیش‌نمایش (متن و تصویر) در اینجا درج می‌شود -->
+            </td>
+          </tr>
+        </table>
+
+        <!-- نوار ابزار شناور برای ویرایش تصویر درون پیش‌نمایش -->
+        <div id="previewImageToolbar"
+          class="hidden absolute bg-white shadow-lg rounded-lg border border-gray-200 p-3 flex flex-col gap-3 z-50"
+          style="min-width: 200px;">
+          <div class="flex items-center gap-2">
+            <label class="text-sm قبw-16">ارتفاع:</label>
+            <input type="range" id="previewImgHeight" min="20" max="800" value="300" class="flex-1">
+            <span id="previewImgHeightValue" class="text-xs w-12">300px</span>
           </div>
-          <div class="img-ctrl">
-            <label>روشنایی</label>
-            <input type="range" id="imgBrightness" min="0" max="200" value="100" class="w-16">
+          <div class="flex items-center gap-2">
+            <label class="text-sm w-16">روشنایی:</label>
+            <input type="range" id="previewImgBrightness" min="0" max="200" value="100" class="flex-1">
           </div>
-          <div class="img-ctrl">
-            <label>کنتراست</label>
-            <input type="range" id="imgContrast" min="0" max="200" value="100" class="w-16">
+          <div class="flex items-center gap-2">
+            <label class="text-sm w-16">کنتراست:</label>
+            <input type="range" id="previewImgContrast" min="0" max="200" value="100" class="flex-1">
           </div>
-          <button class="tool-btn" id="floatLeft" style="background:#3b82f6; color:white;"><i class="bi bi-arrow-left-square"></i> چپ</button>
-          <button class="tool-btn" id="floatCenter" style="background:#3b82f6; color:white;"><i class="bi bi-arrows-expand"></i> وسط</button>
-          <button class="tool-btn" id="floatRight" style="background:#3b82f6; color:white;"><i class="bi bi-arrow-right-square"></i> راست</button>
-          <button class="tool-btn" id="cropBtn" style="background:#ef4444; color:white;"><i class="bi bi-crop"></i> کراپ</button>
+          <div class="flex items-center justify-around gap-1">
+            <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm" data-align="left">چپ</button>
+            <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm" data-align="center">وسط</button>
+            <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm" data-align="right">راست</button>
+          </div>
+          <button id="previewCropBtn" class="w-full px-3 py-1 bg-red-500 text-white rounded text-sm"><i
+              class="bi bi-crop"></i> برش</button>
         </div>
       </div>
 
-      <!-- ========== ویرایشگر تصویر جدید (برگرفته از image.txt) ========== -->
-      <div id="imageEditorComponent" class="w-full bg-white rounded-xl border border-gray-200 p-3 mb-4">
-        <div class="flex items-center justify-between mb-2">
-          <span class="font-medium">تنظیمات تصویر</span>
-          <label for="componentImageUpload" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm cursor-pointer">
-            <i class="bi bi-cloud-upload"></i> انتخاب تصویر
-          </label>
-          <input type="file" id="componentImageUpload" accept="image/*" class="hidden">
-        </div>
-        <div id="componentImageBox" class="min-h-[100px] bg-gray-50 rounded-lg p-2 flex flex-wrap gap-2"></div>
-        <div id="componentImageToolbar" class="hidden mt-3 flex flex-wrap items-center gap-2 p-2 bg-gray-100 rounded-lg">
-          <button class="align-btn bg-blue-600 text-white p-1 rounded w-8 h-8" data-align="left"><i class="bi bi-text-left"></i></button>
-          <button class="align-btn bg-blue-600 text-white p-1 rounded w-8 h-8" data-align="center"><i class="bi bi-text-center"></i></button>
-          <button class="align-btn bg-blue-600 text-white p-1 rounded w-8 h-8" data-align="right"><i class="bi bi-text-right"></i></button>
-          <div class="flex items-center gap-1">
-            <i class="bi bi-arrows-vertical"></i>
-            <input type="range" id="componentHeightRange" min="20" max="800" value="300" class="w-16">
-            <span id="componentHeightValue" class="text-xs">300px</span>
-          </div>
-          <button id="componentChangeBtn" class="bg-purple-600 text-white px-2 py-1 rounded text-sm"><i class="bi bi-arrow-repeat"></i> تعویض</button>
-          <input type="file" id="componentChangeInput" accept="image/*" class="hidden">
-          <div class="flex items-center gap-1">
-            <i class="bi bi-brightness-high"></i>
-            <input type="range" id="componentBrightness" min="0" max="200" value="100" class="w-16">
-          </div>
-          <div class="flex items-center gap-1">
-            <i class="bi bi-contrast"></i>
-            <input type="range" id="componentContrast" min="0" max="200" value="100" class="w-16">
-          </div>
-          <button id="componentCropBtn" class="bg-red-500 text-white px-2 py-1 rounded text-sm"><i class="bi bi-crop"></i> کراپ</button>
-        </div>
-      </div>
-
-      <!-- چک‌باکس نمایش متن و دکمه ذخیره (حفظ شده) -->
+      <!-- چک‌باکس نمایش متن و دکمه ذخیره -->
       <div class="flex items-center justify-between mb-2">
         <label class="flex items-center gap-1">
           <input type="checkbox" id="modal-show-text" class="w-5 h-5">
@@ -205,38 +309,17 @@
         </button>
       </div>
 
-      <!-- جدول پیش‌نمایش (حفظ شده) -->
-      <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
-        <tr>
-          <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold"></td>
-          <td class="p-2" id="modal-preview-cell"></td>
-        </tr>
-      </table>
-
-      <!-- مودال کراپ برای ویرایشگر متن -->
+      <!-- مودال برش تصویر (یکپارچه) -->
       <div id="cropModal" class="crop-modal hidden">
         <div class="crop-panel">
-          <h3><i class="bi bi-crop"></i> برش تصویر</h3>
+          <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><i class="bi bi-crop"></i> برش تصویر</h3>
           <div class="crop-container">
             <img id="cropImage" src="" alt="برای کراپ">
           </div>
           <div class="crop-actions">
-            <button id="applyCrop">اعمال برش</button>
-            <button id="cancelCrop">لغو</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- مودال کراپ برای ویرایشگر تصویر -->
-      <div id="componentCropModal" class="hidden crop-modal">
-        <div class="bg-slate-800 rounded-3xl p-5 w-full max-w-md text-white">
-          <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><i class="bi bi-crop"></i> برش تصویر</h3>
-          <div class="w-full max-h-64 overflow-hidden rounded-2xl bg-slate-900 mb-4">
-            <img id="componentCropImage" src="" alt="برای کراپ" class="max-w-full">
-          </div>
-          <div class="flex gap-3">
-            <button id="componentApplyCrop" class="flex-1 bg-blue-600 py-3 rounded-xl font-semibold">اعمال برش</button>
-            <button id="componentCancelCrop" class="flex-1 bg-slate-600 py-3 rounded-xl font-semibold">لغو</button>
+            <button id="applyCrop" class="flex-1 bg-blue-600 py-3 rounded-xl font-semibold text-white">اعمال
+              برش</button>
+            <button id="cancelCrop" class="flex-1 bg-slate-600 py-3 rounded-xl font-semibold text-white">لغو</button>
           </div>
         </div>
       </div>

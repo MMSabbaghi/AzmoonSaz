@@ -159,79 +159,20 @@ const modalQscore = document.getElementById("modal-Qscore");
 const modalPreviewCell = document.getElementById("modal-preview-cell");
 const modalShowText = document.getElementById("modal-show-text");
 
-// متغیرهای جدید برای ادیتورها
-const textEditor = document.getElementById("editor");
-const imageToolbar = document.getElementById("imageToolbar");
-const cropModal = document.getElementById("cropModal");
-const componentImageBox = document.getElementById("componentImageBox");
-const componentToolbar = document.getElementById("componentImageToolbar");
-const componentCropModal = document.getElementById("componentCropModal");
-const componentCropImage = document.getElementById("componentCropImage");
+// ویرایشگر متن جدید
+const modalTextEditor = document.getElementById("modal-text-editor");
 
-// متغیرهای داخلی ادیتورها (تعریف شده در سطح بالا)
-let selectedImage = null; // تصویر انتخاب‌شده در ویرایشگر متن
-let selectedContainer = null; // کانتینر تصویر انتخاب‌شده در ویرایشگر تصویر
-let cropper = null; // Cropper برای ویرایشگر متن
-let componentCropper = null; // Cropper برای ویرایشگر تصویر
+// نوار ابزار شناور تصویر در پیش‌نمایش
+const previewImageToolbar = document.getElementById("previewImageToolbar");
+const previewImgHeight = document.getElementById("previewImgHeight");
+const previewImgHeightValue = document.getElementById("previewImgHeightValue");
+const previewImgBrightness = document.getElementById("previewImgBrightness");
+const previewImgContrast = document.getElementById("previewImgContrast");
+const previewCropBtn = document.getElementById("previewCropBtn");
 
-// ---------- توابع کمکی ادیتور تصویر (جهت استفاده در مودال) ----------
-function setSelectedContainer(container) {
-  if (selectedContainer === container) return;
-  clearSelectedContainer();
-  selectedContainer = container;
-  container.classList.add("selected");
-  componentToolbar.classList.remove("hidden");
-
-  const img = container.querySelector("img");
-  if (img) {
-    const filter = img.style.filter || "";
-    const b = filter.match(/brightness\((\d+)%\)/);
-    const c = filter.match(/contrast\((\d+)%\)/);
-    document.getElementById("componentBrightness").value = b
-      ? parseInt(b[1])
-      : 100;
-    document.getElementById("componentContrast").value = c
-      ? parseInt(c[1])
-      : 100;
-
-    const currentHeight = parseInt(img.style.height) || 300;
-    document.getElementById("componentHeightRange").value = currentHeight;
-    document.getElementById("componentHeightValue").textContent =
-      currentHeight + "px";
-  }
-}
-
-function clearSelectedContainer() {
-  if (selectedContainer) {
-    selectedContainer.classList.remove("selected");
-    selectedContainer = null;
-  }
-  componentToolbar.classList.add("hidden");
-}
-
-function updateTempItemImageFromComponent() {
-  if (!appState.modal.tempItem) return;
-  const container = componentImageBox.querySelector(".image-container");
-  if (container) {
-    const img = container.querySelector("img");
-    if (!appState.modal.tempItem.image) {
-      appState.modal.tempItem.image = {};
-    }
-    appState.modal.tempItem.image.src = img.src;
-    appState.modal.tempItem.image.height = parseInt(img.style.height) || 300;
-    if (container.classList.contains("align-left"))
-      appState.modal.tempItem.image.align = "LEFT";
-    else if (container.classList.contains("align-right"))
-      appState.modal.tempItem.image.align = "RIGHT";
-    else if (container.classList.contains("align-center"))
-      appState.modal.tempItem.image.align = "CENTER";
-    else appState.modal.tempItem.image.align = "RIGHT";
-    appState.modal.tempItem.image.showText = modalShowText.checked;
-  } else {
-    appState.modal.tempItem.image = null;
-  }
-  updateModalPreviewFromTemp();
-}
+// متغیرهای داخلی برای ویرایشگر متن و تصویر پیش‌نمایش
+let selectedPreviewImage = null; // تصویر انتخاب‌شده در جدول پیش‌نمایش
+let cropper = null; // Cropper برای برش تصویر (هم برای ویرایشگر متن و هم برای پیش‌نمایش)
 
 // ---------- State-bound UI Variables ----------
 let activeRangeId = null; // last clicked range (for paste)
@@ -961,16 +902,10 @@ async function handlePasteInModal(items) {
             showText: modalShowText.checked,
             imageId: createRandomId("img"),
           };
-          componentImageBox.innerHTML = "";
-          const container = document.createElement("div");
-          container.className = "image-container";
-          const img = document.createElement("img");
-          img.src = src;
-          img.style.height = temp.image.height + "px";
-          container.appendChild(img);
-          componentImageBox.appendChild(container);
-          setSelectedContainer(container);
-          imageToolbar.classList.remove("hidden");
+          // به‌روزرسانی پیش‌نمایش
+          updateModalPreviewFromTemp();
+          // اتصال مجدد رویداد کلیک به تصویر جدید
+          attachPreviewImageHandlers();
         } else {
           showConfirm({
             msg: "آیا تصویر فعلی جایگزین شود؟",
@@ -978,15 +913,11 @@ async function handlePasteInModal(items) {
               if (cropper) destroyCropper();
               temp.image.src = src;
               temp.image.imageId = createRandomId("img");
-              const container =
-                componentImageBox.querySelector(".image-container");
-              if (container) {
-                container.querySelector("img").src = src;
-              }
+              updateModalPreviewFromTemp();
+              attachPreviewImageHandlers();
             },
           });
         }
-        updateModalPreviewFromTemp();
       };
       reader.readAsDataURL(blob);
       imageProcessed = true;
@@ -1005,7 +936,7 @@ async function handlePasteInModal(items) {
         text = await new Promise((resolve) => items[i].getAsString(resolve));
       }
     }
-    textEditor.focus();
+    modalTextEditor.focus();
     if (html) {
       document.execCommand("insertHTML", false, html);
     } else if (text) {
@@ -1247,388 +1178,6 @@ function generateQuizHtml() {
   return true;
 }
 
-// ========== ویرایشگر متن ==========
-function initTextEditor() {
-  document
-    .getElementById("alignLeft")
-    .addEventListener("click", () => execCmd("justifyLeft"));
-  document
-    .getElementById("alignCenter")
-    .addEventListener("click", () => execCmd("justifyCenter"));
-  document
-    .getElementById("alignRight")
-    .addEventListener("click", () => execCmd("justifyRight"));
-  document
-    .getElementById("alignJustify")
-    .addEventListener("click", () => execCmd("justifyFull"));
-  document
-    .getElementById("textColor")
-    .addEventListener("input", (e) => execCmd("foreColor", e.target.value));
-  document
-    .getElementById("fontSize")
-    .addEventListener("change", (e) => execCmd("fontSize", e.target.value));
-  document
-    .getElementById("fontFamily")
-    .addEventListener("change", (e) => execCmd("fontName", e.target.value));
-  document
-    .getElementById("undoBtn")
-    .addEventListener("click", () => execCmd("undo"));
-  document
-    .getElementById("redoBtn")
-    .addEventListener("click", () => execCmd("redo"));
-
-  document
-    .getElementById("uploadImage")
-    .addEventListener("click", () =>
-      document.getElementById("imageUploadInput").click(),
-    );
-  document
-    .getElementById("imageUploadInput")
-    .addEventListener("change", function (e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = document.createElement("img");
-          img.src = event.target.result;
-          img.style.maxWidth = "100%";
-          img.style.height = "300px";
-          img.style.width = "auto";
-          img.setAttribute("draggable", "true");
-          insertNodeAtCursor(img);
-        };
-        reader.readAsDataURL(file);
-      }
-      e.target.value = "";
-    });
-
-  textEditor.addEventListener("click", (e) => {
-    if (e.target.tagName === "IMG") {
-      setSelectedImage(e.target);
-    } else {
-      clearSelectedImage();
-    }
-  });
-
-  document.getElementById("imgHeightRange").addEventListener("input", (e) => {
-    if (!selectedImage) return;
-    const val = e.target.value;
-    selectedImage.style.height = val + "px";
-    selectedImage.style.width = "auto";
-    document.getElementById("imgHeightValue").textContent = val + "px";
-    updateTempItemFromTextEditor();
-  });
-
-  document
-    .getElementById("imgBrightness")
-    .addEventListener("input", applyImageFilters);
-  document
-    .getElementById("imgContrast")
-    .addEventListener("input", applyImageFilters);
-  document
-    .getElementById("floatLeft")
-    .addEventListener("click", () => setImageFloat("left"));
-  document
-    .getElementById("floatCenter")
-    .addEventListener("click", () => setImageFloat("center"));
-  document
-    .getElementById("floatRight")
-    .addEventListener("click", () => setImageFloat("right"));
-  document.getElementById("cropBtn").addEventListener("click", openCropModal);
-
-  document.getElementById("applyCrop").addEventListener("click", applyCrop);
-  document
-    .getElementById("cancelCrop")
-    .addEventListener("click", closeCropModal);
-}
-
-function execCmd(cmd, value = null) {
-  document.execCommand(cmd, false, value);
-  textEditor.focus();
-  updateTempItemFromTextEditor();
-}
-
-function insertNodeAtCursor(node) {
-  const sel = window.getSelection();
-  if (sel.rangeCount > 0) {
-    const range = sel.getRangeAt(0);
-    range.insertNode(node);
-    range.setStartAfter(node);
-    range.collapse();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  } else {
-    textEditor.appendChild(node);
-  }
-  updateTempItemFromTextEditor();
-}
-
-function setSelectedImage(img) {
-  if (selectedImage === img) return;
-  clearSelectedImage();
-  selectedImage = img;
-  img.classList.add("selected-for-resize");
-  imageToolbar.classList.remove("hidden");
-
-  const filter = img.style.filter || "";
-  const b = filter.match(/brightness\((\d+)%\)/);
-  const c = filter.match(/contrast\((\d+)%\)/);
-  document.getElementById("imgBrightness").value = b ? parseInt(b[1]) : 100;
-  document.getElementById("imgContrast").value = c ? parseInt(c[1]) : 100;
-
-  const currentHeight = parseInt(img.style.height) || 300;
-  document.getElementById("imgHeightRange").value = currentHeight;
-  document.getElementById("imgHeightValue").textContent = currentHeight + "px";
-}
-
-function clearSelectedImage() {
-  if (selectedImage) {
-    selectedImage.classList.remove("selected-for-resize");
-    selectedImage = null;
-  }
-  imageToolbar.classList.add("hidden");
-}
-
-function applyImageFilters() {
-  if (!selectedImage) return;
-  const b = document.getElementById("imgBrightness").value;
-  const c = document.getElementById("imgContrast").value;
-  selectedImage.style.filter = `brightness(${b}%) contrast(${c}%)`;
-  updateTempItemFromTextEditor();
-}
-
-function setImageFloat(align) {
-  if (!selectedImage) return;
-  selectedImage.style.float =
-    align === "left" ? "left" : align === "right" ? "right" : "none";
-  selectedImage.style.margin =
-    align === "center"
-      ? "16px auto"
-      : align === "left"
-        ? "0 16px 16px 0"
-        : "0 0 16px 16px";
-  selectedImage.style.display = align === "center" ? "block" : "inline-block";
-  updateTempItemFromTextEditor();
-}
-
-function openCropModal() {
-  if (!selectedImage) return;
-  cropModal.classList.remove("hidden");
-  document.getElementById("cropImage").src = selectedImage.src;
-  document.getElementById("cropImage").onload = () => {
-    if (cropper) cropper.destroy();
-    cropper = new Cropper(document.getElementById("cropImage"), {
-      aspectRatio: NaN,
-      viewMode: 1,
-      background: false,
-      autoCropArea: 1,
-    });
-  };
-}
-
-function applyCrop() {
-  if (!cropper || !selectedImage) return;
-  const canvas = cropper.getCroppedCanvas();
-  if (canvas) {
-    selectedImage.src = canvas.toDataURL("image/png");
-    selectedImage.style.filter = "none";
-    document.getElementById("imgBrightness").value = 100;
-    document.getElementById("imgContrast").value = 100;
-    updateTempItemFromTextEditor();
-  }
-  closeCropModal();
-}
-
-function closeCropModal() {
-  cropModal.classList.add("hidden");
-  if (cropper) {
-    cropper.destroy();
-    cropper = null;
-  }
-}
-
-function updateTempItemFromTextEditor() {
-  if (appState.modal.tempItem) {
-    const html = textEditor.innerHTML;
-    let align = "RIGHT";
-    if (textEditor.style.textAlign) {
-      align = textEditor.style.textAlign.toUpperCase();
-    }
-    if (!appState.modal.tempItem.text) {
-      appState.modal.tempItem.text = { html, align };
-    } else {
-      appState.modal.tempItem.text.html = html;
-      appState.modal.tempItem.text.align = align;
-    }
-    updateModalPreviewFromTemp();
-  }
-}
-
-// ========== ویرایشگر تصویر ==========
-function initImageEditor() {
-  const uploadInput = document.getElementById("componentImageUpload");
-  const changeInput = document.getElementById("componentChangeInput");
-  const heightRange = document.getElementById("componentHeightRange");
-  const heightValue = document.getElementById("componentHeightValue");
-  const brightness = document.getElementById("componentBrightness");
-  const contrast = document.getElementById("componentContrast");
-  const changeBtn = document.getElementById("componentChangeBtn");
-  const cropBtn = document.getElementById("componentCropBtn");
-  const alignBtns = document.querySelectorAll(
-    "#componentImageToolbar .align-btn",
-  );
-
-  uploadInput.addEventListener("change", function (e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        addImageToComponent(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-    uploadInput.value = "";
-  });
-
-  function addImageToComponent(src) {
-    componentImageBox.innerHTML = "";
-    const container = document.createElement("div");
-    container.className = "image-container";
-    container.setAttribute("data-id", "img_" + Date.now());
-    const img = document.createElement("img");
-    img.src = src;
-    img.className = "max-w-full h-auto rounded-2xl";
-    img.style.height = "300px";
-    container.appendChild(img);
-    componentImageBox.appendChild(container);
-    setSelectedContainer(container);
-    updateTempItemImageFromComponent();
-  }
-
-  componentImageBox.addEventListener("click", (e) => {
-    const container = e.target.closest(".image-container");
-    if (container) {
-      setSelectedContainer(container);
-    } else {
-      clearSelectedContainer();
-    }
-  });
-
-  alignBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (!selectedContainer) return;
-      const align = btn.dataset.align;
-      selectedContainer.classList.remove(
-        "align-left",
-        "align-center",
-        "align-right",
-      );
-      if (align === "left") selectedContainer.classList.add("align-left");
-      else if (align === "center")
-        selectedContainer.classList.add("align-center");
-      else if (align === "right")
-        selectedContainer.classList.add("align-right");
-      updateTempItemImageFromComponent();
-    });
-  });
-
-  heightRange.addEventListener("input", (e) => {
-    if (!selectedContainer) return;
-    const img = selectedContainer.querySelector("img");
-    if (!img) return;
-    const val = e.target.value;
-    img.style.height = val + "px";
-    img.style.width = "auto";
-    heightValue.textContent = val + "px";
-    updateTempItemImageFromComponent();
-  });
-
-  changeBtn.addEventListener("click", () => {
-    if (selectedContainer) changeInput.click();
-  });
-  changeInput.addEventListener("change", (e) => {
-    if (!selectedContainer) return;
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = selectedContainer.querySelector("img");
-        img.src = event.target.result;
-        img.style.filter = "none";
-        brightness.value = 100;
-        contrast.value = 100;
-        updateTempItemImageFromComponent();
-      };
-      reader.readAsDataURL(file);
-    }
-    changeInput.value = "";
-  });
-
-  function updateFilters() {
-    if (!selectedContainer) return;
-    const img = selectedContainer.querySelector("img");
-    img.style.filter = `brightness(${brightness.value}%) contrast(${contrast.value}%)`;
-    updateTempItemImageFromComponent();
-  }
-  brightness.addEventListener("input", updateFilters);
-  contrast.addEventListener("input", updateFilters);
-
-  cropBtn.addEventListener("click", () => {
-    if (!selectedContainer) return;
-    const img = selectedContainer.querySelector("img");
-    if (!img) return;
-    componentCropModal.classList.remove("hidden");
-    componentCropImage.src = img.src;
-    componentCropImage.onload = () => {
-      if (componentCropper) componentCropper.destroy();
-      componentCropper = new Cropper(componentCropImage, {
-        aspectRatio: NaN,
-        viewMode: 1,
-        background: false,
-        autoCropArea: 1,
-      });
-    };
-  });
-
-  document
-    .getElementById("componentApplyCrop")
-    .addEventListener("click", () => {
-      if (!componentCropper || !selectedContainer) return;
-      const canvas = componentCropper.getCroppedCanvas();
-      if (canvas) {
-        const img = selectedContainer.querySelector("img");
-        img.src = canvas.toDataURL("image/png");
-        img.style.filter = "none";
-        brightness.value = 100;
-        contrast.value = 100;
-        updateTempItemImageFromComponent();
-      }
-      componentCropModal.classList.add("hidden");
-      componentCropper.destroy();
-      componentCropper = null;
-    });
-
-  document
-    .getElementById("componentCancelCrop")
-    .addEventListener("click", () => {
-      componentCropModal.classList.add("hidden");
-      if (componentCropper) {
-        componentCropper.destroy();
-        componentCropper = null;
-      }
-    });
-
-  document.addEventListener("click", (e) => {
-    if (
-      !e.target.closest(".image-container") &&
-      !e.target.closest("#componentImageToolbar") &&
-      !e.target.closest(".crop-modal")
-    ) {
-      clearSelectedContainer();
-    }
-  });
-}
-
 // ========== توابع مودال ==========
 function openModalForNewItem(rangeId, newItem) {
   appState.modal.rangeId = rangeId;
@@ -1652,40 +1201,71 @@ function openModalWithTempItem() {
   const temp = appState.modal.tempItem;
   if (!temp) return;
 
+  // مقداردهی ویرایشگر متن
   if (temp.text) {
-    textEditor.innerHTML = temp.text.html;
-    textEditor.style.textAlign = temp.text.align.toLowerCase();
+    modalTextEditor.innerHTML = temp.text.html;
+    modalTextEditor.style.textAlign = temp.text.align.toLowerCase();
   } else {
-    textEditor.innerHTML = "";
-    textEditor.style.textAlign = "right";
+    modalTextEditor.innerHTML = "";
+    modalTextEditor.style.textAlign = "right";
   }
 
-  componentImageBox.innerHTML = "";
-  if (temp.image) {
-    const container = document.createElement("div");
-    container.className = "image-container";
-    const img = document.createElement("img");
-    img.src = temp.image.src;
-    img.style.height = temp.image.height + "px";
-    container.appendChild(img);
-    if (temp.image.align === "LEFT") container.classList.add("align-left");
-    else if (temp.image.align === "CENTER")
-      container.classList.add("align-center");
-    else if (temp.image.align === "RIGHT")
-      container.classList.add("align-right");
-    componentImageBox.appendChild(container);
-    setSelectedContainer(container);
-  } else {
-    componentToolbar.classList.add("hidden");
-  }
+  // به‌روزرسانی پیش‌نمایش
+  updateModalPreviewFromTemp();
 
+  // مقداردهی چک‌باکس نمایش متن
   modalShowText.checked = temp.image ? temp.image.showText : false;
+
+  // اتصال رویداد کلیک به تصویر پیش‌نمایش
+  attachPreviewImageHandlers();
 
   document.body.classList.add("modal-open");
   modal.style.display = "flex";
   setTimeout(() => modal.classList.add("modal--visible"), 10);
 
-  updateModalPreviewFromTemp();
+  // پنهان کردن نوار ابزار تصویر در ابتدا
+  hidePreviewImageToolbar();
+}
+
+function attachPreviewImageHandlers() {
+  const previewCell = document.getElementById("modal-preview-cell");
+  const img = previewCell.querySelector("img");
+  if (img) {
+    img.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showPreviewImageToolbar(img);
+    });
+  } else {
+    hidePreviewImageToolbar();
+  }
+}
+
+function showPreviewImageToolbar(img) {
+  selectedPreviewImage = img;
+  const rect = img.getBoundingClientRect();
+  const modalRect = modal.getBoundingClientRect();
+
+  // موقعیت‌یابی نوار ابزار نسبت به مودال
+  previewImageToolbar.style.top =
+    rect.top - modalRect.top + rect.height + 10 + "px";
+  previewImageToolbar.style.left = rect.left - modalRect.left + "px";
+  previewImageToolbar.classList.remove("hidden");
+
+  // مقداردهی اولیه اسلایدرها بر اساس تصویر
+  const height = parseInt(img.style.height) || 300;
+  previewImgHeight.value = height;
+  previewImgHeightValue.textContent = height + "px";
+
+  const filter = img.style.filter || "";
+  const b = filter.match(/brightness\((\d+)%\)/);
+  const c = filter.match(/contrast\((\d+)%\)/);
+  previewImgBrightness.value = b ? parseInt(b[1]) : 100;
+  previewImgContrast.value = c ? parseInt(c[1]) : 100;
+}
+
+function hidePreviewImageToolbar() {
+  previewImageToolbar.classList.add("hidden");
+  selectedPreviewImage = null;
 }
 
 function updateModalPreviewFromTemp() {
@@ -1713,16 +1293,19 @@ function updateModalPreviewFromTemp() {
   }
   if (temp.image) {
     const img = temp.image;
-    content += `<img class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}" src="${img.src}" alt="">`;
+    content += `<img class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}" src="${img.src}" alt="" style="height: ${img.height}px;">`;
   }
   modalPreviewCell.innerHTML = content;
+
+  // دوباره اتصال رویداد کلیک به تصویر
+  attachPreviewImageHandlers();
 }
 
 function saveModalChanges() {
   const { rangeId, itemId } = appState.modal;
 
   updateTempItemFromTextEditor();
-  updateTempItemImageFromComponent();
+  // تصویر قبلاً در tempItem.image ذخیره شده است
 
   const tempItem = appState.modal.tempItem;
   if (!rangeId || !tempItem) return;
@@ -1741,15 +1324,10 @@ function saveModalChanges() {
 }
 
 function closeModal() {
-  clearSelectedImage();
-  clearSelectedContainer();
+  hidePreviewImageToolbar();
   if (cropper) {
     cropper.destroy();
     cropper = null;
-  }
-  if (componentCropper) {
-    componentCropper.destroy();
-    componentCropper = null;
   }
 
   appState.modal.rangeId = null;
@@ -1765,7 +1343,7 @@ function closeModal() {
   }
   setTimeout(() => {
     modal.style.display = "none";
-    textEditor.innerHTML = "";
+    modalTextEditor.innerHTML = "";
   }, 300);
 }
 
@@ -2153,24 +1731,253 @@ function moveRange(rangeId, direction) {
   });
 }
 
-// ========== راه‌اندازی ادیتورها ==========
-document.addEventListener("DOMContentLoaded", function () {
-  initTextEditor();
-  initImageEditor();
+// ========== راه‌اندازی ویرایشگر متن جدید (Rich Text) ==========
+function initRichTextEditor() {
+  const mobileToolbar = document.getElementById("mobile-toolbar-modal");
+  const desktopToolbar = document.getElementById("desktop-toolbar-modal");
+  const colorInput = document.getElementById("modal-text-color");
+  const desktopColorInput = document.getElementById("desktop-modal-text-color");
+  const fontSizeSelect = document.getElementById("modal-font-size");
+  const desktopFontSizeSelect = document.getElementById(
+    "desktop-modal-font-size",
+  );
 
-  modalShowText.addEventListener("change", function (e) {
-    if (appState.modal.tempItem?.image) {
-      appState.modal.tempItem.image.showText = e.target.checked;
+  // ابتدا تابع به‌روزرسانی را تعریف می‌کنیم
+  window.updateTempItemFromTextEditor = function () {
+    if (appState.modal.tempItem) {
+      const html = modalTextEditor.innerHTML;
+      let align = "RIGHT";
+      if (modalTextEditor.style.textAlign) {
+        align = modalTextEditor.style.textAlign.toUpperCase();
+      }
+      if (!appState.modal.tempItem.text) {
+        appState.modal.tempItem.text = { html, align };
+      } else {
+        appState.modal.tempItem.text.html = html;
+        appState.modal.tempItem.text.align = align;
+      }
       updateModalPreviewFromTemp();
     }
-  });
+  };
 
-  saveModalBtn.addEventListener("click", () => {
-    showConfirm({
-      msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
-      on_confirm: saveModalChanges,
+  // تابع کمکی برای اجرای دستور و به‌روزرسانی
+  function execEditorCommand(cmd, value = null) {
+    document.execCommand(cmd, false, value);
+    modalTextEditor.focus();
+    updateTempItemFromTextEditor(); // فراخوانی به‌روزرسانی پس از هر دستور
+  }
+
+  // اتصال رویدادها به دکمه‌ها
+  [
+    ...mobileToolbar.querySelectorAll("[data-command]"),
+    ...desktopToolbar.querySelectorAll("[data-command]"),
+  ].forEach((btn) => {
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      execEditorCommand(btn.dataset.command);
     });
   });
 
-  modalOverlay.addEventListener("click", closeModal);
+  // رنگ
+  [colorInput, desktopColorInput].forEach((input) => {
+    input.addEventListener("input", (e) =>
+      execEditorCommand("foreColor", e.target.value),
+    );
+  });
+
+  // اندازه فونت (با روش span)
+  [fontSizeSelect, desktopFontSizeSelect].forEach((select) => {
+    select.addEventListener("change", (e) => {
+      const size = e.target.value;
+      try {
+        document.execCommand("fontSize", false, "7");
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const span = document.createElement("span");
+          span.style.fontSize = size + "px";
+          span.appendChild(range.extractContents());
+          range.insertNode(span);
+          selection.removeAllRanges();
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          selection.addRange(newRange);
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+      modalTextEditor.focus();
+      updateTempItemFromTextEditor();
+    });
+  });
+
+  // undo/redo
+  [
+    ...mobileToolbar.querySelectorAll('[data-action="undo"]'),
+    ...desktopToolbar.querySelectorAll('[data-action="undo"]'),
+  ].forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.execCommand("undo");
+      updateTempItemFromTextEditor();
+    });
+  });
+  [
+    ...mobileToolbar.querySelectorAll('[data-action="redo"]'),
+    ...desktopToolbar.querySelectorAll('[data-action="redo"]'),
+  ].forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.execCommand("redo");
+      updateTempItemFromTextEditor();
+    });
+  });
+
+  // به‌روزرسانی وضعیت دکمه‌ها (active)
+  function updateToolbarState() {
+    const update = (toolbar) => {
+      toolbar.querySelectorAll("[data-command]").forEach((btn) => {
+        try {
+          btn.classList.toggle(
+            "active",
+            document.queryCommandState(btn.dataset.command),
+          );
+        } catch (err) {}
+      });
+    };
+    update(mobileToolbar);
+    update(desktopToolbar);
+  }
+  modalTextEditor.addEventListener("mouseup", updateToolbarState);
+  modalTextEditor.addEventListener("keyup", updateToolbarState);
+
+  // اضافه کردن شنونده رویداد input برای تایپ مستقیم
+  modalTextEditor.addEventListener("input", updateTempItemFromTextEditor);
+
+  // همچنین هنگام از دست دادن فوکوس هم به‌روزرسانی کنیم (اختیاری)
+  modalTextEditor.addEventListener("blur", updateTempItemFromTextEditor);
+}
+
+// ========== راه‌اندازی نوار ابزار تصویر پیش‌نمایش ==========
+function initPreviewImageToolbar() {
+  // تغییر ارتفاع
+  previewImgHeight.addEventListener("input", (e) => {
+    if (!selectedPreviewImage) return;
+    const val = e.target.value;
+    selectedPreviewImage.style.height = val + "px";
+    selectedPreviewImage.style.width = "auto";
+    previewImgHeightValue.textContent = val + "px";
+    // به‌روزرسانی tempItem
+    if (appState.modal.tempItem?.image) {
+      appState.modal.tempItem.image.height = parseInt(val);
+    }
+  });
+
+  // تغییر روشنایی
+  previewImgBrightness.addEventListener("input", () => {
+    if (!selectedPreviewImage) return;
+    applyPreviewImageFilters();
+  });
+
+  // تغییر کنتراست
+  previewImgContrast.addEventListener("input", () => {
+    if (!selectedPreviewImage) return;
+    applyPreviewImageFilters();
+  });
+
+  function applyPreviewImageFilters() {
+    const b = previewImgBrightness.value;
+    const c = previewImgContrast.value;
+    selectedPreviewImage.style.filter = `brightness(${b}%) contrast(${c}%)`;
+    if (appState.modal.tempItem?.image) {
+      // فیلترها در tempItem ذخیره نمی‌شوند، فقط در لحظه اعمال می‌شوند
+    }
+  }
+
+  // دکمه‌های تراز
+  document.querySelectorAll("[data-align]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      if (!selectedPreviewImage) return;
+      const align = e.target.dataset.align; // left, center, right
+      // حذف کلاس‌های قبلی
+      selectedPreviewImage.classList.remove("ml-auto", "mr-auto", "mx-auto");
+      if (align === "left") {
+        selectedPreviewImage.classList.add("mr-auto"); // برای راست‌چین بودن، left به معنی margin-right:auto
+      } else if (align === "center") {
+        selectedPreviewImage.classList.add("mx-auto");
+      } else if (align === "right") {
+        selectedPreviewImage.classList.add("ml-auto");
+      }
+      // ذخیره در tempItem
+      if (appState.modal.tempItem?.image) {
+        appState.modal.tempItem.image.align = align.toUpperCase();
+      }
+    });
+  });
+
+  // دکمه برش
+  previewCropBtn.addEventListener("click", () => {
+    if (!selectedPreviewImage) return;
+    document.getElementById("cropImage").src = selectedPreviewImage.src;
+    cropModal.classList.remove("hidden");
+    document.getElementById("cropImage").onload = () => {
+      if (cropper) cropper.destroy();
+      cropper = new Cropper(document.getElementById("cropImage"), {
+        aspectRatio: NaN,
+        viewMode: 1,
+        background: false,
+        autoCropArea: 1,
+      });
+    };
+  });
+}
+
+// ========== رویدادهای مودال ==========
+modalShowText.addEventListener("change", function (e) {
+  if (appState.modal.tempItem?.image) {
+    appState.modal.tempItem.image.showText = e.target.checked;
+    updateModalPreviewFromTemp();
+  }
+});
+
+saveModalBtn.addEventListener("click", () => {
+  showConfirm({
+    msg: "آیا از ذخیره تغییرات اطمینان دارید؟",
+    on_confirm: saveModalChanges,
+  });
+});
+
+modalOverlay.addEventListener("click", closeModal);
+
+// ========== راه‌اندازی نهایی ==========
+document.addEventListener("DOMContentLoaded", function () {
+  initRichTextEditor();
+  initPreviewImageToolbar();
+
+  // دکمه‌های برش
+  document.getElementById("applyCrop").addEventListener("click", function () {
+    if (!cropper || !selectedPreviewImage) return;
+    const canvas = cropper.getCroppedCanvas();
+    if (canvas) {
+      selectedPreviewImage.src = canvas.toDataURL("image/png");
+      selectedPreviewImage.style.filter = "none";
+      previewImgBrightness.value = 100;
+      previewImgContrast.value = 100;
+      // به‌روزرسانی tempItem
+      if (appState.modal.tempItem?.image) {
+        appState.modal.tempItem.image.src = selectedPreviewImage.src;
+      }
+    }
+    document.getElementById("cropModal").classList.add("hidden");
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+  });
+
+  document.getElementById("cancelCrop").addEventListener("click", function () {
+    document.getElementById("cropModal").classList.add("hidden");
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+  });
 });
