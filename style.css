@@ -1138,19 +1138,19 @@ input.tool-btn[type="color"] {
   display: none !important;
 }
 .crop-panel {
-  background: #1e293b;
-  border-radius: 48px;
-  padding: 24px;
+  background: white;
+  border-radius: var(--radius);
+  padding: 6px;
   width: 100%;
   max-width: 450px;
-  color: white;
 }
 .crop-container {
+  padding: 5px;
   width: 100%;
   max-height: 300px;
   overflow: hidden;
-  border-radius: 24px;
-  background: #0f172a;
+  border-radius: var(--radius);
+  background: var(--primary);
   margin-bottom: 20px;
 }
 #cropImage,
@@ -1162,19 +1162,6 @@ input.tool-btn[type="color"] {
   display: flex;
   gap: 12px;
   margin-top: 20px;
-}
-.crop-actions button {
-  flex: 1;
-  background: #3b82f6;
-  border: none;
-  padding: 14px;
-  border-radius: 40px;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-}
-#cancelCrop {
-  background: #64748b;
 }
 
 /* استایل ویرایشگر تصویر */
@@ -1208,4 +1195,9 @@ input.tool-btn[type="color"] {
   float: none;
   display: block;
   margin: 0 auto;
+}
+
+.backdrop-blur {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }

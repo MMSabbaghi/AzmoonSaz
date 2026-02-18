@@ -101,7 +101,7 @@
 
   <!-- ========== مودال ویرایش آیتم (بازطراحی شده) ========== -->
   <div id="modal" class="modal" style="display: none;">
-    <div id="modal-overlay" class="absolute inset-0 bg-black/60"></div>
+    <div id="modal-overlay" class="absolute inset-0 bg-black/60 backdrop-blur"></div>
     <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg"
       style="transition: transform 0.3s ease-out;">
 
@@ -281,6 +281,15 @@
           <input type="range" id="previewImgHeight" min="20" max="800" value="300" class="w-24">
           <span id="previewImgHeightValue" class="text-xs w-12">300px</span>
         </div>
+
+        <div class="flex items-center gap-1">
+          <button class="btn px-3 py-1 rounded text-sm" data-align="right"><i class="bi bi-align-start"></i></button>
+          <button class="btn px-3 py-1  rounded text-sm" data-align="center"><i class="bi bi-align-middle"></i></button>
+          <button class="btn px-3 py-1 rounded text-sm" data-align="left"><i class="bi bi-align-end"></i></button>
+        </div>
+        <button id="previewCropBtn" class="btn px-3 py-1 text-sm"><i class="bi bi-crop"></i>
+        </button>
+
         <div class="flex items-center gap-2">
           <label class="text-sm">روشنایی:</label>
           <input type="range" id="previewImgBrightness" min="0" max="200" value="100" class="w-24">
@@ -289,15 +298,8 @@
           <label class="text-sm">کنتراست:</label>
           <input type="range" id="previewImgContrast" min="0" max="200" value="100" class="w-24">
         </div>
-        <div class="flex items-center gap-1">
-          <button class="btn px-3 py-1 rounded text-sm" data-align="right"><i class="bi bi-align-start"></i></button>
-          <button class="btn px-3 py-1  rounded text-sm" data-align="center"><i class="bi bi-align-middle"></i></button>
-          <button class="btn px-3 py-1 rounded text-sm" data-align="left"><i class="bi bi-align-end"></i></button>
-        </div>
-        <button id="previewCropBtn" class="btn px-3 py-1 text-sm"><i class="bi bi-crop"></i>
-          برش</button>
         <button id="removeImageBtn" class="btn px-3 py-1 rounded text-sm"><i class="bi bi-trash"></i>
-          حذف تصویر</button>
+        </button>
       </div>
 
       <!-- ========== جدول پیش‌نمایش ========== -->
@@ -331,9 +333,9 @@
             <img id="cropImage" src="" alt="برای کراپ">
           </div>
           <div class="crop-actions">
-            <button id="applyCrop" class="flex-1 bg-blue-600 py-3 rounded-xl font-semibold text-white">اعمال
+            <button id="applyCrop" class="btn flex-1 py-3">اعمال
               برش</button>
-            <button id="cancelCrop" class="flex-1 bg-slate-600 py-3 rounded-xl font-semibold text-white">لغو</button>
+            <button id="cancelCrop" class="btn flex-1 py-3">لغو</button>
           </div>
         </div>
       </div>

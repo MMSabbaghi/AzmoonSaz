@@ -1274,7 +1274,7 @@ function updateModalPreviewFromTemp() {
   }
   if (temp.image) {
     const img = temp.image;
-    content += `<img class="max-h-[${img.height}px] ${getAlignmentClass(img.align)}" src="${img.src}" alt="" style="height: ${img.height}px;">`;
+    content += `<img style="height: ${img.height}px; width: auto; display: block;" src="${img.src}" alt="" class="${getAlignmentClass(img.align)}">`;
   }
   modalPreviewCell.innerHTML = content;
 }
@@ -1899,16 +1899,16 @@ function initPreviewImageToolbar() {
     btn.addEventListener("click", (e) => {
       const img = modalPreviewCell.querySelector("img");
       if (!img) return;
-      const align = e.target.dataset.align; // left, center, right
+      const align = e.currentTarget.dataset.align; // اصلاح: استفاده از currentTarget
       img.classList.remove("ml-auto", "mr-auto", "mx-auto");
       if (align === "left") {
-        img.classList.add("mr-auto"); // برای راست‌چین بودن
+        img.classList.add("mr-auto");
       } else if (align === "center") {
         img.classList.add("mx-auto");
       } else if (align === "right") {
         img.classList.add("ml-auto");
       }
-      if (appState.modal.tempItem?.image) {
+      if (appState.modal.tempItem?.image && align) {
         appState.modal.tempItem.image.align = align.toUpperCase();
       }
     });
@@ -1918,8 +1918,9 @@ function initPreviewImageToolbar() {
   previewCropBtn.addEventListener("click", () => {
     const img = modalPreviewCell.querySelector("img");
     if (!img) return;
+    selectedPreviewImage = img; // ذخیره تصویر انتخابی برای برش
     document.getElementById("cropImage").src = img.src;
-    cropModal.classList.remove("hidden");
+    document.getElementById("cropModal").classList.remove("hidden");
     document.getElementById("cropImage").onload = () => {
       if (cropper) cropper.destroy();
       cropper = new Cropper(document.getElementById("cropImage"), {
@@ -1933,6 +1934,19 @@ function initPreviewImageToolbar() {
 }
 
 // ========== رویدادهای مودال ==========
+// فعال‌سازی خودکار نمایش متن هنگام فوکوس روی ویرایشگر
+modalTextEditor.addEventListener("focus", function () {
+  // فقط در صورتی که آیتم تصویر داشته باشد
+  if (appState.modal.tempItem && appState.modal.tempItem.image) {
+    // اگر چک‌باکس فعال نیست، آن را فعال کن
+    if (!modalShowText.checked) {
+      modalShowText.checked = true;
+      appState.modal.tempItem.image.showText = true;
+      updateModalPreviewFromTemp(); // به‌روزرسانی پیش‌نمایش
+    }
+  }
+});
+
 modalShowText.addEventListener("change", function (e) {
   if (appState.modal.tempItem?.image) {
     appState.modal.tempItem.image.showText = e.target.checked;
