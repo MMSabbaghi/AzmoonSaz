@@ -720,8 +720,8 @@ textarea:disabled {
 
   #modal-preview-cell img {
     max-width: 100%;
-    height: auto !important;
-    max-height: 250px !important;
+    height: auto;
+    max-height: 250px;
   }
 
   /* تنظیمات تصویر */
@@ -1120,6 +1120,7 @@ input.tool-btn[type="color"] {
 }
 
 /* مودال کراپ */
+/* ===== مودال کراپ با انیمیشن ===== */
 .crop-modal {
   position: fixed;
   top: 0;
@@ -1133,16 +1134,28 @@ input.tool-btn[type="color"] {
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    visibility 0.3s ease,
+    opacity 0.3s ease;
 }
-.crop-modal.hidden {
-  display: none !important;
+.crop-modal.visible {
+  visibility: visible;
+  opacity: 1;
 }
+
 .crop-panel {
   background: white;
   border-radius: var(--radius);
   padding: 10px;
   width: 100%;
   max-width: 450px;
+  transform: scale(0.9);
+  transition: transform 0.3s ease-out;
+}
+.crop-modal.visible .crop-panel {
+  transform: scale(1);
 }
 .crop-container {
   width: 100%;
@@ -1158,6 +1171,12 @@ input.tool-btn[type="color"] {
   display: flex;
   gap: 12px;
   margin-top: 20px;
+}
+
+@media screen and (min-width: 768px) {
+  .crop-panel {
+    max-width: 600px;
+  }
 }
 
 /* استایل ویرایشگر تصویر */
