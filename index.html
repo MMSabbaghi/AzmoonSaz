@@ -326,6 +326,103 @@
     </div>
   </div>
 
+  <!-- ========== مودال هوشمند پرامپت‌ساز (AI Prompt) ========== -->
+  <div id="aiModalOverlay"
+    class="ai-modal fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div id="aiModalContent"
+      class="bg-white rounded-[var(--radius)] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-enter-active">
+      <!-- هدر -->
+      <div class="flex items-center justify-between border-b p-4 sticky top-0 bg-white z-10">
+        <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <i class="bi bi-magic"></i> ساخت سوال با هوش مصنوعی
+        </h2>
+        <button id="closeAiModalBtn" class="text-gray-400 hover:text-gray-600 transition">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <!-- محتوا -->
+      <div class="p-5 space-y-5">
+        <!-- بخش ورودی مبحث و تعداد -->
+        <div class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-3">
+          <div class="flex gap-4 items-center">
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-gray-700 mb-1">توضیح نوع سوال</label>
+              <input type="text" data-number-input="true" data-float="false" id="aiTopicInput"
+                class="w-full border p-2 bg-white" placeholder="توضیح نوع، سبک ، میزان سختی و...">
+            </div>
+            <div class="w-24">
+              <label class="block text-sm font-medium text-gray-700 mb-1">تعداد سوال</label>
+              <input type="text" id="aiCountInput" data-number-input="true" data-float="false"
+                class="w-full border p-2 bg-white">
+            </div>
+          </div>
+        </div>
+        <!-- بخش پرامپت پیشنهادی -->
+        <div class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="font-medium text-gray-700 flex items-center gap-1">
+              <i class="bi bi-chat-dots"></i> پرامپت پیشنهادی
+            </label>
+            <button id="copyAiPromptBtn" class="btn px-3 py-1 flex items-center gap-1">
+              <i class="bi bi-clipboard"></i> کپی
+            </button>
+          </div>
+          <div id="aiPromptDisplay"
+            class="bg-white border border-gray-200 rounded-lg p-3 font-mono text-sm text-gray-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+          </div>
+          <p class="text-xs text-gray-500 flex items-center gap-1">
+            <i class="bi bi-info-circle"></i> این پرامپت را برای AI بفرستید و خروجی JSON را در بخش پایین بچسبانید.
+          </p>
+        </div>
+
+        <!-- بخش ورودی JSON -->
+        <div class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <label class="font-medium text-gray-700 flex items-center gap-1">
+              <i class="bi bi-filetype-json"></i> خروجی AI (JSON)
+            </label>
+            <div class="flex gap-2">
+              <button id="pasteAiJsonBtn" class="btn px-3 py-1 flex items-center gap-1">
+                <i class="bi bi-clipboard-plus"></i> چسباندن
+              </button>
+              <button id="sampleAiJsonBtn" class="btn px-3 py-1 flex items-center gap-1">
+                <i class="bi bi-flask"></i> نمونه
+              </button>
+            </div>
+          </div>
+          <textarea id="aiJsonInput" rows="4"
+            class="w-full border border-gray-300 rounded-[var(--radius)]  p-2 font-mono text-sm bg-white"
+            placeholder='{ "items": [ {"text": "فرمول $...$"} ] }'></textarea>
+          <p class="text-xs text-gray-500 flex items-center gap-1">
+            <i class="bi bi-info-circle"></i> پس از وارد کردن JSON، دکمه «پیش‌نمایش» را بزنید.
+          </p>
+        </div>
+
+        <!-- دکمه‌های پیش‌نمایش و رندر مجدد -->
+        <div class="flex flex-wrap gap-3">
+          <button id="previewAiBtn" class="btn px-3 py-1 flex items-center gap-1">
+            <i class="bi bi-eye"></i> پیش‌نمایش آیتم‌ها
+          </button>
+          <button id="addAiItemsToRangeBtn" class="btn px-3 py-1 flex items-center gap-1">
+            <i class="bi bi-plus-lg"></i> افزودن به مبحث فعلی
+          </button>
+        </div>
+
+        <!-- بخش پیش‌نمایش کارت‌ها -->
+        <div id="aiPreviewContainer" class="border-t pt-4 space-y-3">
+          <h3 class="font-medium text-gray-700 flex items-center gap-1">
+            <i class="bi bi-card-list"></i> پیش‌نمایش آیتم‌ها
+          </h3>
+          <div id="aiItemsContainer" class="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto pr-1"></div>
+          <p id="aiEmptyPreviewMsg" class="text-sm text-gray-400 text-center py-4 hidden">
+            <i class="bi bi-inbox"></i> هیچ آیتمی برای نمایش وجود ندارد.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <button id="toTop" title="برو بالا" class="
     fixed bottom-7 right-7 z-50
     w-14 h-14 rounded-full
@@ -339,6 +436,9 @@
   ">
     <i class="bi bi-arrow-up"></i>
   </button>
+  <link rel="stylesheet" href="./utils/katex/katex.min.css">
+  <script defer src="./utils/katex/katex.min.js"></script>
+  <script defer src="./utils/katex/auto-render.min.js"></script>
   <script src="./utils/cropper/cropper.min.js"></script>
   <script src="./utils/persian-inputs.js"></script>
   <script src="./utils/alert.js"></script>

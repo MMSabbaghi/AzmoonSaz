@@ -1216,3 +1216,31 @@ input.tool-btn[type="color"] {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
+
+/* انیمیشن مودال هوشمند */
+.ai-modal {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    visibility 0.3s ease,
+    opacity 0.3s ease;
+}
+.ai-modal--visible {
+  visibility: visible;
+  opacity: 1;
+}
+.ai-modal #aiModalContent {
+  transform: scale(0.9);
+  transition: transform 0.3s ease-out;
+}
+.ai-modal--visible #aiModalContent {
+  transform: scale(1);
+}
+
+.katex {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.katex-display {
+  text-align: center;
+}

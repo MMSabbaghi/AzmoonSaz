@@ -10,6 +10,11 @@ const appState = {
     itemId: null,
     tempItem: null,
   },
+  aiModal: {
+    isOpen: false,
+    rangeId: null,
+    topic: "",
+  },
 };
 
 const TEXT_DEFAULTS = {
@@ -204,12 +209,24 @@ const modalImageUploadContainer = document.getElementById(
   "modalImageUploadContainer",
 );
 const removeImageBtn = document.getElementById("removeImageBtn");
-
-// متغیرهای داخلی برای ویرایشگر متن و تصویر پیش‌نمایش
-let selectedPreviewImage = null; // تصویر انتخاب‌شده در جدول پیش‌نمایش
-let cropper = null; // Cropper برای برش تصویر (هم برای ویرایشگر متن و هم برای پیش‌نمایش)
+const aiModalOverlay = document.getElementById("aiModalOverlay");
+const aiModalContent = document.getElementById("aiModalContent");
+const closeAiModalBtn = document.getElementById("closeAiModalBtn");
+const aiPromptDisplay = document.getElementById("aiPromptDisplay");
+const aiJsonInput = document.getElementById("aiJsonInput");
+const copyAiPromptBtn = document.getElementById("copyAiPromptBtn");
+const pasteAiJsonBtn = document.getElementById("pasteAiJsonBtn");
+const sampleAiJsonBtn = document.getElementById("sampleAiJsonBtn");
+const previewAiBtn = document.getElementById("previewAiBtn");
+const aiItemsContainer = document.getElementById("aiItemsContainer");
+const aiEmptyPreviewMsg = document.getElementById("aiEmptyPreviewMsg");
+const addAiItemsToRangeBtn = document.getElementById("addAiItemsToRangeBtn");
+const aiTopicInput = document.getElementById("aiTopicInput");
+const aiCountInput = document.getElementById("aiCountInput");
 
 // ---------- State-bound UI Variables ----------
+let selectedPreviewImage = null;
+let cropper = null;
 let activeRangeId = null; // last clicked range (for paste)
 let isTouchDevice = false;
 let draggedElement = null;
@@ -478,6 +495,7 @@ function getRangeHTML(rangeData) {
           <button class="toggle-items-btn ${rangeData.itemsCollapsed ? "collapsed" : ""}">
             <i class="bi bi-eye"></i>
           </button>
+          <button class="ai-range"><i class="bi bi-openai"></i></button>
           <button class="move-up"><i class="bi bi-arrow-up"></i></button>
           <button class="move-down"><i class="bi bi-arrow-down"></i></button>
           </button>
@@ -533,6 +551,7 @@ function getRangeHTML(rangeData) {
             </div>
           </div>
           <button class="add-text-item btn px-3 py-2 rounded"><i class="bi bi-type"></i></button>
+          <button class="ai-range btn px-3 py-2 rounded"><i class="bi bi-openai"></i></button>
           <label class="font-normal text-[#777]" > متن سوال: </label>
           <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
             <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
@@ -589,6 +608,17 @@ function setupRangeButtons(rangeElement, rangeId) {
         },
       });
     };
+  });
+
+  rangeElement.querySelectorAll(".ai-range").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const rangeId = rangeElement.id;
+      const range = appState.ranges.find((r) => r.id === rangeId);
+      if (range) {
+        openAIModal(rangeId, range.rangeName || "موضوع");
+      }
+    });
   });
 
   rangeElement.querySelectorAll(".copy-range").forEach((btn) => {
@@ -1267,6 +1297,8 @@ function updateModalPreviewFromTemp() {
   modalPreviewCell.innerHTML = renderItemContent(temp, {
     rangeDesc: range.desc,
   });
+
+  renderMathInContainer(modalPreviewCell);
 }
 
 function saveModalChanges() {
@@ -1313,6 +1345,246 @@ function closeModal() {
     modalTextEditor.innerHTML = "";
   }, 300);
 }
+
+// ========== Math Rendering Helper ==========
+function renderMathInContainer(container) {
+  if (typeof renderMathInElement === "undefined") {
+    console.warn("KaTeX auto-render not available");
+    return;
+  }
+  try {
+    renderMathInElement(container, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+        { left: "\\(", right: "\\)", display: false },
+        { left: "\\[", right: "\\]", display: true },
+      ],
+      throwOnError: false,
+    });
+  } catch (e) {
+    console.error("Math rendering error:", e);
+  }
+}
+
+// ========== AI Prompt Modal Functions ==========
+function openAIModal(rangeId, topic) {
+  appState.aiModal.rangeId = rangeId;
+  appState.aiModal.topic = topic;
+  appState.aiModal.isOpen = true;
+
+  // پر کردن فیلدها
+  const range = appState.ranges.find((r) => r.id === rangeId);
+  document.getElementById("aiTopicInput").value = topic;
+  document.getElementById("aiCountInput").value = range ? range.count : 3;
+
+  // به‌روزرسانی پرامپت
+  updatePromptDisplay();
+
+  // پاک کردن ورودی‌های قبلی
+  document.getElementById("aiJsonInput").value = "";
+  document.getElementById("aiItemsContainer").innerHTML = "";
+  document.getElementById("aiEmptyPreviewMsg").classList.add("hidden");
+
+  // نمایش مودال با انیمیشن
+  aiModalOverlay.classList.remove("hidden"); // hidden دیگر وجود ندارد اما برای امنیت
+  void aiModalOverlay.offsetHeight; // force reflow
+  aiModalOverlay.classList.add("ai-modal--visible");
+  document.body.classList.add("modal-open");
+}
+
+function closeAIModal() {
+  appState.aiModal.rangeId = null;
+  appState.aiModal.topic = "";
+  appState.aiModal.isOpen = false;
+
+  aiModalOverlay.classList.remove("ai-modal--visible");
+  setTimeout(() => {
+    aiModalOverlay.classList.add("hidden"); // بازگشت به حالت پنهان
+    document.body.classList.remove("modal-open");
+  }, 300); // هماهنگ با مدت انیمیشن
+}
+
+// تابع تولید پرامپت با استفاده از مقادیر ورودی
+function generatePrompt() {
+  const topic = document.getElementById("aiTopicInput").value.trim() || "موضوع";
+  const count = document.getElementById("aiCountInput").value || 3;
+  return `یک JSON با فرمت { "items": [ {"text": "..."} ] } تولید کن. تعداد آیتم‌ها: ${count}. مبحث: "${topic}". هر آیتم می تواند شامل فرمول‌های $...$ یا $$...$$ باشد. مثال: {"text": "مشتق $f(x)=x^2$ را بیابید. $$\\\\frac{d}{dx}x^2=2x$$"}. فقط JSON برگردان.`;
+}
+
+// به‌روزرسانی نمایش پرامپت
+function updatePromptDisplay() {
+  document.getElementById("aiPromptDisplay").textContent = generatePrompt();
+}
+
+// افزودن شنونده برای تغییرات فیلدها
+document
+  .getElementById("aiTopicInput")
+  .addEventListener("input", updatePromptDisplay);
+document
+  .getElementById("aiCountInput")
+  .addEventListener("input", updatePromptDisplay);
+
+// کپی پرامپت
+copyAiPromptBtn.addEventListener("click", () => {
+  copyToClipboard(aiPromptDisplay.textContent, "پرامپت کپی شد");
+});
+
+// چسباندن JSON
+pasteAiJsonBtn.addEventListener("click", async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    aiJsonInput.value = text;
+  } catch (err) {
+    showToast("خطا در چسباندن", "error");
+  }
+});
+
+// نمونه JSON
+sampleAiJsonBtn.addEventListener("click", () => {
+  aiJsonInput.value = `{
+  "items": [
+    {
+      "text": "عبارت $(3x + 4)^2$ را بسط دهید."
+    },
+    {
+      "text":"اگر $a - b = 5$ و $ab = 6$ باشد، $a^2 + b^2$ را بیابید."
+    }
+  ]
+}`;
+});
+
+// پیش‌نمایش آیتم‌ها
+previewAiBtn.addEventListener("click", () => {
+  const raw = aiJsonInput.value.trim();
+  if (!raw) {
+    showToast("لطفاً JSON را وارد کنید", "error");
+    return;
+  }
+
+  try {
+    // استخراج JSON از متن (اگر اضافی داشته باشد)
+    const jsonStr = extractJSON(raw);
+    const data = JSON.parse(jsonStr);
+
+    if (!Array.isArray(data.items)) {
+      showToast("کلید items باید آرایه باشد", "error");
+      return;
+    }
+
+    aiItemsContainer.innerHTML = "";
+    if (data.items.length === 0) {
+      aiEmptyPreviewMsg.classList.remove("hidden");
+      return;
+    } else {
+      aiEmptyPreviewMsg.classList.add("hidden");
+    }
+
+    data.items.forEach((item, idx) => {
+      if (!item.text || typeof item.text !== "string") return;
+
+      const card = document.createElement("div");
+      card.className =
+        "border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow transition";
+
+      const header = document.createElement("div");
+      header.className =
+        "text-xs text-gray-400 mb-2 border-b pb-1 flex items-center gap-1";
+      header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${idx + 1}`;
+      card.appendChild(header);
+
+      const textDiv = document.createElement("div");
+      textDiv.className = "card-text text-gray-800";
+      textDiv.textContent = normalizeMathSpaces(item.text);
+      card.appendChild(textDiv);
+
+      aiItemsContainer.appendChild(card);
+    });
+
+    // رندر فرمول‌ها
+    renderMathInElement(aiItemsContainer, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+        { left: "\\(", right: "\\)", display: false },
+        { left: "\\[", right: "\\]", display: true },
+      ],
+      throwOnError: false,
+    });
+  } catch (error) {
+    showToast("خطا در پردازش JSON: " + error.message, "error");
+  }
+});
+
+// افزودن آیتم‌ها به مبحث
+addAiItemsToRangeBtn.addEventListener("click", () => {
+  const rangeId = appState.aiModal.rangeId;
+  if (!rangeId) {
+    showToast("مشکلی پیش آمده، لطفاً دوباره تلاش کنید", "error");
+    return;
+  }
+
+  // دریافت آیتم‌های موجود در کانتینر پیش‌نمایش (برای اطمینان از اعتبار)
+  const cards = aiItemsContainer.querySelectorAll(".card-text");
+  if (cards.length === 0) {
+    showToast("ابتدا پیش‌نمایش را بررسی کنید", "error");
+    return;
+  }
+
+  // ساخت آیتم از روی متن هر کارت (با فرض اینکه متن داخل card.textContent است)
+  // اما card.textContent حاوی متن بدون HTML است. بهتر است از داده اصلی JSON استفاده کنیم.
+  // ما می‌توانیم JSON را دوباره parse کنیم و از آیتم‌های اصلی استفاده کنیم.
+  try {
+    const jsonStr = extractJSON(aiJsonInput.value.trim());
+    const data = JSON.parse(jsonStr);
+    if (!Array.isArray(data.items)) throw new Error("items آرایه نیست");
+
+    data.items.forEach((item) => {
+      if (item.text) {
+        // ایجاد آیتم متنی با استفاده از تابع createTextItem
+        const newItem = createTextItem(item.text, "RIGHT"); // راست‌چین پیش‌فرض
+        addItemToRange(rangeId, newItem);
+      }
+      // در صورت نیاز می‌توان تصویر هم پشتیبانی کرد،但目前 فقط متن
+    });
+
+    showToast(`${data.items.length} آیتم به مبحث اضافه شد`);
+    closeAIModal();
+  } catch (err) {
+    showToast("خطا در افزودن آیتم‌ها: " + err.message, "error");
+  }
+});
+
+// کمکی: استخراج JSON از متن
+function extractJSON(str) {
+  str = str.trim();
+  const first = str.indexOf("{");
+  const last = str.lastIndexOf("}");
+  if (first === -1 || last === -1) throw new Error("JSON یافت نشد");
+  return str.substring(first, last + 1);
+}
+
+// کمکی: نرمال‌سازی فاصله‌های اطراف فرمول
+function normalizeMathSpaces(text) {
+  return text
+    .replace(/\$[ \t]+/g, "$")
+    .replace(/[ \t]+\$/g, "$")
+    .replace(/\$\$[ \t]+/g, "$$")
+    .replace(/[ \t]+\$\$/g, "$$");
+}
+
+// بستن مودال با کلیک روی overlay یا دکمه بستن
+closeAiModalBtn.addEventListener("click", closeAIModal);
+aiModalOverlay.addEventListener("click", (e) => {
+  if (e.target === aiModalOverlay) closeAIModal();
+});
+
+// بستن با Escape
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && appState.aiModal.isOpen) {
+    closeAIModal();
+  }
+});
 
 // ========== Drag & Drop Helpers ==========
 function handleDragStart(e) {
@@ -1570,7 +1842,10 @@ function handleAddRange() {
 
 function handleGenerateClick(e) {
   const isGenerated = generateQuizHtml();
-  if (isGenerated) e.target.scrollIntoView({ behavior: "smooth" });
+  if (isGenerated) {
+    e.target.scrollIntoView({ behavior: "smooth" });
+    renderMathInContainer(document.getElementById("printable"));
+  }
 }
 
 document.getElementById("addRange").onclick = handleAddRange;
