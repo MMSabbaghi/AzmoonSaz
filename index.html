@@ -143,25 +143,16 @@
 
             <button type="button"
               class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="justifyRight" title="راست چین"><i class="bi bi-align-start"></i></button>
+              data-command="justifyRight" title="راست چین"><i class="bi bi-justify-right"></i></button>
             <button type="button"
               class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="justifyCenter" title="وسط چین"><i class="bi bi-align-middle"></i></button>
+              data-command="justifyCenter" title="وسط چین"><i class="bi bi-text-center"></i></button>
             <button type="button"
               class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="justifyLeft" title="چپ چین"><i class="bi bi-align-end"></i></button>
+              data-command="justifyLeft" title="چپ چین"><i class="bi bi-justify-left"></i></button>
             <button type="button"
               class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
               data-command="justifyFull" title="هم‌تراز"><i class="bi bi-justify"></i></button>
-
-            <span class="toolbar-divider w-px h-6 bg-gray-400 mx-1 inline-block"></span>
-
-            <button type="button"
-              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="insertUnorderedList" title="لیست نامرتب"><i class="bi bi-list-ul"></i></button>
-            <button type="button"
-              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="insertOrderedList" title="لیست مرتب"><i class="bi bi-list-ol"></i></button>
 
             <span class="toolbar-divider w-px h-6 bg-gray-400 mx-1 inline-block"></span>
 
@@ -219,24 +210,16 @@
           <div class="toolbar-group flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
             <button type="button"
               class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="justifyRight"><i class="bi bi-align-start"></i></button>
+              data-command="justifyRight"><i class="bi bi-justify-right"></i></button>
             <button type="button"
               class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="justifyCenter"><i class="bi bi-align-middle"></i></button>
+              data-command="justifyCenter"><i class="bi bi-text-center"></i></button>
             <button type="button"
               class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="justifyLeft"><i class="bi bi-align-end"></i></button>
+              data-command="justifyLeft"><i class="bi bi-justify-left"></i></button>
             <button type="button"
               class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
               data-command="justifyFull"><i class="bi bi-justify"></i></button>
-          </div>
-          <div class="toolbar-group flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
-            <button type="button"
-              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="insertUnorderedList"><i class="bi bi-list-ul"></i></button>
-            <button type="button"
-              class="toolbar-btn min-w-[36px] h-9 px-2 border-none bg-transparent rounded text-gray-600 text-base cursor-pointer inline-flex items-center justify-center transition-all duration-200 hover:bg-gray-200 hover:text-gray-800 active:scale-95"
-              data-command="insertOrderedList"><i class="bi bi-list-ol"></i></button>
           </div>
           <div class="toolbar-group flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
             <div class="toolbar-color-picker relative inline-flex items-center">
@@ -325,19 +308,20 @@
         </button>
       </div>
 
-      <!-- مودال برش تصویر (یکپارچه) -->
-      <div id="cropModal" class="crop-modal hidden">
-        <div class="crop-panel">
-          <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><i class="bi bi-crop"></i> برش تصویر</h3>
-          <div class="crop-container">
-            <img id="cropImage" src="" alt="برای کراپ">
-          </div>
-          <div class="crop-actions">
-            <button id="applyCrop" class="btn flex-1 py-3">اعمال
-              برش</button>
-            <button id="cancelCrop" class="btn flex-1 py-3">لغو</button>
-          </div>
-        </div>
+    </div>
+  </div>
+
+  <!-- مودال برش تصویر (یکپارچه) -->
+  <div id="cropModal" class="crop-modal hidden">
+    <div class="crop-panel">
+      <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><i class="bi bi-crop"></i> برش تصویر</h3>
+      <div class="crop-container">
+        <img id="cropImage" src="" alt="برای کراپ">
+      </div>
+      <div class="crop-actions">
+        <button id="applyCrop" class="btn flex-1 py-3">اعمال
+          برش</button>
+        <button id="cancelCrop" class="btn flex-1 py-3">لغو</button>
       </div>
     </div>
   </div>
