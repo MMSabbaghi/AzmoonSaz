@@ -755,11 +755,7 @@ function addItemToRange(rangeId, item) {
 // ========== Names Section - Unified State ==========
 function updateNamesFromElement(element) {
   if (element && element.tagName === "TEXTAREA") {
-    const names = element.value
-      .trim()
-      .split("\n")
-      .filter((n) => n);
-    appState.names = names;
+    appState.names = element.value.split("\n");
   } else if (
     element &&
     element.tagName === "INPUT" &&
@@ -1158,11 +1154,12 @@ function generateAnonymousStudentNames(count) {
 }
 
 function getStudentNames() {
+  const validNames = appState.names.filter((name) => name.trim() !== "");
   return {
-    names: appState.names.length
-      ? appState.names
+    names: validNames.length
+      ? validNames
       : generateAnonymousStudentNames(appState.namesCount),
-    showNames: appState.names.length > 0,
+    showNames: validNames.length > 0,
   };
 }
 
