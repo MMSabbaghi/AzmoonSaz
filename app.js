@@ -1,6 +1,6 @@
 // ---------- State Management ----------
 const appState = {
-  ranges: [], // هر range شامل { id, rangeName, count, score, desc, items, itemsCollapsed, fieldsCollapsed }
+  ranges: [], // هر range شامل { id, rangeName, count, score, desc, items, itemsCollapsed }
   names: [],
   namesCount: 1,
   font: "'Vazirmatn', sans-serif",
@@ -475,20 +475,18 @@ function getRangeHTML(rangeData) {
             <span class="range-total-badge">${toPersianDigits(rangeData.items.length)}</span>
           </div>
           <div class="range-actions">
-            <button class="remove-range"><i class="bi bi-trash3"></i></button>
-            <button class="copy-range"><i class="bi bi-copy"></i></button>
-            <button class="paste-range"><i class="bi bi-clipboard-plus"></i></button>
-            <button class="move-up"><i class="bi bi-arrow-up"></i></button>
-            <button class="move-down"><i class="bi bi-arrow-down"></i></button>
-            <button class="toggle-fields-btn ${rangeData.fieldsCollapsed ? "" : "collapsed"}">
-              <i class="bi bi-chevron-down"></i>
-            </button>
-            <button class="toggle-items-btn ${rangeData.itemsCollapsed ? "collapsed" : ""}">
-              <i class="bi bi-chevron-up"></i>
-            </button>
+          <button class="toggle-items-btn ${rangeData.itemsCollapsed ? "collapsed" : ""}">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="move-up"><i class="bi bi-arrow-up"></i></button>
+          <button class="move-down"><i class="bi bi-arrow-down"></i></button>
+          </button>
+          <button class="copy-range"><i class="bi bi-copy"></i></button>
+          <button class="paste-range"><i class="bi bi-clipboard-plus"></i></button>
+          <button class="remove-range"><i class="bi bi-trash3"></i></button>
           </div>
         </div>
-        <div class="range-details ${rangeData.fieldsCollapsed ? "hidden" : ""}">
+        <div class="range-details ${rangeData.itemsCollapsed ? "hidden" : ""}">
           <div class="details-row">
             <label>تعداد:</label> <input value="${rangeData.count}" data-number-input="true" data-float="false" class="range-count border rounded p-2 w-10">
             <label>نمره:</label> <input value="${rangeData.score}" data-number-input="true" class="range-score border rounded p-2 w-10">
@@ -512,9 +510,12 @@ function getRangeHTML(rangeData) {
     return `
       <div class="range-header my-1">
         <div class="flex items-center gap-2">
-          <div>
+          <div class="relative">
             <label class="font-normal text-[#777]"> مبحث: </label>
             <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
+            <span class="range-total absolute -top-2 -left-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              ${toPersianDigits(rangeData.items.length)}
+            </span>
           </div>
           <div>
             <label class="font-normal text-[#777]"> تعداد: </label>
@@ -524,14 +525,11 @@ function getRangeHTML(rangeData) {
             <label class="font-normal text-[#777]" > نمره: </label>
             <input value="${rangeData.score}" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
           </div>
-          <div class="relative inline-block">
+          <div class="inline-block">
             <div class="file-input">
               <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
               <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
             </div>
-            <span class="range-total absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              ${toPersianDigits(rangeData.items.length)}
-            </span>
           </div>
           <button class="add-text-item btn px-3 py-2 rounded"><i class="bi bi-type"></i></button>
           <label class="font-normal text-[#777]" > متن سوال: </label>
@@ -650,27 +648,6 @@ function setupRangeButtons(rangeElement, rangeId) {
       }
     });
   }
-
-  const toggleFieldsBtn = rangeElement.querySelector(".toggle-fields-btn");
-  if (toggleFieldsBtn) {
-    toggleFieldsBtn.addEventListener("click", (e) => {
-      if (
-        e.target.closest(
-          ".remove-range, .copy-range, .paste-range, .move-up, .move-down",
-        )
-      ) {
-        return;
-      }
-      e.stopPropagation();
-      const range = appState.ranges.find((r) => r.id === rangeId);
-      if (!range) return;
-      range.fieldsCollapsed = !range.fieldsCollapsed;
-      const details = rangeElement.querySelector(".range-details");
-      details.classList.toggle("hidden", range.fieldsCollapsed);
-      toggleFieldsBtn.classList.toggle("collapsed", !range.fieldsCollapsed);
-      toggleFieldsBtn.setAttribute("aria-expanded", !range.fieldsCollapsed);
-    });
-  }
 }
 
 function setupFileUploadOnRange(rangeElement, rangeId) {
@@ -743,7 +720,6 @@ function createRangeElement(rangeData = null) {
       desc: "",
       items: [],
       itemsCollapsed: false,
-      fieldsCollapsed: false,
     };
     appState.ranges.push(newRange);
     rangeData = newRange;
@@ -1527,7 +1503,6 @@ function importRangesFromData(data) {
       desc: r.desc || "",
       items,
       itemsCollapsed: false,
-      fieldsCollapsed: false,
     };
     appState.ranges.push(rangeWithId);
   });
