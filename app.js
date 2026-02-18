@@ -117,6 +117,39 @@ function createRandomId(prefix) {
   }
 }
 
+// ========== تابع کمکی برای تراز تصویر ==========
+function getAlignmentClass(align) {
+  const classes = { RIGHT: "ml-auto", LEFT: "mr-auto", CENTER: "mx-auto" };
+  return classes[align] || "";
+}
+
+// ========== تابع یکپارچه برای تولید HTML آیتم ==========
+function renderItemContent(item, options = {}) {
+  const { rangeDesc = "", imageClass = "", textClass = "" } = options;
+  let html = "";
+
+  // بخش متن
+  if (item.image && item.image.showText) {
+    const text = item.text ? item.text.html : rangeDesc;
+    if (text) {
+      const align = item.text ? item.text.align.toLowerCase() : "right";
+      html += `<div class="${textClass}" style="text-align: ${align};">${text}</div>`;
+    }
+  } else if (item.text && !item.image) {
+    html += `<div class="${textClass}" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
+  }
+
+  // بخش تصویر
+  if (item.image) {
+    const img = item.image;
+    const alignClass = getAlignmentClass(img.align);
+    const classNames = [alignClass, imageClass].filter(Boolean).join(" ");
+    html += `<img src="${img.src}" style="height: ${img.height}px; width: auto; display: block;" class="${classNames}" alt="">`;
+  }
+
+  return html;
+}
+
 // ---------- Item Creation ----------
 function createTextItem(
   html = TEXT_DEFAULTS.html,
@@ -388,33 +421,12 @@ function renderRangeItems(rangeElement, rangeId) {
   }
 }
 
-function buildItemThumbnailContent(item) {
-  let contentHtml = "";
-  if (item.image && item.image.showText && item.text) {
-    contentHtml += `<div class="text-preview" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
-  } else if (item.text && !item.image) {
-    contentHtml += `<div class="text-preview" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
-  }
-  if (item.image) {
-    const imgAlign = item.image.align.toLowerCase();
-    const marginClass =
-      imgAlign === "right"
-        ? "ml-auto"
-        : imgAlign === "left"
-          ? "mr-auto"
-          : "mx-auto";
-    contentHtml += `<img src="${item.image.src}" style="max-height: ${item.image.height}px; display: block;" class="${marginClass}">`;
-  }
-  return contentHtml;
-}
-
 function createItemThumbnailElement(item, rangeDiv, rangeId) {
   const container = document.createElement("div");
   container.className = "item-thumbnail";
   container.dataset.itemId = item.id;
   container.innerHTML =
-    buildItemThumbnailContent(item) +
-    `<button class="remove-item">&times;</button>`;
+    renderItemContent(item) + `<button class="remove-item">&times;</button>`;
 
   const removeBtn = container.querySelector(".remove-item");
   removeBtn.onclick = (e) => {
@@ -1093,28 +1105,9 @@ function buildQuizData(names, ranges) {
   return finalData;
 }
 
-function getAlignmentClass(align) {
-  const classes = { RIGHT: "ml-auto", LEFT: "mr-auto", CENTER: "mx-auto" };
-  return classes[align];
-}
-
 function renderItemForQuiz(item, rangeDesc) {
-  let html = "";
-  if (item.image && item.image.showText) {
-    const text = item.text ? item.text.html : rangeDesc || "";
-    if (text) {
-      html += `<div style="text-align: ${item.text ? item.text.align.toLowerCase() : "right"};">${text}</div>`;
-    }
-  } else if (item.text && !item.image) {
-    html += `<div style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
-  }
-  if (item.image) {
-    const img = item.image;
-    html += `<img class="max-h-[${img.height}px] ${getAlignmentClass(
-      img.align,
-    )}" src="${img.src}" alt="">`;
-  }
-  return html;
+  const imageClass = item.image ? `max-h-[${item.image.height}px]` : "";
+  return renderItemContent(item, { rangeDesc, imageClass });
 }
 
 function createQuestionRowHtml(qNum, item, range) {
@@ -1293,20 +1286,10 @@ function updateModalPreviewFromTemp() {
         </span>
     `;
 
-  let content = "";
-  if (temp.image && temp.image.showText) {
-    const text = temp.text ? temp.text.html : range.desc || "";
-    if (text) {
-      content += `<div style="text-align: ${temp.text ? temp.text.align.toLowerCase() : "right"};">${text}</div>`;
-    }
-  } else if (temp.text && !temp.image) {
-    content += `<div style="text-align: ${temp.text.align.toLowerCase()};">${temp.text.html}</div>`;
-  }
-  if (temp.image) {
-    const img = temp.image;
-    content += `<img style="height: ${img.height}px; width: auto; display: block;" src="${img.src}" alt="" class="${getAlignmentClass(img.align)}">`;
-  }
-  modalPreviewCell.innerHTML = content;
+  // استفاده از تابع یکپارچه renderItemContent
+  modalPreviewCell.innerHTML = renderItemContent(temp, {
+    rangeDesc: range.desc,
+  });
 }
 
 function saveModalChanges() {
