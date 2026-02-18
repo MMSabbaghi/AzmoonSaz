@@ -17,7 +17,7 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            z-index: 999;
+            z-index: 1001;
             pointer-events: none;
             max-width: 300px;
           }

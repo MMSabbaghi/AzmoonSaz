@@ -216,9 +216,8 @@ const aiPromptDisplay = document.getElementById("aiPromptDisplay");
 const aiJsonInput = document.getElementById("aiJsonInput");
 const copyAiPromptBtn = document.getElementById("copyAiPromptBtn");
 const pasteAiJsonBtn = document.getElementById("pasteAiJsonBtn");
-const sampleAiJsonBtn = document.getElementById("sampleAiJsonBtn");
-const previewAiBtn = document.getElementById("previewAiBtn");
 const aiItemsContainer = document.getElementById("aiItemsContainer");
+const aiPreviewContainer = document.getElementById("aiPreviewContainer");
 const aiEmptyPreviewMsg = document.getElementById("aiEmptyPreviewMsg");
 const addAiItemsToRangeBtn = document.getElementById("addAiItemsToRangeBtn");
 const aiTopicInput = document.getElementById("aiTopicInput");
@@ -1438,84 +1437,67 @@ pasteAiJsonBtn.addEventListener("click", async () => {
   try {
     const text = await navigator.clipboard.readText();
     aiJsonInput.value = text;
+    const raw = text.trim();
+    if (!raw) {
+      showToast("لطفاً JSON را وارد کنید", "error");
+      return;
+    }
+
+    try {
+      // استخراج JSON از متن (اگر اضافی داشته باشد)
+      const jsonStr = extractJSON(raw);
+      const data = JSON.parse(jsonStr);
+
+      if (!Array.isArray(data.items)) {
+        showToast("کلید items باید آرایه باشد", "error");
+        return;
+      }
+
+      aiItemsContainer.innerHTML = "";
+      if (data.items.length === 0) {
+        aiEmptyPreviewMsg.classList.remove("hidden");
+        return;
+      } else {
+        aiEmptyPreviewMsg.classList.add("hidden");
+        aiPreviewContainer.classList.remove("hidden");
+      }
+
+      data.items.forEach((item, idx) => {
+        if (!item.text || typeof item.text !== "string") return;
+
+        const card = document.createElement("div");
+        card.className =
+          "border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow transition";
+
+        const header = document.createElement("div");
+        header.className =
+          "text-xs text-gray-400 mb-2 border-b pb-1 flex items-center gap-1";
+        header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${idx + 1}`;
+        card.appendChild(header);
+
+        const textDiv = document.createElement("div");
+        textDiv.className = "card-text text-gray-800";
+        textDiv.textContent = normalizeMathSpaces(item.text);
+        card.appendChild(textDiv);
+
+        aiItemsContainer.appendChild(card);
+      });
+
+      // رندر فرمول‌ها
+      renderMathInElement(aiItemsContainer, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false },
+          { left: "\\[", right: "\\]", display: true },
+        ],
+        throwOnError: false,
+      });
+    } catch (error) {
+      showToast("داده نامعتبر است.", "error");
+    }
   } catch (err) {
     showToast("خطا در چسباندن", "error");
-  }
-});
-
-// نمونه JSON
-sampleAiJsonBtn.addEventListener("click", () => {
-  aiJsonInput.value = `{
-  "items": [
-    {
-      "text": "عبارت $(3x + 4)^2$ را بسط دهید."
-    },
-    {
-      "text":"اگر $a - b = 5$ و $ab = 6$ باشد، $a^2 + b^2$ را بیابید."
-    }
-  ]
-}`;
-});
-
-// پیش‌نمایش آیتم‌ها
-previewAiBtn.addEventListener("click", () => {
-  const raw = aiJsonInput.value.trim();
-  if (!raw) {
-    showToast("لطفاً JSON را وارد کنید", "error");
-    return;
-  }
-
-  try {
-    // استخراج JSON از متن (اگر اضافی داشته باشد)
-    const jsonStr = extractJSON(raw);
-    const data = JSON.parse(jsonStr);
-
-    if (!Array.isArray(data.items)) {
-      showToast("کلید items باید آرایه باشد", "error");
-      return;
-    }
-
-    aiItemsContainer.innerHTML = "";
-    if (data.items.length === 0) {
-      aiEmptyPreviewMsg.classList.remove("hidden");
-      return;
-    } else {
-      aiEmptyPreviewMsg.classList.add("hidden");
-    }
-
-    data.items.forEach((item, idx) => {
-      if (!item.text || typeof item.text !== "string") return;
-
-      const card = document.createElement("div");
-      card.className =
-        "border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow transition";
-
-      const header = document.createElement("div");
-      header.className =
-        "text-xs text-gray-400 mb-2 border-b pb-1 flex items-center gap-1";
-      header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${idx + 1}`;
-      card.appendChild(header);
-
-      const textDiv = document.createElement("div");
-      textDiv.className = "card-text text-gray-800";
-      textDiv.textContent = normalizeMathSpaces(item.text);
-      card.appendChild(textDiv);
-
-      aiItemsContainer.appendChild(card);
-    });
-
-    // رندر فرمول‌ها
-    renderMathInElement(aiItemsContainer, {
-      delimiters: [
-        { left: "$$", right: "$$", display: true },
-        { left: "$", right: "$", display: false },
-        { left: "\\(", right: "\\)", display: false },
-        { left: "\\[", right: "\\]", display: true },
-      ],
-      throwOnError: false,
-    });
-  } catch (error) {
-    showToast("خطا در پردازش JSON: " + error.message, "error");
   }
 });
 
