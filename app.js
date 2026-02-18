@@ -472,7 +472,7 @@ function getRangeHTML(rangeData) {
         <div class="range-header-row">
           <div class="range-title">
             <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
-            <span class="range-total-badge">${toPersianDigits(rangeData.items.length)}</span>
+            <span class="range-total">${toPersianDigits(rangeData.items.length)}</span>
           </div>
           <div class="range-actions">
           <button class="toggle-items-btn ${rangeData.itemsCollapsed ? "collapsed" : ""}">
@@ -493,10 +493,11 @@ function getRangeHTML(rangeData) {
             <div class="file-input hidden">
               <input type="file" class="range-images" accept="image/*" multiple><label class="btn px-3 py-2"><i class="bi bi-image"></i></label>
             </div>
-            <button class="add-text-item btn px-3 py-2"><i class="bi bi-type"></i></button>
+            <label class="font-normal text-[#777]" > متن : </label>
             <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
-              <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+            <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
             </div>
+            <button class="add-text-item btn px-3 py-2"><i class="bi bi-plus-lg"></i></button>
           </div>
         </div>
         <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">

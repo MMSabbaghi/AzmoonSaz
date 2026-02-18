@@ -924,7 +924,7 @@ textarea:disabled {
   align-items: center;
   gap: 8px;
 }
-.range-total-badge {
+.range-total {
   background: red;
   color: white;
   border-radius: 999px;
