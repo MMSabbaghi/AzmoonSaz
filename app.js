@@ -495,7 +495,6 @@ function getRangeHTML(rangeData) {
           <button class="toggle-items-btn ${rangeData.itemsCollapsed ? "collapsed" : ""}">
             <i class="bi bi-eye"></i>
           </button>
-          <button class="ai-range"><i class="bi bi-openai"></i></button>
           <button class="move-up"><i class="bi bi-arrow-up"></i></button>
           <button class="move-down"><i class="bi bi-arrow-down"></i></button>
           </button>
@@ -511,10 +510,14 @@ function getRangeHTML(rangeData) {
             <div class="file-input hidden">
               <input type="file" class="range-images" accept="image/*" multiple><label class="btn px-3 py-2"><i class="bi bi-image"></i></label>
             </div>
+            <div class="hidden">
             <label class="font-normal text-[#777]" > متن : </label>
             <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
             <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
             </div>
+            </div>
+          <button class="ai-range btn px-3 py-2"><i class="bi bi-openai"></i></button>
+
             <button class="add-text-item btn px-3 py-2"><i class="bi bi-plus-lg"></i></button>
           </div>
         </div>
