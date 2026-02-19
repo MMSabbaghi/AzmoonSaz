@@ -683,10 +683,154 @@ document.getElementById("addRange").onclick = () => {
 };
 
 // ========== Names Section ==========
-const namesCountEl = document.getElementById("names-count");
-const namesTextareaContainer = document.getElementById("names-textarea");
-const namesTextarea = namesTextareaContainer.querySelector("textarea");
-const fontSelector = document.getElementById("fontSelector");
+let namesUI = null;
+
+function createNamesUI() {
+  const container = document.createElement("div");
+  container.className = "names-section w-full";
+
+  container.innerHTML = `
+    <div class="flex items-center gap-2 flex-wrap">
+      <div>
+        <label>تعداد:</label>
+        <input type="text" class="names-count-input border rounded p-2 w-10 md:w-20" value="${appState.names.length || appState.namesCount}" data-number-input="true" ${appState.names.length ? "disabled" : ""}>
+      </div>
+      <div class="flex items-center gap-2">
+        <label>فونت:</label>
+        <select class="font-selector border rounded p-2 text-sm bg-white text-gray-800">
+          <option value="'Vazirmatn', sans-serif">وزیرمتن</option>
+          <option value="'Shabnam', sans-serif">شبنم</option>
+          <option value="'BNazanin', sans-serif">نازنین</option>
+        </select>
+      </div>
+      <div class="names-switch flex gap-1">
+        <label>نمایش نام:</label>
+        <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
+          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+        </div>
+      </div>
+      <div class="flex gap-2 md:mr-auto w-full md:w-fit">
+      <button class="generate-btn btn px-4 py-2 w-full md:w-fit"><i class="bi bi-clipboard2-check"></i> تولید آزمون</button>
+      <button class="print-btn btn px-4 py-2 w-full md:w-fit"><i class="bi bi-printer"></i> چاپ خروجی</button>
+      </div>
+    </div>  
+    <div class="names-textarea-container overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
+      <textarea class="names-textarea w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" rows="5" placeholder="نام دانش‌آموزان هر کدام در یک خط">${appState.names.join("\n")}</textarea>
+    </div>
+  `;
+
+  const fontSelect = container.querySelector(".font-selector");
+  fontSelect.value = appState.font;
+
+  const countInput = container.querySelector(".names-count-input");
+  countInput.addEventListener("input", (e) => {
+    const val = parseInt(e.target.value) || 1;
+    appState.namesCount = val;
+    if (!appState.names.length) {
+      document.querySelectorAll(".names-count-input").forEach((other) => {
+        if (other !== e.target) other.value = val;
+      });
+    }
+  });
+
+  fontSelect.addEventListener("change", (e) => {
+    appState.font = e.target.value;
+    document.body.style.fontFamily = appState.font;
+    document.querySelectorAll(".font-selector").forEach((other) => {
+      if (other !== e.target) other.value = appState.font;
+    });
+  });
+
+  const textarea = container.querySelector(".names-textarea");
+  textarea.addEventListener("input", (e) => {
+    appState.names = e.target.value
+      .split("\n")
+      .filter((name) => name.trim() !== "");
+    document.querySelectorAll(".names-count-input").forEach((input) => {
+      input.value = appState.names.length || appState.namesCount;
+      input.disabled = appState.names.length > 0;
+    });
+  });
+
+  const switchContainer = container.querySelector(".names-switch");
+  const textareaContainer = container.querySelector(
+    ".names-textarea-container",
+  );
+  handleSwitchElement({
+    container: switchContainer,
+    onChange: (isActive) => {
+      setElementState({
+        target: textareaContainer,
+        stateClasses: {
+          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+        },
+        isActive,
+      });
+    },
+  });
+
+  container
+    .querySelector(".generate-btn")
+    .addEventListener("click", handleGenerateClick);
+  container
+    .querySelector(".print-btn")
+    .addEventListener("click", () => window.print());
+
+  return container;
+}
+
+function placeNamesUI() {
+  if (!namesUI) return;
+
+  const mobile = isMobile();
+  const desktopContainer = document.getElementById("sticky");
+  let mobileContainer = document.getElementById("mobile-bottom-bar");
+
+  if (mobile) {
+    if (!mobileContainer) {
+      mobileContainer = document.createElement("div");
+      mobileContainer.id = "mobile-bottom-bar";
+      document.body.appendChild(mobileContainer);
+    }
+    if (!mobileContainer.contains(namesUI)) {
+      mobileContainer.appendChild(namesUI);
+    }
+    if (desktopContainer.contains(namesUI)) {
+      desktopContainer.removeChild(namesUI);
+    }
+    document.body.style.paddingBottom = mobileContainer.offsetHeight + "px";
+    updateToTopPosition();
+  } else {
+    if (!desktopContainer.contains(namesUI)) {
+      desktopContainer.appendChild(namesUI);
+    }
+    if (mobileContainer && mobileContainer.contains(namesUI)) {
+      mobileContainer.removeChild(namesUI);
+    }
+    document.body.style.paddingBottom = "";
+  }
+}
+
+function renderNamesSection() {
+  document.querySelectorAll(".names-textarea").forEach((textarea) => {
+    textarea.value = appState.names.join("\n");
+  });
+
+  document.querySelectorAll(".names-count-input").forEach((input) => {
+    if (appState.names.length > 0) {
+      input.value = appState.names.length;
+      input.disabled = true;
+    } else {
+      input.value = appState.namesCount;
+      input.disabled = false;
+    }
+  });
+
+  document.querySelectorAll(".font-selector").forEach((select) => {
+    select.value = appState.font;
+  });
+}
 
 function updateNamesFromElement(element) {
   if (element && element.tagName === "TEXTAREA") {
@@ -702,38 +846,10 @@ function updateNamesFromElement(element) {
   renderNamesSection();
 }
 
-function renderNamesSection() {
-  namesTextarea.value = appState.names.join("\n");
-  if (appState.names.length > 0) {
-    namesCountEl.value = appState.names.length;
-    namesCountEl.disabled = true;
-  } else {
-    namesCountEl.value = appState.namesCount;
-    namesCountEl.disabled = false;
-  }
-
-  const mobileTextarea = document.querySelector(
-    "#names-textarea-mobile textarea",
-  );
-  if (mobileTextarea) mobileTextarea.value = appState.names.join("\n");
-
-  const mobileCount = document.getElementById("names-count-mobile");
-  if (mobileCount) {
-    if (appState.names.length > 0) {
-      mobileCount.value = appState.names.length;
-      mobileCount.disabled = true;
-    } else {
-      mobileCount.value = appState.namesCount;
-      mobileCount.disabled = false;
-    }
-  }
-
-  const mobileFont = document.getElementById("fontSelector-mobile");
-  if (mobileFont) mobileFont.value = appState.font;
-}
-
 function syncNamesFromTextarea(sourceElement) {
-  updateNamesFromElement(sourceElement || namesTextarea);
+  updateNamesFromElement(
+    sourceElement || document.querySelector(".names-textarea"),
+  );
 }
 
 function adjustMobilePadding() {
@@ -745,134 +861,6 @@ function adjustMobilePadding() {
     barHeight + "px";
   updateToTopPosition();
 }
-
-function setupMobileNamesBar() {
-  if (!isMobile()) return;
-
-  const bottomBar = document.getElementById("mobile-bottom-bar");
-  if (bottomBar.querySelector(".mobile-names-section-custom")) return;
-
-  buildMobileNamesBarHTML(bottomBar);
-  attachMobileNamesEvents();
-  adjustMobilePadding();
-}
-
-function buildMobileNamesBarHTML(bottomBar) {
-  bottomBar.innerHTML = `
-    <div class="names-controls mobile-names-section-custom">
-      <div class="flex items-center gap-2 flex-wrap">
-        <div>
-          <label>تعداد:</label>
-          <input value="${appState.namesCount}" data-number-input="true" type="text" id="names-count-mobile" class="border rounded p-2 w-16" placeholder="تعداد">
-        </div>
-        <div>
-          <label>فونت:</label>
-          <select id="fontSelector-mobile" class="border rounded p-2 text-sm bg-white text-gray-800">
-            <option value="'Vazirmatn', sans-serif">وزیرمتن</option>
-            <option value="'Shabnam', sans-serif">شبنم</option>
-            <option value="'BNazanin', sans-serif">نازنین</option>
-          </select>
-        </div>
-        <div id="names-switch-mobile" class="flex gap-1">
-          <label>نمایش اسامی:</label>
-          <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
-            <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="mobile-actions">
-      <button class="btn mobile-generate"><i class="bi bi-clipboard2-check"></i> تولید آزمون</button>
-      <button class="btn mobile-print"><i class="bi bi-printer"></i> چاپ</button>
-    </div>
-    <div id="names-textarea-mobile" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-      <textarea rows="5" class="w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="نام دانش‌آموزان هر کدام در یک خط"></textarea>
-    </div>
-  `;
-}
-
-function attachMobileNamesEvents() {
-  const mobileCount = document.getElementById("names-count-mobile");
-  const mobileFont = document.getElementById("fontSelector-mobile");
-  const mobileTextarea = document.querySelector(
-    "#names-textarea-mobile textarea",
-  );
-
-  mobileCount.value = appState.names.length
-    ? appState.names.length
-    : appState.namesCount;
-  mobileCount.disabled = appState.names.length > 0;
-  mobileFont.value = appState.font;
-
-  mobileCount.addEventListener("input", (e) => {
-    const val = parseInt(e.target.value) || 1;
-    appState.namesCount = val;
-    if (!appState.names.length) {
-      namesCountEl.value = val;
-    }
-  });
-
-  mobileFont.addEventListener("change", (e) => {
-    appState.font = e.target.value;
-    document.body.style.fontFamily = appState.font;
-  });
-
-  mobileTextarea.addEventListener("input", () =>
-    updateNamesFromElement(mobileTextarea),
-  );
-
-  handleSwitchElement({
-    container: document.getElementById("names-switch-mobile"),
-    onChange: (isActive) => {
-      setElementState({
-        target: document.getElementById("names-textarea-mobile"),
-        stateClasses: {
-          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-        },
-        isActive,
-      });
-      updateNamesFromElement(mobileTextarea);
-      adjustMobilePadding();
-    },
-  });
-
-  const bottomBar = document.getElementById("mobile-bottom-bar");
-  bottomBar
-    .querySelector(".mobile-generate")
-    .addEventListener("click", handleGenerateClick);
-  bottomBar
-    .querySelector(".mobile-print")
-    .addEventListener("click", () => window.print());
-}
-
-handleSwitchElement({
-  container: document.getElementById("names-switch"),
-  onChange: (isActive) => {
-    setElementState({
-      target: namesTextareaContainer,
-      stateClasses: {
-        on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-        off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-      },
-      isActive,
-    });
-    syncNamesFromTextarea();
-  },
-});
-
-namesTextarea.addEventListener("input", () => {
-  syncNamesFromTextarea(namesTextarea);
-});
-
-namesCountEl.addEventListener("input", (e) => {
-  updateNamesFromElement(e.target);
-});
-
-fontSelector.addEventListener("change", function (e) {
-  appState.font = e.target.value;
-  document.body.style.fontFamily = appState.font;
-});
 
 // ========== Paste Handlers ==========
 async function handlePasteInModal(items) {
@@ -1138,8 +1126,6 @@ function generateQuizHtml() {
     </table>`;
   return true;
 }
-
-document.getElementById("generate").onclick = handleGenerateClick;
 
 function handleGenerateClick(e) {
   const isGenerated = generateQuizHtml();
@@ -2063,10 +2049,16 @@ function setupCropButton() {
 // ========== Initialization ==========
 document.addEventListener("DOMContentLoaded", function () {
   document.body.style.fontFamily = appState.font;
-  setupMobileNamesBar();
+
+  // Initialize unified names component
+  namesUI = createNamesUI();
+  placeNamesUI();
+
+  // Initialize rich text editor and preview toolbar
   initRichTextEditor();
   initPreviewImageToolbar();
 
+  // Crop modal event listeners
   document.getElementById("applyCrop").addEventListener("click", function () {
     if (!cropper || !selectedPreviewImage) return;
     const canvas = cropper.getCroppedCanvas();
@@ -2094,13 +2086,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
+  // Window resize handler
   window.addEventListener("resize", () => {
     const isNowMobile = window.innerWidth <= 768;
     document.querySelectorAll(".range-item").forEach((el) => {
       el.draggable = !isNowMobile;
     });
-    if (isNowMobile) setupMobileNamesBar();
 
+    placeNamesUI();
     adjustMobilePadding();
     updateToTopPosition();
   });

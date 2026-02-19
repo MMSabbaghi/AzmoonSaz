@@ -201,7 +201,6 @@ input:focus + label {
 
 .export-btns {
   border: 1px dashed var(--border);
-  padding: 0 8px;
   border-radius: var(--radius);
   justify-content: center;
 }

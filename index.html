@@ -37,59 +37,11 @@
     </button>
 
     <div id="sentinel"></div>
-    <div class="my-1 bg-white export-btns sticky-box" id="sticky">
-      <div class="flex items-center justify-between gap-1">
-        <!-- بخش سمت چپ (اسامی) که در موبایل پنهان می‌شود -->
-        <div class="flex items-center gap-2 names-section-original">
-          <div>
-            <label> تعداد دانش آموزان: </label>
-            <input value="1" data-number-input="true" data-float="false" type="text" id="names-count"
-              class="border rounded p-2 w-20" placeholder="تعداد ">
-          </div>
-          <div class="flex items-center gap-2">
-            <label for="fontSelector">فونت:</label>
-            <select id="fontSelector" class="border rounded p-2 text-sm bg-white text-gray-800">
-              <option value="'Vazirmatn', sans-serif" style="font-family: 'Vazirmatn', sans-serif;">وزیرمتن</option>
-              <option value="'Shabnam', sans-serif" style="font-family: 'Shabnam', sans-serif;">شبنم</option>
-              <option value="'BNazanin', sans-serif" style="font-family:'BNazanin', sans-serif;">نازنین</option>
-            </select>
-          </div>
-          <div id="names-switch" class="flex gap-1">
-            <label> نمایش اسامی: </label>
-            <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer
-                transition-all duration-300 ease-out shadow-inner">
-              <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)]
-                  transition-all duration-500 shadow-md">
-              </div>
-            </div>
-          </div>
-        </div>
-        <div>
-          <button id="generate" class="btn px-4 py-2 rounded mt-2 md:mb-2 desktop-cta">
-            <i class="bi bi-clipboard2-check"></i>
-            <span>تولید آزمون</span>
-          </button>
-          <button onclick="window.print()" class="btn px-4 py-2 rounded md:mt-2 mb-2 desktop-cta">
-            <i class="bi bi-printer"></i>
-            <span>چاپ خروجی</span>
-          </button>
-        </div>
-      </div>
-      <!-- تکست‌اریا اساسی -->
-      <div id="names-textarea"
-        class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-        <textarea rows="5" class="w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none"
-          placeholder="نام دانش‌آموزان هر کدام در یک خط"></textarea>
-      </div>
+    <div class="my-1  md:p-[8px] bg-white export-btns sticky-box" id="sticky">
     </div>
 
-    <!-- نوار پایین موبایل -->
-    <div id="mobile-bottom-bar">
-      <div class="names-controls"></div> <!-- place for cloned names section -->
-      <div class="mobile-actions">
-        <button class="btn mobile-generate"><i class="bi bi-clipboard2-check"></i> تولید آزمون</button>
-        <button class="btn mobile-print"><i class="bi bi-printer"></i> چاپ</button>
-      </div>
+    <div id="mobile-bottom-bar"
+      class="fixed bottom-0 left-0 right-0 bg-white z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-2 border-t border-[color:var(--border)]">
     </div>
 
     <div id="printable" class="overflow-auto">
@@ -97,6 +49,8 @@
         <img src="images/no_data.jpg" alt="no_data" style="max-height: 380px;">
       </div>
     </div>
+  </div>
+
   </div>
 
   <!-- ========== مودال ویرایش آیتم (بازطراحی شده) ========== -->
