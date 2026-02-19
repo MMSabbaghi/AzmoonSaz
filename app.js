@@ -28,6 +28,13 @@ const IMAGE_DEFAULTS = {
   showText: true,
 };
 
+const MATH_RENDER_DELIMITERS = [
+  { left: "$$", right: "$$", display: true },
+  { left: "$", right: "$", display: false },
+  { left: "\\(", right: "\\)", display: false },
+  { left: "\\[", right: "\\]", display: true },
+];
+
 // ---------- State update helpers ----------
 function updateRangeInState(rangeId, updates) {
   const index = appState.ranges.findIndex((r) => r.id === rangeId);
@@ -1356,12 +1363,7 @@ function renderMathInContainer(container) {
   }
   try {
     renderMathInElement(container, {
-      delimiters: [
-        { left: "$$", right: "$$", display: true },
-        { left: "$", right: "$", display: false },
-        { left: "\\(", right: "\\)", display: false },
-        { left: "\\[", right: "\\]", display: true },
-      ],
+      delimiters: MATH_RENDER_DELIMITERS,
       throwOnError: false,
     });
   } catch (e) {
@@ -1411,7 +1413,7 @@ function closeAIModal() {
 function generatePrompt() {
   const topic = document.getElementById("aiTopicInput").value.trim() || "موضوع";
   const count = document.getElementById("aiCountInput").value || 3;
-  return `یک JSON با فرمت { "items": [ {"text": "..."} ] } تولید کن. تعداد آیتم‌ها: ${count}. مبحث: "${topic}". هر آیتم می تواند شامل فرمول‌های $...$ یا $$...$$ باشد. مثال: {"text": "مشتق $f(x)=x^2$ را بیابید. $$\\\\frac{d}{dx}x^2=2x$$"}. فقط JSON برگردان.`;
+  return getAIPrompt(topic, count);
 }
 
 // به‌روزرسانی نمایش پرامپت
@@ -1485,12 +1487,7 @@ pasteAiJsonBtn.addEventListener("click", async () => {
 
       // رندر فرمول‌ها
       renderMathInElement(aiItemsContainer, {
-        delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "$", right: "$", display: false },
-          { left: "\\(", right: "\\)", display: false },
-          { left: "\\[", right: "\\]", display: true },
-        ],
+        delimiters: MATH_RENDER_DELIMITERS,
         throwOnError: false,
       });
     } catch (error) {
