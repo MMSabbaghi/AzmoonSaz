@@ -49,18 +49,31 @@ function prepareJSONString(str) {
 }
 
 function extractJSON(str) {
-  console.log(str);
-
   const jsonStr = prepareJSONString(str);
 
-  console.log(jsonStr);
-
-  let obj;
-  try {
-    obj = JSON.parse(jsonStr);
-  } catch (e) {
-    throw new Error("JSON نامعتبر بعد از اصلاح: " + e.message);
+  if (!str || typeof str !== "string") {
+    throw new Error("ورودی خالی یا نامعتبر است");
   }
 
-  return obj;
+  const textPattern = /"text"\s*:\s*"((?:\\.|[^"\\])*)"/g;
+  const validItems = [];
+  let match;
+
+  while ((match = textPattern.exec(str)) !== null) {
+    const rawText = match[1];
+    try {
+      // اعتبارسنجی رشته با parse کوتاه
+      const parsedText = JSON.parse('"' + rawText + '"');
+      validItems.push({ text: parsedText });
+    } catch (e) {
+      console.warn("آیتم نامعتبر حذف شد:", rawText, e.message);
+      continue;
+    }
+  }
+
+  if (validItems.length === 0) {
+    throw new Error("هیچ آیتم معتبر پیدا نشد یا فرمت JSON نامعتبر است");
+  }
+
+  return { items: validItems };
 }

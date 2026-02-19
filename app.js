@@ -625,7 +625,7 @@ function setupRangeButtons(rangeElement, rangeId) {
       const rangeId = rangeElement.id;
       const range = appState.ranges.find((r) => r.id === rangeId);
       if (range) {
-        openAIModal(rangeId, range.rangeName || "موضوع");
+        openAIModal(rangeId, range.rangeName || "");
       }
     });
   });
@@ -1411,8 +1411,8 @@ function closeAIModal() {
 
 // تابع تولید پرامپت با استفاده از مقادیر ورودی
 function generatePrompt() {
-  const topic = document.getElementById("aiTopicInput").value.trim() || "موضوع";
-  const count = document.getElementById("aiCountInput").value || 3;
+  const topic = document.getElementById("aiTopicInput").value.trim();
+  const count = document.getElementById("aiCountInput").value;
   return getAIPrompt(topic, count);
 }
 
@@ -1431,6 +1431,13 @@ document
 
 // کپی پرامپت
 copyAiPromptBtn.addEventListener("click", () => {
+  const topic = document.getElementById("aiTopicInput").value.trim();
+  const count = document.getElementById("aiCountInput").value;
+
+  if (!topic || !count) {
+    showToast("لطفا توضیحات و تعداد سوال را وارد کنید.", "error");
+    return;
+  }
   copyToClipboard(aiPromptDisplay.textContent, "پرامپت کپی شد");
 });
 
