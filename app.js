@@ -229,7 +229,7 @@ const aiEmptyPreviewMsg = document.getElementById("aiEmptyPreviewMsg");
 const addAiItemsToRangeBtn = document.getElementById("addAiItemsToRangeBtn");
 const aiTopicInput = document.getElementById("aiTopicInput");
 const aiCountInput = document.getElementById("aiCountInput");
-
+const AiModal = document.getElementById("#AiModal");
 // ---------- State-bound UI Variables ----------
 let selectedPreviewImage = null;
 let cropper = null;
@@ -1490,9 +1490,13 @@ pasteAiJsonBtn.addEventListener("click", async () => {
         delimiters: MATH_RENDER_DELIMITERS,
         throwOnError: false,
       });
+
+      aiModalContent.scrollTo({
+        top: aiPreviewContainer.offsetTop - aiModalContent.offsetTop,
+        behavior: "smooth",
+      });
     } catch (error) {
       showToast("داده نامعتبر است.", "error");
-      console.log(error);
     }
   } catch (err) {
     showToast("خطا در چسباندن", "error");

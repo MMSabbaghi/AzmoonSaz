@@ -342,27 +342,50 @@
       </div>
 
       <!-- محتوا -->
-      <div class="p-5 space-y-5">
-        <!-- بخش ورودی مبحث و تعداد -->
-        <div class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-3">
-          <div class="flex gap-4 items-center">
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-gray-700 mb-1">توضیح نوع سوال</label>
-              <input type="text" id="aiTopicInput" class="w-full border p-2 bg-white"
-                placeholder="توضیح نوع، سبک ، میزان سختی و...">
-            </div>
-            <div class="w-24">
-              <label class="block text-sm font-medium text-gray-700 mb-1">تعداد سوال</label>
-              <input type="text" id="aiCountInput" data-number-input="true" data-float="false"
-                class="w-full border p-2 bg-white">
+      <div class="p-5 space-y-3">
+        <div class="relative bg-white/70 backdrop-blur-sm border border-gray-200 
+            rounded-[var(--radius)] p-5 shadow-sm transition-all duration-200
+            focus-within:shadow-md">
+
+          <!-- عنوان -->
+          <div class="flex items-center justify-between">
+            <label for="aiTopicInput" class="text-sm font-semibold text-gray-800">
+              توضیح نوع سوال
+            </label>
+
+            <!-- چیپ تعداد سوال -->
+            <div class="flex items-center gap-2  
+                px-3 py-1.5 rounded-[var(--radius)] border">
+              <span class="text-xs font-medium">تعداد</span>
+              <input type="text" id="aiCountInput" data-number-input="true" data-float="false" class="w-10 bg-transparent text-center text-sm font-semibold 
+               focus:outline-none" placeholder="۰">
             </div>
           </div>
-          <p class="text-xs text-gray-500 flex items-center gap-1">
-            <i class="bi bi-info-circle"></i> توضیحات کامل درباره مبحث و نوع سوال و درجه سختی و ...
+
+          <!-- فیلد توضیحات -->
+          <div class="relative my-1">
+            <textarea id="aiTopicInput" rows="2" class="w-full resize-none bg-gray-50 border border-gray-200
+             rounded-[var(--radius)] p-4 pr-10 text-sm text-gray-700
+             placeholder:text-gray-400"
+              placeholder="مثلاً: سوالات تستی از فصل حد و پیوستگی، سطح متوسط رو به سخت، ترکیبی..."></textarea>
+
+            <!-- آیکن راهنما -->
+            <div class="absolute top-3 left-3 text-gray-400">
+              <i class="bi bi-pencil-square text-sm"></i>
+            </div>
+          </div>
+
+          <!-- توضیح کمکی -->
+          <p class="text-xs text-gray-500 flex items-start gap-2 leading-relaxed">
+            <i class="bi bi-info-circle"></i>
+            توضیح دقیق درباره مبحث، نوع سوال، درجه سختی و سبک طراحی کمک می‌کند خروجی دقیق‌تری دریافت کنید.
           </p>
+
         </div>
+
+
         <!-- بخش پرامپت پیشنهادی -->
-        <div class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-2">
+        <div id="AiModal" class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-2">
           <div class="flex items-center justify-between">
             <label class="font-medium text-gray-700 flex items-center gap-1">
               <i class="bi bi-chat-dots"></i> پرامپت تولید سوال

@@ -1240,6 +1240,7 @@ input.tool-btn[type="color"] {
 .katex {
   direction: ltr;
   unicode-bidi: isolate;
+  font-family: inherit !important;
 }
 .katex-display {
   text-align: center;
