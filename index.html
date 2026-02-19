@@ -13,7 +13,7 @@
 
 <body class="bg-gray-100 md:p-6">
 
-  <div class="max-w-6xl mx-auto bg-white p-3 md:p-6 rounded shadow app-container" id="app-container">
+  <div class="max-w-6xl mx-auto bg-white p-3 md:p-6 rounded shadow min-h-[85vh]" id="app-container">
     <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
       <h1 class="text-2xl font-bold">کوئیز ساز</h1>
       <div>
@@ -31,13 +31,19 @@
 
     <div id="ranges" class="flex flex-col gap-2"></div>
 
-    <button id="addRange" style="width: 100%;" class="btn add-btn my-2">
+    <button id="addRange" style="width: 100%;" class=" 
+    flex items-center justify-center bg-transparent border-2 border-dashed border-[var(--primary)] text-[var(--primary)] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out px-4 py-2 gap-2
+    hover:border-[#222] hover:text-[#222] hover:shadow-md
+    my-2
+    ">
       <i class="bi bi-plus-lg"></i>
       <span>افزودن مبحث جدید</span>
     </button>
 
-    <div id="sentinel"></div>
-    <div class="my-1  md:p-[8px] bg-white export-btns sticky-box" id="sticky">
+    <div id="sentinel" class="h-[1px]"></div>
+    <div class="
+    will-change-[position] border border-dashed border-[var(--border)] rounded-[var(--radius)] justify-center
+    my-1 md:p-[8px] bg-white export-btns sticky-box" id="sticky">
     </div>
 
     <div id="mobile-bottom-bar"
@@ -56,7 +62,7 @@
   <!-- ========== مودال ویرایش آیتم (بازطراحی شده) ========== -->
   <div id="modal" class="modal" style="display: none;">
     <div id="modal-overlay" class="absolute inset-0 bg-black/60 backdrop-blur"></div>
-    <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-lg"
+    <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-[var(--radius)]"
       style="transition: transform 0.3s ease-out;">
 
       <!-- هدر مودال -->
@@ -204,13 +210,16 @@
   </div>
 
   <!-- مودال برش تصویر (یکپارچه) -->
-  <div id="cropModal" class="crop-modal">
-    <div class="crop-panel">
+  <div id="cropModal"
+    class="crop-modal fixed inset-0 bg-black/80 backdrop-blur z-[9999] flex items-center justify-center p-4 invisible opacity-0 transition-all">
+    <div class="crop-panel
+    bg-white rounded-[var(--radius)] p-2.5 w-full max-w-[450px] scale-90 transition-transform duration-300
+    ">
       <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><i class="bi bi-crop"></i> برش تصویر</h3>
-      <div class="crop-container">
-        <img id="cropImage" src="" alt="برای کراپ">
+      <div class="crop-container w-full max-h-[400px] mb-2.5">
+        <img id="cropImage" class="block max-w-full" src="" alt="برای کراپ">
       </div>
-      <div class="crop-actions">
+      <div class="crop-actions flex gap-3 mt-5">
         <button id="applyCrop" class="btn flex-1 py-3">اعمال برش</button>
         <button id="cancelCrop" class="btn flex-1 py-3">لغو</button>
       </div>
@@ -219,7 +228,7 @@
 
   <!-- ========== مودال هوشمند پرامپت‌ساز (AI Prompt) ========== -->
   <div id="aiModalOverlay"
-    class="ai-modal fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[1000]">
+    class="hidden ai-modal fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[1000]">
     <div id="aiModalContent"
       class="bg-white rounded-[var(--radius)] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-enter-active">
       <!-- هدر -->

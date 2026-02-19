@@ -1150,6 +1150,26 @@ const modalImageUploadContainer = document.getElementById(
 );
 const removeImageBtn = document.getElementById("removeImageBtn");
 
+function updateTempItemFromTextEditor() {
+  const temp = appState.modal.tempItem;
+  if (!temp) return;
+
+  const editor = modalTextEditor;
+  const hasContent = editor.innerText.trim() !== "";
+
+  if (hasContent) {
+    if (!temp.text) {
+      temp.text = { html: editor.innerHTML, align: "RIGHT" };
+    } else {
+      temp.text.html = editor.innerHTML;
+    }
+  } else {
+    temp.text = null;
+  }
+
+  updateModalPreviewFromTemp();
+}
+
 function openModalForNewItem(rangeId, newItem) {
   appState.modal.rangeId = rangeId;
   appState.modal.itemId = null;
@@ -1178,7 +1198,7 @@ function openModalWithTempItem() {
 
   modalShowText.checked = temp.image ? temp.image.showText : false;
 
-  document.body.classList.add("modal-open");
+  document.body.classList.add("overflow-hidden");
   modal.style.display = "flex";
   setTimeout(() => modal.classList.add("modal--visible"), 10);
 }
@@ -1271,7 +1291,7 @@ function closeModal() {
   appState.modal.itemId = null;
   appState.modal.tempItem = null;
   modal.classList.remove("modal--visible");
-  document.body.classList.remove("modal-open");
+  document.body.classList.remove("overflow-hidden");
   if (window.__viewportHandler) {
     window.visualViewport?.removeEventListener(
       "resize",
@@ -1405,7 +1425,7 @@ function openAIModal(rangeId, topic) {
   aiModalOverlay.classList.remove("hidden");
   void aiModalOverlay.offsetHeight;
   aiModalOverlay.classList.add("ai-modal--visible");
-  document.body.classList.add("modal-open");
+  document.body.classList.add("overflow-hidden");
 }
 
 function closeAIModal() {
@@ -1416,7 +1436,7 @@ function closeAIModal() {
   aiModalOverlay.classList.remove("ai-modal--visible");
   setTimeout(() => {
     aiModalOverlay.classList.add("hidden");
-    document.body.classList.remove("modal-open");
+    document.body.classList.remove("overflow-hidden");
   }, 300);
 }
 
@@ -1557,7 +1577,8 @@ document.addEventListener("keydown", (e) => {
 // ========== Drag & Drop ==========
 let draggedElement = null;
 const dragPlaceholder = document.createElement("div");
-dragPlaceholder.className = "placeholder";
+dragPlaceholder.className =
+  "placeholder  h-20 border-2 border-dashed border-[var(--primary)] rounded-[var(--radius)]";
 let isTouchDevice = false;
 
 function handleDragStart(e) {
