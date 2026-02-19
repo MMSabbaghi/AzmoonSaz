@@ -715,7 +715,7 @@ function createNamesUI() {
       </div>
     </div>  
     <div class="names-textarea-container overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-      <textarea class="names-textarea w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" rows="5" placeholder="نام دانش‌آموزان هر کدام در یک خط">${appState.names.join("\n")}</textarea>
+      <textarea class="names-textarea mt-1 w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" rows="5" placeholder="نام دانش‌آموزان هر کدام در یک خط">${appState.names.join("\n")}</textarea>
     </div>
   `;
 
