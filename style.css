@@ -374,37 +374,6 @@ input:focus + label {
     transform 0.2s ease;
 }
 
-/* استایل placeholder برای ویرایشگر متن */
-.text-editor-content[placeholder]:empty:before {
-  content: attr(placeholder);
-  color: #aaa;
-}
-.text-editor-content[placeholder]:empty:focus:before {
-  content: "";
-}
-
-/* استایل برای المان‌های تعاملی غیرفعال */
-button:disabled,
-input:disabled,
-select:disabled,
-textarea:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-/* استایل برای ویرایشگر متن در حالت غیرفعال */
-.text-editor--disabled {
-  opacity: 0.6;
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-  border-color: #ccc;
-}
-
-.text-editor--disabled[placeholder]:empty:before {
-  color: #999;
-}
-
 /* ========== ریسپانسیو موبایل (Native-like) ========== */
 @media screen and (max-width: 768px) {
   /* تنظیمات عمومی برای خوانایی بهتر */
@@ -816,75 +785,6 @@ textarea:disabled {
     opacity: 0.3;
     transition: 0s;
   }
-
-  /* نوار پایین موبایل */
-  #mobile-bottom-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-    padding: 12px 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 1000;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    border-top: 1px solid var(--border);
-    transform: translateY(0);
-    transition: transform 0.3s ease;
-  }
-
-  #mobile-bottom-bar .names-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  #mobile-bottom-bar .mobile-actions {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-  }
-
-  #mobile-bottom-bar .mobile-actions button {
-    flex: 1;
-    min-height: 48px;
-  }
-
-  #mobile-bottom-bar #names-switch-mobile {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  #mobile-bottom-bar #names-count-mobile {
-    width: 70px;
-    height: 44px;
-  }
-
-  #mobile-bottom-bar #names-textarea-mobile {
-    width: 100%;
-    transition: all 0.3s ease;
-  }
-
-  .sticky-box .names-section-original,
-  .sticky-box .desktop-cta {
-    display: none;
-  }
-}
-
-@media screen and (min-width: 769px) {
-  #mobile-bottom-bar {
-    display: none !important;
-  }
-  .sticky-box .names-section-original {
-    display: flex;
-  }
 }
 
 /* تنظیمات ویژه برای صفحه‌های بسیار کوچک (زیر 480px) */
@@ -895,14 +795,6 @@ textarea:disabled {
 
   .range-header .range-count,
   .range-header .range-score {
-    width: 100%;
-  }
-
-  .sticky-box > .flex > div:last-child {
-    flex-direction: column;
-  }
-
-  .sticky-box > .flex > div:last-child button {
     width: 100%;
   }
 }
@@ -992,81 +884,15 @@ textarea:disabled {
 }
 
 /* ========== استایل‌های ویرایشگرهای جدید ========== */
-.editor-container {
-  width: 100%;
-  background: white;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-}
-
-.toolbar {
-  background: #f8fafc;
-  padding: 8px 6px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  justify-content: center;
-  z-index: 20;
-}
-
-.tool-btn {
-  background: #f8fafc;
-  border: 1px solid #e9eef2;
-  border-radius: 40px;
-  padding: 8px 12px;
-  font-size: 1rem;
-  color: #1e293b;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  cursor: pointer;
-  transition: all 0.15s;
-  min-width: 40px;
-  min-height: 40px;
-}
-
-.tool-btn i {
-  font-size: 1.2rem;
-}
-.tool-btn:active {
-  background: #e6edf5;
-  transform: scale(0.96);
-}
-
-select.tool-btn,
-input.tool-btn[type="color"] {
-  padding: 6px 10px;
-}
-input.tool-btn[type="color"] {
-  width: 48px;
-  padding: 4px;
-}
-
-.editor-box {
-  flex: 1;
-  background: white;
-  padding: 16px;
-  overflow-y: auto;
-  min-height: 150px;
-  max-height: 300px;
-  direction: rtl;
-  outline: none;
-  resize: vertical;
-}
-.editor-box[contenteditable="true"]:empty:before {
+.rich-editor-content[contenteditable="true"]:empty:before {
   content: attr(data-placeholder);
   color: #94a3b8;
   font-style: italic;
   pointer-events: none;
   display: block;
 }
-.editor-box img {
+
+.rich-editor-content img {
   max-width: 100%;
   display: inline-block;
   margin: 4px 0;
@@ -1075,47 +901,6 @@ input.tool-btn[type="color"] {
   vertical-align: middle;
   user-select: none;
   -webkit-user-drag: element;
-}
-.editor-box img.selected-for-resize {
-  outline: 3px dashed #3b82f6;
-  outline-offset: 4px;
-  touch-action: none;
-}
-
-.image-floatbar {
-  background: #1e293be6;
-  backdrop-filter: blur(16px);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 40px;
-  margin: 8px 16px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-around;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  z-index: 30;
-  position: sticky;
-  bottom: 10px;
-}
-.image-floatbar.hidden {
-  display: none;
-}
-
-.img-ctrl {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #ffffff20;
-  padding: 4px 12px;
-  border-radius: 40px;
-  color: white;
-  font-size: 0.9rem;
-}
-.img-ctrl input[type="range"] {
-  width: 60px;
-  height: 6px;
 }
 
 /* مودال کراپ */

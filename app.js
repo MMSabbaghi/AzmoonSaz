@@ -1832,108 +1832,85 @@ moveToTopBtn.addEventListener("click", () => {
 
 // ========== Rich Text Editor Initialization ==========
 function initRichTextEditor() {
-  const mobileToolbar = document.getElementById("mobile-toolbar-modal");
-  const desktopToolbar = document.getElementById("desktop-toolbar-modal");
-  const colorInput = document.getElementById("modal-text-color");
-  const desktopColorInput = document.getElementById("desktop-modal-text-color");
-  const fontSizeSelect = document.getElementById("modal-font-size");
-  const desktopFontSizeSelect = document.getElementById(
-    "desktop-modal-font-size",
-  );
+  const toolbar = document.getElementById("modal-toolbar");
+  if (!toolbar) return;
 
-  window.updateTempItemFromTextEditor = function () {
-    if (appState.modal.tempItem) {
-      const html = modalTextEditor.innerHTML;
-      let align = "RIGHT";
-      if (modalTextEditor.style.textAlign) {
-        align = modalTextEditor.style.textAlign.toUpperCase();
-      }
-      if (!appState.modal.tempItem.text) {
-        appState.modal.tempItem.text = { html, align };
-      } else {
-        appState.modal.tempItem.text.html = html;
-        appState.modal.tempItem.text.align = align;
-      }
-      updateModalPreviewFromTemp();
-    }
-  };
+  setupToolbarCommands(toolbar);
+  setupColorPicker(toolbar);
+  setupFontSizeSelector(toolbar);
+  setupUndoRedo(toolbar);
+  setupToolbarState(toolbar);
 
-  setupEditorCommands(mobileToolbar, desktopToolbar);
-  setupColorInputs(colorInput, desktopColorInput);
-  setupFontSizeSelects(fontSizeSelect, desktopFontSizeSelect);
-  setupUndoRedo(mobileToolbar, desktopToolbar);
-  setupToolbarState(mobileToolbar, desktopToolbar);
+  // Ensure text changes update temp item
+  modalTextEditor.addEventListener("input", updateTempItemFromTextEditor);
+  modalTextEditor.addEventListener("blur", updateTempItemFromTextEditor);
 }
 
-function setupEditorCommands(mobileToolbar, desktopToolbar) {
-  function execEditorCommand(cmd, value = null) {
-    document.execCommand(cmd, false, value);
-    modalTextEditor.focus();
-    updateTempItemFromTextEditor();
-  }
-
-  [
-    ...mobileToolbar.querySelectorAll("[data-command]"),
-    ...desktopToolbar.querySelectorAll("[data-command]"),
-  ].forEach((btn) => {
+function setupToolbarCommands(toolbar) {
+  const commandButtons = toolbar.querySelectorAll("[data-command]");
+  commandButtons.forEach((btn) => {
     btn.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      execEditorCommand(btn.dataset.command);
-    });
-  });
-}
-
-function setupColorInputs(...inputs) {
-  inputs.forEach((input) => {
-    input.addEventListener("input", (e) => {
-      document.execCommand("foreColor", false, e.target.value);
+      document.execCommand(btn.dataset.command, false, null);
       modalTextEditor.focus();
       updateTempItemFromTextEditor();
     });
   });
 }
 
-function setupFontSizeSelects(...selects) {
-  selects.forEach((select) => {
-    select.addEventListener("change", (e) => {
-      const size = e.target.value;
-      try {
-        document.execCommand("fontSize", false, "7");
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const span = document.createElement("span");
-          span.style.fontSize = size + "px";
-          span.appendChild(range.extractContents());
-          range.insertNode(span);
-          selection.removeAllRanges();
-          const newRange = document.createRange();
-          newRange.selectNodeContents(span);
-          selection.addRange(newRange);
-        }
-      } catch (err) {
-        console.warn(err);
+function setupColorPicker(toolbar) {
+  const colorInput = toolbar.querySelector("#modal-text-color");
+  if (!colorInput) return;
+
+  colorInput.addEventListener("input", (e) => {
+    document.execCommand("foreColor", false, e.target.value);
+    modalTextEditor.focus();
+    updateTempItemFromTextEditor();
+  });
+}
+
+function setupFontSizeSelector(toolbar) {
+  const fontSizeSelect = toolbar.querySelector("#modal-font-size");
+  if (!fontSizeSelect) return;
+
+  fontSizeSelect.addEventListener("change", (e) => {
+    const size = e.target.value;
+    try {
+      // Use execCommand to create a font tag, then replace with span
+      document.execCommand("fontSize", false, "7");
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement("span");
+        span.style.fontSize = size + "px";
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        // Move cursor inside the span
+        selection.removeAllRanges();
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        selection.addRange(newRange);
       }
-      modalTextEditor.focus();
-      updateTempItemFromTextEditor();
-    });
+    } catch (err) {
+      console.warn("Font size change error:", err);
+    }
+    modalTextEditor.focus();
+    updateTempItemFromTextEditor();
   });
 }
 
-function setupUndoRedo(mobileToolbar, desktopToolbar) {
-  [
-    ...mobileToolbar.querySelectorAll('[data-action="undo"]'),
-    ...desktopToolbar.querySelectorAll('[data-action="undo"]'),
-  ].forEach((btn) => {
+function setupUndoRedo(toolbar) {
+  const undoBtns = toolbar.querySelectorAll('[data-action="undo"]');
+  const redoBtns = toolbar.querySelectorAll('[data-action="redo"]');
+
+  undoBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       document.execCommand("undo");
       updateTempItemFromTextEditor();
     });
   });
-  [
-    ...mobileToolbar.querySelectorAll('[data-action="redo"]'),
-    ...desktopToolbar.querySelectorAll('[data-action="redo"]'),
-  ].forEach((btn) => {
+
+  redoBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       document.execCommand("redo");
       updateTempItemFromTextEditor();
@@ -1941,25 +1918,20 @@ function setupUndoRedo(mobileToolbar, desktopToolbar) {
   });
 }
 
-function setupToolbarState(mobileToolbar, desktopToolbar) {
-  function updateToolbarState() {
-    const update = (toolbar) => {
-      toolbar.querySelectorAll("[data-command]").forEach((btn) => {
-        try {
-          btn.classList.toggle(
-            "active",
-            document.queryCommandState(btn.dataset.command),
-          );
-        } catch (err) {}
-      });
-    };
-    update(mobileToolbar);
-    update(desktopToolbar);
-  }
-  modalTextEditor.addEventListener("mouseup", updateToolbarState);
-  modalTextEditor.addEventListener("keyup", updateToolbarState);
-  modalTextEditor.addEventListener("input", updateTempItemFromTextEditor);
-  modalTextEditor.addEventListener("blur", updateTempItemFromTextEditor);
+function setupToolbarState(toolbar) {
+  const updateState = () => {
+    toolbar.querySelectorAll("[data-command]").forEach((btn) => {
+      try {
+        const active = document.queryCommandState(btn.dataset.command);
+        btn.classList.toggle("active", active);
+      } catch (err) {
+        // Some commands may not have state; ignore
+      }
+    });
+  };
+
+  modalTextEditor.addEventListener("mouseup", updateState);
+  modalTextEditor.addEventListener("keyup", updateState);
 }
 
 // ========== Preview Image Toolbar ==========
