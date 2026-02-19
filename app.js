@@ -1356,6 +1356,22 @@ function closeModal() {
 }
 
 // ========== Math Rendering Helper ==========
+function convertDigitsToPersianInsideContainer(container) {
+  const walker = document.createTreeWalker(
+    container,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false,
+  );
+
+  let node;
+  while ((node = walker.nextNode())) {
+    if (/\d/.test(node.nodeValue)) {
+      node.nodeValue = toPersianDigits(node.nodeValue);
+    }
+  }
+}
+
 function renderMathInContainer(container) {
   if (typeof renderMathInElement === "undefined") {
     console.warn("KaTeX auto-render not available");
@@ -1366,6 +1382,7 @@ function renderMathInContainer(container) {
       delimiters: MATH_RENDER_DELIMITERS,
       throwOnError: false,
     });
+    convertDigitsToPersianInsideContainer(container);
   } catch (e) {
     console.error("Math rendering error:", e);
   }
