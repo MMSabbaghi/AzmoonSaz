@@ -1441,19 +1441,12 @@ pasteAiJsonBtn.addEventListener("click", async () => {
     aiJsonInput.value = text;
     const raw = text.trim();
     if (!raw) {
-      showToast("لطفاً JSON را وارد کنید", "error");
+      showToast("لطفاً داده ها را وارد کنید", "error");
       return;
     }
 
     try {
-      // استخراج JSON از متن (اگر اضافی داشته باشد)
-      const jsonStr = extractJSON(raw);
-      const data = JSON.parse(jsonStr);
-
-      if (!Array.isArray(data.items)) {
-        showToast("کلید items باید آرایه باشد", "error");
-        return;
-      }
+      const data = extractJSON(raw);
 
       aiItemsContainer.innerHTML = "";
       if (data.items.length === 0) {
@@ -1474,7 +1467,7 @@ pasteAiJsonBtn.addEventListener("click", async () => {
         const header = document.createElement("div");
         header.className =
           "text-xs text-gray-400 mb-2 border-b pb-1 flex items-center gap-1";
-        header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${idx + 1}`;
+        header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${toPersianDigits(idx + 1)}`;
         card.appendChild(header);
 
         const textDiv = document.createElement("div");
@@ -1492,6 +1485,7 @@ pasteAiJsonBtn.addEventListener("click", async () => {
       });
     } catch (error) {
       showToast("داده نامعتبر است.", "error");
+      console.log(error);
     }
   } catch (err) {
     showToast("خطا در چسباندن", "error");
@@ -1517,8 +1511,7 @@ addAiItemsToRangeBtn.addEventListener("click", () => {
   // اما card.textContent حاوی متن بدون HTML است. بهتر است از داده اصلی JSON استفاده کنیم.
   // ما می‌توانیم JSON را دوباره parse کنیم و از آیتم‌های اصلی استفاده کنیم.
   try {
-    const jsonStr = extractJSON(aiJsonInput.value.trim());
-    const data = JSON.parse(jsonStr);
+    const data = extractJSON(aiJsonInput.value.trim());
     if (!Array.isArray(data.items)) throw new Error("items آرایه نیست");
 
     data.items.forEach((item) => {
@@ -1536,15 +1529,6 @@ addAiItemsToRangeBtn.addEventListener("click", () => {
     showToast("خطا در افزودن آیتم‌ها: " + err.message, "error");
   }
 });
-
-// کمکی: استخراج JSON از متن
-function extractJSON(str) {
-  str = str.trim();
-  const first = str.indexOf("{");
-  const last = str.lastIndexOf("}");
-  if (first === -1 || last === -1) throw new Error("JSON یافت نشد");
-  return str.substring(first, last + 1);
-}
 
 // کمکی: نرمال‌سازی فاصله‌های اطراف فرمول
 function normalizeMathSpaces(text) {
