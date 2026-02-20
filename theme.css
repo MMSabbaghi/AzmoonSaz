@@ -1,54 +1,45 @@
 :root {
-  --primary: #4361ee;
-  --primary-light: #4895ef;
-  --primary-dark: #3f37c9;
-  --secondary: #f72585;
-  --secondary-light: #ff4d6d;
-  --secondary-dark: #b5179e;
-  --success: #4cc9f0;
-  --warning: #f8961e;
-  --error: #f94144;
+  --primary: #1e4a6b;
+  --primary-light: #3a6e8f;
+  --primary-dark: #0e334b;
+  --secondary: #d97c2b;
+  --secondary-light: #e89f5c;
+  --secondary-dark: #b35f1a;
+  --success: #2c7a5a;
+  --warning: #e6a917;
+  --error: #c95a5a;
 
-  --background: #f8f9fa;
+  --background: #f5f8fc;
   --background-light: #ffffff;
   --surface: #ffffff;
-  --surface-dark: #f1f3f5;
-  --surface-darker: #e9ecef;
+  --surface-dark: #eef2f7;
+  --surface-darker: #e2e8f0;
 
-  --border: #dee2e6;
-  --border-light: #e9ecef;
-  --border-dark: #ced4da;
+  --border: #d0dceb;
+  --border-light: #e2ebf5;
+  --border-dark: #b8c9dd;
 
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --text-muted: #adb5bd;
+  --text-primary: #1a2b3c;
+  --text-secondary: #3a4b5e;
+  --text-muted: #6b7f94;
   --text-inverse: #ffffff;
 
-  --error-light: #fee2e2;
-  --success-light: #d1fae5;
+  --error-light: #fbe9e9;
+  --success-light: #e6f4ef;
 
-  --primary-gradient: linear-gradient(
-    135deg,
-    var(--primary),
-    var(--primary-dark)
-  );
-  --secondary-gradient: linear-gradient(
-    135deg,
-    var(--secondary),
-    var(--secondary-dark)
-  );
-  --success-gradient: linear-gradient(135deg, var(--success), #0096c7);
-  --overlay: rgba(0, 0, 0, 0.6);
+  --primary-gradient: linear-gradient(135deg, var(--primary), #154b6b);
+  --secondary-gradient: linear-gradient(135deg, var(--secondary), #c4681a);
+  --success-gradient: linear-gradient(135deg, var(--success), #1e6245);
+  --overlay: rgba(0, 0, 0, 0.5);
 
-  --radius: 8px;
+  --radius: 10px;
   --radius-circle: 9999px;
   --transition: 0.3s ease;
   --shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    0 4px 12px -4px rgba(0, 20, 40, 0.12), 0 2px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    0 20px 25px -10px rgba(0, 30, 60, 0.2), 0 8px 12px -8px rgba(0, 0, 0, 0.1);
 }
-
 /* ========== Utility Classes ========== */
 .bg-background {
   background-color: var(--background);
