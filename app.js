@@ -1197,7 +1197,7 @@ function handleGenerateClick(e) {
   }
 }
 
-// ========== Modal Utilities  ==========
+// ========== Modal Utilities ==========
 function openModalElement(modalElement) {
   modalElement.style.display = "flex";
   void modalElement.offsetHeight; // force reflow
@@ -1210,17 +1210,16 @@ function closeModalElement(modalElement) {
   document.body.classList.remove("overflow-hidden");
   setTimeout(() => {
     modalElement.style.display = "none";
-  }, 300);
+  }, 300); // مطابق با transition
 }
 
 function setupModal(modalElement, options = {}) {
-  const {
-    closeOnEscape = true,
-    closeOnOverlayClick = true,
-    overlaySelector = ".modal-overlay",
-    closeButtonSelector = ".modal-close-btn",
-  } = options;
+  const { closeOnEscape = true, closeOnOverlayClick = true } = options;
 
+  const overlaySelector = ".modal-overlay";
+  const closeButtonSelector = ".modal-close-btn";
+
+  // کلیک روی overlay
   if (closeOnOverlayClick) {
     const overlay = modalElement.querySelector(overlaySelector);
     if (overlay) {
@@ -1263,7 +1262,7 @@ const modalImageUploadContainer = document.getElementById(
 );
 const removeImageBtn = document.getElementById("removeImageBtn");
 const saveModalBtn = document.getElementById("save-modal-btn");
-const modalQscore = document.getElementById("modal-Qscore"); // این آیدی در جدول است
+const modalQscore = document.getElementById("modal-Qscore");
 const previewImageToolbar = document.getElementById("previewImageToolbar");
 const previewImgHeight = document.getElementById("previewImgHeight");
 const previewImgHeightValue = document.getElementById("previewImgHeightValue");
@@ -2129,14 +2128,8 @@ document.addEventListener("DOMContentLoaded", function () {
   initRichTextEditor();
   initPreviewImageToolbar();
 
-  setupModal(modalEdit, {
-    overlaySelector: ".modal-overlay",
-    closeButtonSelector: ".modal-close-btn",
-  });
-  setupModal(modalAI, {
-    overlaySelector: ".modal-overlay",
-    closeButtonSelector: ".modal-close-btn",
-  });
+  setupModal(modalEdit);
+  setupModal(modalAI);
 
   document.getElementById("applyCrop").addEventListener("click", function () {
     if (!cropper || !selectedPreviewImage) return;
