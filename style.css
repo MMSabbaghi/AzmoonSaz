@@ -63,18 +63,6 @@ input:focus {
   bottom: -0.125em;
 }
 
-.file {
-  opacity: 0;
-  width: 0.1px;
-  height: 0.1px;
-  position: absolute;
-}
-.file-input label {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 input:focus + label {
   outline: 1px solid #000;
   outline: -webkit-focus-ring-color auto 2px;
@@ -85,81 +73,15 @@ input:focus + label {
   position: sticky;
   top: 0;
   z-index: 10;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-}
-/* ========== Range Items ========== */
-.range-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-}
-
-#textareaBox {
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  filter: blur(4px);
-  transform: translateY(-0.75rem);
-  transition: all 0.5s ease-out;
-}
-#textareaBox textarea {
-  width: 100%;
-  height: 3.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem;
-  font-size: 0.875rem;
-}
-#textareaBox textarea:focus {
-  outline: none;
+  box-shadow: 0 6px 20px rgba(155, 152, 152, 0.25);
 }
 
 /* ========== Items Preview ========== */
-.items-preview {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 5px;
-  margin-top: 4px;
-}
 .items-preview.collapsed {
   display: none !important;
 }
 
-.item-thumbnail {
-  position: relative;
-  border: 1px solid #ddd;
-  border-radius: var(--radius);
-  padding: 4px;
-  background: #fff;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-.item-thumbnail:hover {
-  border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-.item-thumbnail .remove-item {
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  width: 16px;
-  height: 16px;
-  background: #ef4444;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-  border: none;
-  cursor: pointer;
-}
-.item-thumbnail .remove-item:hover {
-  opacity: 1;
-}
+/* ========== Items thumbnail with animations ========== */
 .item-thumbnail img {
   max-width: 100%;
   max-height: 75px;
@@ -191,7 +113,6 @@ input:focus + label {
 }
 
 /* ========== Modals ========== */
-/* Modal base - کاملاً یکپارچه */
 .modal {
   display: flex;
   visibility: hidden;
@@ -213,7 +134,6 @@ input:focus + label {
   opacity: 1;
 }
 
-/* Modal content - یکسان برای همه مودال‌ها */
 .modal-content {
   transform: scale(0.9);
   transition: transform 0.3s ease-out;
@@ -229,15 +149,6 @@ input:focus + label {
   transform: scale(1);
 }
 
-/* عرض‌های متفاوت با کلاس‌های اضافی */
-.modal-edit .modal-content {
-  width: 72rem;
-}
-.modal-ai .modal-content {
-  max-width: 42rem;
-}
-
-/* Overlay (اختیاری) */
 .modal-overlay {
   position: absolute;
   inset: 0;
@@ -245,68 +156,22 @@ input:focus + label {
   backdrop-filter: blur(8px);
 }
 
-/* سلول پیش‌نمایش تصویر */
+/* edit modal */
 .modal-preview-cell img {
   display: block;
   max-width: 100%;
   height: auto;
 }
 
-/* Crop modal (بدون تغییر) */
-.crop-modal {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  visibility: hidden;
-  opacity: 0;
-  transition: all 0.3s ease;
-}
+/* Crop modal */
 .crop-modal.visible {
   visibility: visible;
   opacity: 1;
 }
-.crop-modal .crop-panel {
-  background: white;
-  border-radius: var(--radius);
-  padding: 0.625rem;
-  width: 100%;
-  max-width: 450px;
-  transform: scale(0.9);
-  transition: transform 0.3s ease;
-}
+
 .crop-modal.visible .crop-panel {
   transform: scale(1);
 }
-@media screen and (min-width: 768px) {
-  .crop-panel {
-    max-width: 600px;
-  }
-}
-.crop-container {
-  width: 100%;
-  max-height: 400px;
-  margin-bottom: 0.625rem;
-}
-.crop-container img {
-  display: block;
-  max-width: 100%;
-}
-.crop-actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1.25rem;
-}
-.crop-actions button {
-  flex: 1;
-  padding: 0.75rem 0;
-}
-
 /* ========== Rich Text Editor ========== */
 .rich-editor-content[contenteditable="true"]:empty:before {
   content: attr(data-placeholder);
@@ -394,20 +259,8 @@ input[type="range"]::-moz-range-track {
 }
 
 /* ========== Mobile range item ========== */
-.dropdown-menu {
-  display: none;
-  min-width: 140px;
-}
-.dropdown-open .dropdown-menu {
-  display: flex;
-  flex-direction: column;
-}
-
 .toggle-items-btn.collapsed > .toggle-arrow {
   transform: rotate(-180deg);
-}
-
-.toggle-items-btn i {
   transition: transform 0.3s;
 }
 
@@ -422,13 +275,14 @@ input[type="range"]::-moz-range-track {
   color: #374151;
   transition: all 0.2s;
 }
+
 .action-circle:hover {
   background-color: #e5e7eb;
 }
+
 .action-circle:active {
   transform: scale(0.95);
 }
-
 /* ========== Utilities ========== */
 .backdrop-blur {
   backdrop-filter: blur(8px);
@@ -458,140 +312,17 @@ input[type="range"]::-moz-range-track {
     padding: 0;
     -webkit-overflow-scrolling: touch;
   }
-  .app-container > .flex:first-child {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-  .app-container > .flex:first-child > div {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    gap: 1rem;
-  }
-  .app-container > .flex:first-child button,
-  .app-container > .flex:first-child label {
-    flex: 1;
-    text-align: center;
-    padding: 0.75rem 0.5rem;
-    min-height: 48px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .sticky-box.is-sticky {
-    padding: 0.5rem 0;
-  }
-  .sticky-box > .flex {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  .sticky-box > .flex > div:first-child {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 0.75rem;
-  }
-  .sticky-box > .flex > div:last-child {
-    width: 100%;
-    display: flex;
-    gap: 0.5rem;
-  }
-  .sticky-box > .flex > div:last-child button {
-    flex: 1;
-    min-height: 48px;
-    font-size: 0.9rem;
-  }
-
-  /* Range mobile */
-  .range-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-  .range-header > .flex:first-child {
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-  .range-header input {
-    height: 44px;
-    font-size: 16px;
-    padding: 12px;
-  }
-  .range-header .range-name {
-    width: 100%;
-  }
-  .range-header .range-count,
-  .range-header .range-score {
-    width: calc(50% - 0.375rem);
-    flex: 1;
-  }
-  .range-header .file-input label {
-    min-width: 48px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-  }
-  .range-header .add-text-item {
-    min-width: 48px;
-    height: 44px;
-    padding: 0 !important;
-  }
-  .range-header > .flex:first-child > #switch {
-    margin-left: auto;
-  }
-  .range-header > .flex:last-child {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-  .range-header > .flex:last-child button {
-    width: 44px;
-    height: 44px;
-    font-size: 1.2rem;
-  }
-  .range-header .toggle-items-btn {
-    background: transparent;
-    border: none;
-    font-size: 1.4rem;
-    color: var(--primary);
-    cursor: pointer;
-    padding: 0 8px;
-    min-width: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  #textareaBox textarea {
-    font-size: 14px;
-    padding: 0.75rem;
-    min-height: 80px;
-  }
-  .items-preview {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
   .item-thumbnail {
-    padding: 8px;
     touch-action: pan-y;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
+
   .item-thumbnail img {
     max-height: 100px;
   }
-  .item-thumbnail .remove-item {
-    width: 24px;
-    height: 24px;
-    font-size: 1rem;
-    top: -6px;
-    left: -6px;
-  }
 
-  /* Modal - یکپارچه در موبایل */
+  /* Modal*/
   .modal {
     align-items: flex-end;
   }
@@ -618,37 +349,13 @@ input[type="range"]::-moz-range-track {
     font-size: 1.2rem;
     padding: 8px;
   }
-  .modal-content .flex.items-center.gap-4 {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    gap: 0.5rem;
-    overflow: auto;
-  }
-  .modal-content .flex.items-center.gap-4 button,
-  .modal-content .flex.items-center.gap-4 label {
-    min-height: 44px;
-    padding: 0 1rem;
-  }
-  .modal-preview-cell {
-    padding: 0.5rem !important;
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+
   .modal-preview-cell img {
     max-width: 100%;
     height: auto;
     max-height: 250px;
   }
 
-  #toTop {
-    bottom: calc(80px + env(safe-area-inset-bottom));
-    z-index: 1001;
-    width: 56px;
-    height: 56px;
-    font-size: 1.8rem;
-  }
   #printable {
     font-size: 14px;
   }
@@ -726,23 +433,5 @@ input[type="range"]::-moz-range-track {
   .range-header input,
   .range-header select {
     height: 44px;
-  }
-  .modal-preview-cell {
-    max-height: 40vh;
-    overflow-y: auto;
-    display: block;
-  }
-  .modal-preview-cell img {
-    max-height: 100%;
-    width: auto;
-  }
-}
-@media screen and (max-width: 480px) {
-  .items-preview {
-    grid-template-columns: 1fr;
-  }
-  .range-header .range-count,
-  .range-header .range-score {
-    width: 100%;
   }
 }

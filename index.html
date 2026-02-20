@@ -21,7 +21,7 @@
           <i class="bi bi-floppy"></i>
           ذخیره آزمون
         </button>
-        <input type="file" id="importJson" class="hidden">
+        <input type="file" id="importJson" class="sr-only">
         <label for="importJson" class="btn px-4 py-2 w-full md:w-fit">
           <i class="bi bi-folder-plus"></i>
           <span> ورود اطلاعات</span>
@@ -43,7 +43,7 @@
     <div id="sentinel" class="h-[1px]"></div>
     <div class="
     will-change-[position] border border-dashed border-[var(--border)] rounded-[var(--radius)] justify-center
-    my-1 md:p-[8px] bg-white export-btns sticky-box" id="sticky">
+    my-1 max-md:hidden md:p-[8px] bg-white export-btns sticky-box" id="sticky">
     </div>
 
     <div id="mobile-bottom-bar"
@@ -60,7 +60,7 @@
   <!-- ========== مودال ویرایش آیتم (یکپارچه) ========== -->
   <div class="modal modal-edit" style="display: none;">
     <div class="modal-overlay"></div>
-    <div class="modal-content flex flex-col z-10 p-6 bg-white">
+    <div class="modal-content w-[72rem] flex flex-col z-10 p-6 bg-white">
       <!-- هدر مودال -->
       <div class="flex items-center justify-between mb-4 pb-2 border-b">
         <h2 class="text-xl font-bold">ویرایش سوال</h2>
@@ -69,7 +69,7 @@
 
       <!-- دکمه آپلود تصویر (در صورت نبود تصویر) -->
       <div id="modalImageUploadContainer" class="mb-2">
-        <input type="file" id="modalImageUpload" accept="image/*" class="hidden">
+        <input type="file" id="modalImageUpload" accept="image/*" class="sr-only">
         <label for="modalImageUpload" class="btn px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
           <i class="bi bi-image"></i> افزودن تصویر
         </label>
@@ -243,7 +243,7 @@
   <div id="cropModal"
     class="crop-modal fixed inset-0 bg-black/80 backdrop-blur z-[9999] flex items-center justify-center p-4 invisible opacity-0 transition-all">
     <div class="crop-panel
-    bg-white rounded-[var(--radius)] p-2.5 w-full max-w-[450px] scale-90 transition-transform duration-300
+    md:max-w-[600px] bg-white rounded-[var(--radius)] p-2.5 w-full max-w-[450px] scale-90 transition-transform duration-300
     ">
       <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><i class="bi bi-crop"></i> برش تصویر</h3>
       <div class="crop-container w-full max-h-[400px] mb-2.5">
@@ -259,7 +259,7 @@
   <!-- ========== مودال هوشمند پرامپت‌ساز (AI Prompt) ========== -->
   <div class="modal modal-ai" style="display: none;">
     <div class="modal-overlay"></div>
-    <div class="modal-content md:p-4 bg-white shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="modal-content max-w-[42rem] md:p-4 bg-white shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- هدر -->
       <div class="flex items-center justify-between border-b p-4 sticky top-0 bg-white z-10">
         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -371,7 +371,7 @@
   </div>
 
   <button id="toTop" title="برو بالا" class="
-    fixed bottom-7 right-7 z-50
+    fixed bottom-7 right-7 z-[1000]
     w-14 h-14 rounded-full
     bg-[var(--primary)]
     text-white text-2xl
@@ -380,6 +380,8 @@
     opacity-0 invisible translate-y-6
     hover:-translate-y-1 hover:scale-110
     hover:shadow-xl
+    max-md:bottom-[calc(80px+env(safe-area-inset-bottom))]
+    max-md:w-14 max-md:h-14 max-md:text-[1.8rem]
   ">
     <i class="bi bi-arrow-up"></i>
   </button>

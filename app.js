@@ -296,10 +296,12 @@ function renderRangeItems(rangeElement, rangeId) {
 
 function createItemThumbnailElement(item, rangeDiv, rangeId) {
   const container = document.createElement("div");
-  container.className = "item-thumbnail";
+  container.className =
+    "item-thumbnail max-md:p-[8px] relative border border-[#ddd] rounded-[6px] p-1 bg-white transition-all duration-200 cursor-pointer hover:border-[#333] hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]";
   container.dataset.itemId = item.id;
   container.innerHTML =
-    renderItemContent(item) + `<button class="remove-item">&times;</button>`;
+    renderItemContent(item) +
+    `<button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>`;
 
   const removeBtn = container.querySelector(".remove-item");
   removeBtn.onclick = (e) => {
@@ -356,7 +358,7 @@ function getMobileRangeHTML(rangeData) {
             <button class="dropdown-toggle action-circle border-0">
               <i class="bi bi-three-dots-vertical text-lg text-gray-600"></i>
             </button>
-            <div class="dropdown-menu absolute top-full left-0 right-auto bg-white border border-gray-200 rounded-[var(--radius)] p-2 shadow-lg z-50 flex-col gap-1">
+            <div class="dropdown-menu hidden min-w-[140px] absolute top-full left-0 right-auto bg-white border border-gray-200 rounded-[var(--radius)] p-2 shadow-lg z-50 flex-col gap-1">
               <button class="copy-range flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-[var(--radius)] transition-all w-full text-right"><i class="bi bi-copy text-gray-500"></i> کپی</button>
               <button class="paste-range flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-[var(--radius)] w-full text-right"><i class="bi bi-clipboard-plus text-gray-500"></i> چسباندن</button>
               <button class="remove-range flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-[var(--radius)] transition-all w-full text-right"><i class="bi bi-trash3 text-gray-500"></i> حذف</button>
@@ -386,7 +388,7 @@ function getMobileRangeHTML(rangeData) {
             <i class="bi bi-plus-lg text-lg"></i> <span>افزودن سوال</span>
           </button>
           <!-- آپلود تصویر -->
-          <input type="file" id="${fileID}" accept="image/*" multiple class="hidden range-images">
+          <input type="file" id="${fileID}" accept="image/*" multiple class="sr-only range-images">
           <label for="${fileID}" class="hidden flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-[var(--radius)] py-3 text-sm font-medium transition-all active:scale-[0.98]">
             <i class="bi bi-image text-lg"></i> <span>تصویر</span>
           </label>
@@ -412,9 +414,9 @@ function getMobileRangeHTML(rangeData) {
         <button class="toggle-items-btn flex gap-2 items-center w-full bg-gray-50 hover:bg-gray-100 rounded-[var(--radius)] px-4 py-3 transition-all ${rangeData.itemsCollapsed ? "collapsed" : ""}">
           <span class="text-sm font-medium text-gray-700 flex items-center gap-2"><i class="bi bi-grid-3x3-gap-fill text-gray-500"></i>سوالات تعریف شده</span>
             <span class="range-total flex items-center justify-center min-w-[2rem] h-8 px-2 bg-gray-200 text-gray-700 rounded-full text-sm font-semibold">${toPersianDigits(rangeData.items.length)}</span>
-          <i class="mr-auto bi-chevron-down text-gray-500 toggle-arrow text-lg"></i>
+          <i class="mr-auto transition-transform duration-300 bi-chevron-down text-gray-500 toggle-arrow text-lg"></i>
         </button>
-        <div class="items-preview ${rangeData.itemsCollapsed ? "collapsed" : ""} mt-3">
+        <div class="items-preview grid grid-cols-2 gap-[5px] mt-1 ${rangeData.itemsCollapsed ? "collapsed" : ""} mt-3">
           <!-- آیتم‌ها توسط تابع renderRangeItems در اینجا قرار می‌گیرند -->
         </div>
       </div>
@@ -426,7 +428,7 @@ function getDesktopRangeHTML(rangeData) {
   const fileID = createRandomId("file");
   return `
   <div class="border border-[#ccc] p-2 rounded-md bg-[#f9f9f9] relative overflow-visible">
-    <div class="range-header my-1">
+    <div class="range-header flex justify-between items-center font-bold my-1">
       <div class="flex items-center gap-2">
         <div class="relative">
           <label class="font-normal text-[#777]"> مبحث: </label>
@@ -445,8 +447,8 @@ function getDesktopRangeHTML(rangeData) {
         </div>
         <div class="inline-block">
           <div class="file-input">
-            <input type="file" id="${fileID}" accept="image/*" multiple class="file range-images">
-            <label for="${fileID}" class="btn px-4 py-2 rounded"><i class="bi bi-image"></i></label>
+            <input type="file" id="${fileID}" accept="image/*" multiple class="file sr-only range-images">
+            <label for="${fileID}" class="btn px-4 py-2 rounded relative flex items-center justify-center"><i class="bi bi-image"></i></label>
           </div>
         </div>
         <button class="add-text-item btn px-3 py-2 rounded"><i class="bi bi-type"></i></button>
@@ -465,7 +467,7 @@ function getDesktopRangeHTML(rangeData) {
     <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
       <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
     </div>
-    <div class="items-preview ${rangeData.itemsCollapsed ? "collapsed" : ""}"></div>
+    <div class="items-preview grid grid-cols-6 gap-[5px] mt-1 ${rangeData.itemsCollapsed ? "collapsed" : ""}"></div>
   <div>  
   `;
 }
@@ -630,17 +632,17 @@ function setupSwitchOnRange(rangeElement) {
 
 function setupDropdownMenu(rangeElement) {
   const dropdownToggle = rangeElement.querySelector(".dropdown-toggle");
-  const dropdown = rangeElement.querySelector(".dropdown");
-  if (!dropdownToggle || !dropdown) return;
+  const dropdownMenu = rangeElement.querySelector(".dropdown-menu");
+  if (!dropdownToggle || !dropdownMenu) return;
 
   dropdownToggle.addEventListener("click", (e) => {
     e.stopPropagation();
-    dropdown.classList.toggle("dropdown-open");
+    dropdownMenu.classList.toggle("hidden");
   });
 
   const closeDropdownOnOutsideClick = (e) => {
     if (!dropdown.contains(e.target) && !dropdownToggle.contains(e.target)) {
-      dropdown.classList.remove("dropdown-open");
+      dropdownMenu.classList.remove("hidden");
     }
   };
   document.addEventListener("click", closeDropdownOnOutsideClick);
