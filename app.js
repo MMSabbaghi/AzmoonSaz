@@ -1197,20 +1197,79 @@ function handleGenerateClick(e) {
   }
 }
 
-// ========== Modal Functions ==========
-const modal = document.getElementById("modal");
-const modalOverlay = document.getElementById("modal-overlay");
-const saveModalBtn = document.getElementById("save-modal-btn");
-const modalQscore = document.getElementById("modal-Qscore");
-const modalPreviewCell = document.getElementById("modal-preview-cell");
-const modalShowText = document.getElementById("modal-show-text");
+// ========== Modal Utilities  ==========
+function openModalElement(modalElement) {
+  modalElement.style.display = "flex";
+  void modalElement.offsetHeight; // force reflow
+  modalElement.classList.add("modal--visible");
+  document.body.classList.add("overflow-hidden");
+}
+
+function closeModalElement(modalElement) {
+  modalElement.classList.remove("modal--visible");
+  document.body.classList.remove("overflow-hidden");
+  setTimeout(() => {
+    modalElement.style.display = "none";
+  }, 300);
+}
+
+function setupModal(modalElement, options = {}) {
+  const {
+    closeOnEscape = true,
+    closeOnOverlayClick = true,
+    overlaySelector = ".modal-overlay",
+    closeButtonSelector = ".modal-close-btn",
+  } = options;
+
+  if (closeOnOverlayClick) {
+    const overlay = modalElement.querySelector(overlaySelector);
+    if (overlay) {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          closeModalElement(modalElement);
+        }
+      });
+    }
+  }
+
+  if (closeButtonSelector) {
+    const closeBtn = modalElement.querySelector(closeButtonSelector);
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => closeModalElement(modalElement));
+    }
+  }
+
+  if (closeOnEscape) {
+    const escapeHandler = (e) => {
+      if (
+        e.key === "Escape" &&
+        modalElement.classList.contains("modal--visible")
+      ) {
+        closeModalElement(modalElement);
+      }
+    };
+    document.addEventListener("keydown", escapeHandler);
+  }
+}
+
+// ========== Edit modal ==========
+const modalEdit = document.querySelector(".modal-edit");
+const modalEditPreviewCell = modalEdit.querySelector(".modal-preview-cell");
 const modalTextEditor = document.getElementById("modal-text-editor");
-const closeModalBtn = document.getElementById("closeModalBtn");
+const modalShowText = document.getElementById("modal-show-text");
 const modalImageUpload = document.getElementById("modalImageUpload");
 const modalImageUploadContainer = document.getElementById(
   "modalImageUploadContainer",
 );
 const removeImageBtn = document.getElementById("removeImageBtn");
+const saveModalBtn = document.getElementById("save-modal-btn");
+const modalQscore = document.getElementById("modal-Qscore"); // این آیدی در جدول است
+const previewImageToolbar = document.getElementById("previewImageToolbar");
+const previewImgHeight = document.getElementById("previewImgHeight");
+const previewImgHeightValue = document.getElementById("previewImgHeightValue");
+const previewImgBrightness = document.getElementById("previewImgBrightness");
+const previewImgContrast = document.getElementById("previewImgContrast");
+const previewCropBtn = document.getElementById("previewCropBtn");
 
 function updateTempItemFromTextEditor() {
   const temp = appState.modal.tempItem;
@@ -1260,9 +1319,7 @@ function openModalWithTempItem() {
 
   modalShowText.checked = temp.image ? temp.image.showText : false;
 
-  document.body.classList.add("overflow-hidden");
-  modal.style.display = "flex";
-  setTimeout(() => modal.classList.add("modal--visible"), 10);
+  openModalElement(modalEdit);
 }
 
 function setupModalEditorFromTemp(temp) {
@@ -1286,7 +1343,7 @@ function updateModalImageUI() {
 }
 
 function syncImageToolbarWithCurrentImage() {
-  const img = modalPreviewCell.querySelector("img");
+  const img = modalEditPreviewCell.querySelector("img");
   if (!img) return;
   const height =
     parseInt(img.style.height) || appState.modal.tempItem.image.height || 300;
@@ -1316,10 +1373,10 @@ function updateModalPreviewFromTemp() {
     </span>
   `;
 
-  modalPreviewCell.innerHTML = renderItemContent(temp, {
+  modalEditPreviewCell.innerHTML = renderItemContent(temp, {
     rangeDesc: range.desc,
   });
-  renderMathInContainer(modalPreviewCell);
+  renderMathInContainer(modalEditPreviewCell);
 }
 
 function saveModalChanges() {
@@ -1340,10 +1397,10 @@ function saveModalChanges() {
     showToast("تغییرات ذخیره شد.");
   }
 
-  closeModal();
+  closeEditModal();
 }
 
-function closeModal() {
+function closeEditModal() {
   if (cropper) {
     cropper.destroy();
     cropper = null;
@@ -1352,16 +1409,10 @@ function closeModal() {
   appState.modal.rangeId = null;
   appState.modal.itemId = null;
   appState.modal.tempItem = null;
-  modal.classList.remove("modal--visible");
-  document.body.classList.remove("overflow-hidden");
-  if (window.__viewportHandler) {
-    window.visualViewport?.removeEventListener(
-      "resize",
-      window.__viewportHandler,
-    );
-  }
+
+  closeModalElement(modalEdit);
+
   setTimeout(() => {
-    modal.style.display = "none";
     modalTextEditor.innerHTML = "";
   }, 300);
 }
@@ -1389,9 +1440,6 @@ saveModalBtn.addEventListener("click", () => {
     on_confirm: saveModalChanges,
   });
 });
-
-modalOverlay.addEventListener("click", closeModal);
-closeModalBtn.addEventListener("click", closeModal);
 
 modalImageUpload.addEventListener("change", function (e) {
   const file = e.target.files[0];
@@ -1455,9 +1503,8 @@ function renderMathInContainer(container) {
 }
 
 // ========== AI Prompt Modal ==========
-const aiModalOverlay = document.getElementById("aiModalOverlay");
-const aiModalContent = document.getElementById("aiModalContent");
-const closeAiModalBtn = document.getElementById("closeAiModalBtn");
+const modalAI = document.querySelector(".modal-ai");
+const aiModalContent = modalAI.querySelector(".modal-content");
 const aiPromptDisplay = document.getElementById("aiPromptDisplay");
 const aiJsonInput = document.getElementById("aiJsonInput");
 const copyAiPromptBtn = document.getElementById("copyAiPromptBtn");
@@ -1484,10 +1531,7 @@ function openAIModal(rangeId, topic) {
   aiItemsContainer.innerHTML = "";
   aiEmptyPreviewMsg.classList.add("hidden");
 
-  aiModalOverlay.classList.remove("hidden");
-  void aiModalOverlay.offsetHeight;
-  aiModalOverlay.classList.add("ai-modal--visible");
-  document.body.classList.add("overflow-hidden");
+  openModalElement(modalAI);
 }
 
 function closeAIModal() {
@@ -1495,11 +1539,7 @@ function closeAIModal() {
   appState.aiModal.topic = "";
   appState.aiModal.isOpen = false;
 
-  aiModalOverlay.classList.remove("ai-modal--visible");
-  setTimeout(() => {
-    aiModalOverlay.classList.add("hidden");
-    document.body.classList.remove("overflow-hidden");
-  }, 300);
+  closeModalElement(modalAI);
 }
 
 function generatePrompt() {
@@ -1622,17 +1662,6 @@ addAiItemsToRangeBtn.addEventListener("click", () => {
     closeAIModal();
   } catch (err) {
     showToast("خطا در افزودن آیتم‌ها: " + err.message, "error");
-  }
-});
-
-closeAiModalBtn.addEventListener("click", closeAIModal);
-aiModalOverlay.addEventListener("click", (e) => {
-  if (e.target === aiModalOverlay) closeAIModal();
-});
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && appState.aiModal.isOpen) {
-    closeAIModal();
   }
 });
 
@@ -1924,7 +1953,6 @@ function initRichTextEditor() {
   setupUndoRedo(toolbar);
   setupToolbarState(toolbar);
 
-  // Ensure text changes update temp item
   modalTextEditor.addEventListener("input", updateTempItemFromTextEditor);
   modalTextEditor.addEventListener("blur", updateTempItemFromTextEditor);
 }
@@ -1959,7 +1987,6 @@ function setupFontSizeSelector(toolbar) {
   fontSizeSelect.addEventListener("change", (e) => {
     const size = e.target.value;
     try {
-      // Use execCommand to create a font tag, then replace with span
       document.execCommand("fontSize", false, "7");
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
@@ -1968,7 +1995,6 @@ function setupFontSizeSelector(toolbar) {
         span.style.fontSize = size + "px";
         span.appendChild(range.extractContents());
         range.insertNode(span);
-        // Move cursor inside the span
         selection.removeAllRanges();
         const newRange = document.createRange();
         newRange.selectNodeContents(span);
@@ -2007,9 +2033,7 @@ function setupToolbarState(toolbar) {
       try {
         const active = document.queryCommandState(btn.dataset.command);
         btn.classList.toggle("active", active);
-      } catch (err) {
-        // Some commands may not have state; ignore
-      }
+      } catch (err) {}
     });
   };
 
@@ -2018,12 +2042,6 @@ function setupToolbarState(toolbar) {
 }
 
 // ========== Preview Image Toolbar ==========
-const previewImageToolbar = document.getElementById("previewImageToolbar");
-const previewImgHeight = document.getElementById("previewImgHeight");
-const previewImgHeightValue = document.getElementById("previewImgHeightValue");
-const previewImgBrightness = document.getElementById("previewImgBrightness");
-const previewImgContrast = document.getElementById("previewImgContrast");
-const previewCropBtn = document.getElementById("previewCropBtn");
 let selectedPreviewImage = null;
 let cropper = null;
 
@@ -2036,7 +2054,7 @@ function initPreviewImageToolbar() {
 
 function setupHeightSlider() {
   previewImgHeight.addEventListener("input", (e) => {
-    const img = modalPreviewCell.querySelector("img");
+    const img = modalEditPreviewCell.querySelector("img");
     if (!img) return;
     const val = e.target.value;
     img.style.height = val + "px";
@@ -2051,7 +2069,7 @@ function setupHeightSlider() {
 
 function setupBrightnessContrast() {
   function applyPreviewImageFilters() {
-    const img = modalPreviewCell.querySelector("img");
+    const img = modalEditPreviewCell.querySelector("img");
     if (!img) return;
     const b = previewImgBrightness.value;
     const c = previewImgContrast.value;
@@ -2064,7 +2082,7 @@ function setupBrightnessContrast() {
 function setupAlignmentButtons() {
   document.querySelectorAll("[data-align]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
-      const img = modalPreviewCell.querySelector("img");
+      const img = modalEditPreviewCell.querySelector("img");
       if (!img) return;
       const align = e.currentTarget.dataset.align;
       img.classList.remove("ml-auto", "mr-auto", "mx-auto");
@@ -2084,7 +2102,7 @@ function setupAlignmentButtons() {
 
 function setupCropButton() {
   previewCropBtn.addEventListener("click", () => {
-    const img = modalPreviewCell.querySelector("img");
+    const img = modalEditPreviewCell.querySelector("img");
     if (!img) return;
     selectedPreviewImage = img;
     document.getElementById("cropImage").src = img.src;
@@ -2105,15 +2123,21 @@ function setupCropButton() {
 document.addEventListener("DOMContentLoaded", function () {
   document.body.style.fontFamily = appState.font;
 
-  // Initialize unified names component
   namesUI = createNamesUI();
   placeNamesUI();
 
-  // Initialize rich text editor and preview toolbar
   initRichTextEditor();
   initPreviewImageToolbar();
 
-  // Crop modal event listeners
+  setupModal(modalEdit, {
+    overlaySelector: ".modal-overlay",
+    closeButtonSelector: ".modal-close-btn",
+  });
+  setupModal(modalAI, {
+    overlaySelector: ".modal-overlay",
+    closeButtonSelector: ".modal-close-btn",
+  });
+
   document.getElementById("applyCrop").addEventListener("click", function () {
     if (!cropper || !selectedPreviewImage) return;
     const canvas = cropper.getCroppedCanvas();
@@ -2141,7 +2165,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Window resize handler
   window.addEventListener("resize", () => {
     const isNowMobile = window.innerWidth <= 768;
     document.querySelectorAll(".range-item").forEach((el) => {

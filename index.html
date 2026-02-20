@@ -57,18 +57,14 @@
     </div>
   </div>
 
-  </div>
-
-  <!-- ========== مودال ویرایش آیتم (بازطراحی شده) ========== -->
-  <div id="modal" class="modal" style="display: none;">
-    <div id="modal-overlay" class="absolute inset-0 bg-black/60 backdrop-blur"></div>
-    <div id="modalContent" class="flex flex-col z-10 w-[72rem] p-6 bg-white rounded-[var(--radius)]"
-      style="transition: transform 0.3s ease-out;">
-
+  <!-- ========== مودال ویرایش آیتم (یکپارچه) ========== -->
+  <div class="modal modal-edit" style="display: none;">
+    <div class="modal-overlay absolute inset-0 bg-black/60 backdrop-blur"></div>
+    <div class="modal-content flex flex-col z-10 p-6 bg-white">
       <!-- هدر مودال -->
       <div class="flex items-center justify-between mb-4 pb-2 border-b">
         <h2 class="text-xl font-bold">ویرایش سوال</h2>
-        <button id="closeModalBtn" class="text-2xl leading-none hover:text-gray-600">&times;</button>
+        <button class="modal-close-btn text-2xl leading-none hover:text-gray-600">&times;</button>
       </div>
 
       <!-- دکمه آپلود تصویر (در صورت نبود تصویر) -->
@@ -79,9 +75,9 @@
         </label>
       </div>
 
-      <!-- ========== ویرایشگر متن پیشرفته (Rich Text) با تولبار یکپارچه و Tailwind ========== -->
+      <!-- ========== ویرایشگر متن پیشرفته (Rich Text) ========== -->
       <div class="rich-editor-wrapper relative w-full bg-white border border-gray-300 overflow-hidden mb-4" dir="rtl">
-        <!-- تولبار واکنش‌گرا با Tailwind -->
+        <!-- تولبار -->
         <div
           class="rich-editor-toolbar bg-gray-100 border-b border-gray-200 p-2 z-20 w-full overflow-x-auto whitespace-nowrap md:overflow-visible md:whitespace-normal md:flex md:flex-wrap md:items-center md:gap-2"
           id="modal-toolbar">
@@ -149,13 +145,13 @@
           </div>
         </div>
 
-        <!-- باکس ویرایش متن (استایل‌های پایه با Tailwind + placeholder در CSS) -->
+        <!-- باکس ویرایش متن -->
         <div
           class="rich-editor-content min-h-[150px] max-h-[300px] overflow-y-auto p-4 leading-relaxed outline-none bg-white"
           id="modal-text-editor" contenteditable="true" data-placeholder="متن خود را بنویسید..."></div>
       </div>
 
-      <!-- نوار ابزار تنظیمات تصویر (فقط زمانی نمایش داده می‌شود که تصویر وجود دارد) -->
+      <!-- نوار ابزار تنظیمات تصویر -->
       <div id="previewImageToolbar" class="hidden bg-gray-100 p-3 flex flex-wrap items-center gap-4 mb-4">
         <div class="flex items-center gap-2">
           <label class="text-sm">ارتفاع:</label>
@@ -165,7 +161,7 @@
 
         <div class="flex items-center gap-1">
           <button class="btn px-3 py-1 rounded text-sm" data-align="right"><i class="bi bi-align-start"></i></button>
-          <button class="btn px-3 py-1  rounded text-sm" data-align="center"><i class="bi bi-align-middle"></i></button>
+          <button class="btn px-3 py-1 rounded text-sm" data-align="center"><i class="bi bi-align-middle"></i></button>
           <button class="btn px-3 py-1 rounded text-sm" data-align="left"><i class="bi bi-align-end"></i></button>
         </div>
         <button id="previewCropBtn" class="btn px-3 py-1 text-sm"><i class="bi bi-crop"></i>
@@ -183,13 +179,13 @@
         </button>
       </div>
 
-      <!-- ========== جدول پیش‌نمایش ========== -->
+      <!-- جدول پیش‌نمایش -->
       <div class="mb-4 relative">
         <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
           <tr>
             <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold"></td>
-            <td class="p-2 relative" id="modal-preview-cell">
-              <!-- محتوای پیش‌نمایش (متن و تصویر) در اینجا درج می‌شود -->
+            <td class="p-2 relative modal-preview-cell" id="modal-preview-cell">
+              <!-- محتوای پیش‌نمایش -->
             </td>
           </tr>
         </table>
@@ -209,7 +205,7 @@
     </div>
   </div>
 
-  <!-- مودال برش تصویر (یکپارچه) -->
+  <!-- مودال برش تصویر (بدون تغییر) -->
   <div id="cropModal"
     class="crop-modal fixed inset-0 bg-black/80 backdrop-blur z-[9999] flex items-center justify-center p-4 invisible opacity-0 transition-all">
     <div class="crop-panel
@@ -226,17 +222,16 @@
     </div>
   </div>
 
-  <!-- ========== مودال هوشمند پرامپت‌ساز (AI Prompt) ========== -->
-  <div id="aiModalOverlay"
-    class="hidden ai-modal fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[1000]">
-    <div id="aiModalContent"
-      class="bg-white rounded-[var(--radius)] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-enter-active">
+  <!-- ========== مودال هوش مصنوعی (یکپارچه) ========== -->
+  <div class="modal modal-ai" style="display: none;">
+    <div class="modal-overlay absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="modal-content shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- هدر -->
       <div class="flex items-center justify-between border-b p-4 sticky top-0 bg-white z-10">
-        <h2 class=" text-lg font-bold text-gray-800 flex items-center gap-2">
+        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
           <i class="bi bi-magic"></i> ساخت سوال با هوش مصنوعی
         </h2>
-        <button id="closeAiModalBtn" class="text-gray-400 hover:text-gray-600 transition">
+        <button class="modal-close-btn text-gray-400 hover:text-gray-600 transition">
           <i class="bi bi-x-lg"></i>
         </button>
       </div>
@@ -283,7 +278,6 @@
 
         </div>
 
-
         <!-- بخش پرامپت پیشنهادی -->
         <div id="AiModal" class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-2">
           <div class="flex items-center justify-between">
@@ -315,7 +309,7 @@
             </div>
           </div>
           <textarea id="aiJsonInput" rows="4"
-            class="hidden w-full border border-gray-300 rounded-[var(--radius)]  p-2 font-mono text-sm bg-white"
+            class="hidden w-full border border-gray-300 rounded-[var(--radius)] p-2 font-mono text-sm bg-white"
             placeholder='{ "items": [ {"text": "فرمول $...$"} ] }'></textarea>
           <p class="text-xs text-gray-500 flex items-center gap-1">
             <i class="bi bi-info-circle"></i> پاسخ AI را اینجا بچسبانید.
