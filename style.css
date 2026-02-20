@@ -88,27 +88,13 @@ input:focus + label {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 /* ========== Range Items ========== */
-.range-item {
-  border: 1px solid #ccc;
-  padding: 8px;
-  border-radius: 6px;
-  background: #f9f9f9;
-  position: relative;
-  overflow: visible;
-}
 .range-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-weight: bold;
 }
-.range-total {
-  background: red;
-  color: white;
-  border-radius: 9999px;
-  padding: 2px 8px;
-  font-size: 12px;
-}
+
 #textareaBox {
   overflow: hidden;
   max-height: 0;
@@ -127,48 +113,6 @@ input:focus + label {
 }
 #textareaBox textarea:focus {
   outline: none;
-}
-
-/* ========== Mobile Range Layout ========== */
-.range-header-mobile {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.range-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.range-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.range-actions {
-  display: flex;
-  gap: 8px;
-}
-.range-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 0;
-}
-.range-details.hidden {
-  display: none;
-}
-.details-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.toggle-items-btn i {
-  transition: transform 0.3s;
-}
-.toggle-items-btn.collapsed i {
-  transform: rotate(-180deg);
 }
 
 /* ========== Items Preview ========== */
@@ -363,6 +307,42 @@ input:focus + label {
   display: block;
 }
 
+/* ========== Mobile range item ========== */
+.dropdown-menu {
+  display: none;
+  min-width: 140px;
+}
+.dropdown-open .dropdown-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-items-btn.collapsed > .toggle-arrow {
+  transform: rotate(-180deg);
+}
+
+.toggle-items-btn i {
+  transition: transform 0.3s;
+}
+
+.action-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background-color: #f3f4f6;
+  color: #374151;
+  transition: all 0.2s;
+}
+.action-circle:hover {
+  background-color: #e5e7eb;
+}
+.action-circle:active {
+  transform: scale(0.95);
+}
+
 /* ========== Utilities ========== */
 .backdrop-blur {
   backdrop-filter: blur(8px);
@@ -438,10 +418,6 @@ input:focus + label {
   }
 
   /* Range mobile */
-  .range-item {
-    padding: 16px 12px;
-    margin-bottom: 12px;
-  }
   .range-header {
     flex-direction: column;
     align-items: stretch;
