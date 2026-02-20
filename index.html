@@ -76,7 +76,7 @@
       </div>
 
       <!-- ========== ویرایشگر متن پیشرفته (Rich Text) با تولبار یکپارچه و Tailwind ========== -->
-      <div class="rich-editor-wrapper relative w-full bg-white border border-gray-300 overflow-hidden mb-4" dir="rtl">
+      <div class="rich-editor-wrapper relative w-full bg-white border border-gray-300 mb-4" dir="rtl">
         <!-- تولبار واکنش‌گرا با Tailwind -->
         <div
           class="rich-editor-toolbar bg-gray-100 border-b border-gray-200 p-2 z-20 w-full overflow-x-auto whitespace-nowrap md:overflow-visible md:whitespace-normal md:flex md:flex-wrap md:items-center md:gap-2"
@@ -146,36 +146,71 @@
         </div>
 
         <!-- باکس ویرایش متن (استایل‌های پایه با Tailwind + placeholder در CSS) -->
-        <div
-          class="rich-editor-content min-h-[150px] max-h-[300px] overflow-y-auto p-4 leading-relaxed outline-none bg-white"
-          id="modal-text-editor" contenteditable="true" data-placeholder="متن خود را بنویسید..."></div>
+        <div class="rich-editor-content h-[100px] overflow-y-auto p-4 leading-relaxed outline-none bg-white"
+          id="modal-text-editor" contenteditable="true" data-placeholder="متن سوال را بنویسید..."></div>
       </div>
 
       <!-- نوار ابزار تنظیمات تصویر (فقط زمانی نمایش داده می‌شود که تصویر وجود دارد) -->
-      <div id="previewImageToolbar" class="hidden bg-gray-100 p-3 flex flex-wrap items-center gap-4 mb-4">
-        <div class="flex items-center gap-2">
-          <label class="text-sm">ارتفاع:</label>
-          <input type="range" id="previewImgHeight" min="20" max="800" value="300" class="w-24">
-          <span id="previewImgHeightValue" class="text-xs w-12">300px</span>
+      <!-- نوار ابزار بازطراحی‌شده با Tailwind CSS -->
+      <div id="previewImageToolbar" dir="rtl"
+        class="hidden border-y border-gray-200 py-2 flex overflow-x-auto flex-row flex-wrap items-center gap-4 mb-4">
+
+        <!-- ارتفاع تصویر -->
+        <div class="flex-none flex items-center gap-3 min-w-[180px] flex-1">
+          <span class="text-sm font-medium text-gray-700">ارتفاع:</span>
+          <div class="flex items-center gap-2 flex-1">
+            <input type="range" id="previewImgHeight" min="20" max="800" value="300"
+              class="w-24 sm:w-32 h-2 bg-gray-200 rounded-[var(--radius)] appearance-none cursor-pointer accent-blue-600">
+            <span id="previewImgHeightValue"
+              class="text-xs bg-gray-100 px-2 py-1 rounded-[var(--radius)] text-gray-600 w-12 text-center">300px</span>
+          </div>
         </div>
 
-        <div class="flex items-center gap-1">
-          <button class="btn px-3 py-1 rounded text-sm" data-align="right"><i class="bi bi-align-start"></i></button>
-          <button class="btn px-3 py-1  rounded text-sm" data-align="center"><i class="bi bi-align-middle"></i></button>
-          <button class="btn px-3 py-1 rounded text-sm" data-align="left"><i class="bi bi-align-end"></i></button>
+        <!-- دکمه‌های تراز -->
+        <div class="flex-none flex items-center gap-1 rounded-[var(--radius)]">
+          <button
+            class="btn px-4 py-2 rounded-[var(--radius)] bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 flex items-center gap-2"
+            data-align="right" title="تراز به راست">
+            <i class="bi bi-align-start"></i>
+          </button>
+          <button
+            class="btn px-4 py-2 rounded-[var(--radius)] bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 flex items-center gap-2"
+            data-align="center" title="تراز به وسط">
+            <i class="bi bi-align-middle"></i>
+          </button>
+          <button
+            class="btn px-4 py-2 rounded-[var(--radius)] bg-gray-100 hover:bg-gray-200  text-sm font-medium text-gray-700 flex items-center gap-2"
+            data-align="left" title="تراز به چپ">
+            <i class="bi bi-align-end"></i>
+          </button>
         </div>
-        <button id="previewCropBtn" class="btn px-3 py-1 text-sm"><i class="bi bi-crop"></i>
+
+        <!-- دکمه برش -->
+        <button id="previewCropBtn"
+          class="flex-none btn px-4 py-2 rounded-[var(--radius)] bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 flex items-center gap-2">
+          <i class="bi bi-crop"></i>
+          <span class="hidden sm:inline">برش</span>
         </button>
 
-        <div class="flex items-center gap-2">
-          <label class="text-sm">روشنایی:</label>
-          <input type="range" id="previewImgBrightness" min="0" max="200" value="100" class="w-24">
+        <!-- تنظیمات روشنایی و کنتراست -->
+        <div class="flex-none flex flex-row items-stretch sm:items-center gap-3 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="whitespace-nowrap text-sm font-medium text-gray-700">روشنایی:</span>
+            <input type="range" id="previewImgBrightness" min="0" max="200" value="100"
+              class="w-20 sm:w-24 h-2 bg-gray-200 rounded-[var(--radius)] appearance-none cursor-pointer accent-blue-600">
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="whitespace-nowrap text-sm font-medium text-gray-700">کنتراست:</span>
+            <input type="range" id="previewImgContrast" min="0" max="200" value="100"
+              class="w-20 sm:w-24 h-2 bg-gray-200 rounded-[var(--radius)] appearance-none cursor-pointer accent-blue-600">
+          </div>
         </div>
-        <div class="flex items-center gap-2">
-          <label class="text-sm">کنتراست:</label>
-          <input type="range" id="previewImgContrast" min="0" max="200" value="100" class="w-24">
-        </div>
-        <button id="removeImageBtn" class="btn px-3 py-1 rounded text-sm"><i class="bi bi-trash"></i>
+
+        <!-- دکمه حذف -->
+        <button id="removeImageBtn"
+          class="flex-none btn px-4 py-2 rounded-[var(--radius)] bg-red-50 hover:bg-red-100 text-sm font-medium text-red-600 flex items-center gap-2">
+          <i class="bi bi-trash"></i>
+          <span class="hidden sm:inline">حذف</span>
         </button>
       </div>
 
