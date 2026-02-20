@@ -73,7 +73,7 @@ function handleSwitchElement({ container, onChange }) {
   sw.addEventListener("click", () => {
     on = !on;
     const func = on ? "add" : "remove";
-    sw.classList[func]("bg-[#333]");
+    sw.classList[func]("bg-surface");
     knob.classList[func]("translate-x-4", "scale-105");
     onChange(on);
   });
@@ -301,7 +301,7 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
   container.dataset.itemId = item.id;
   container.innerHTML =
     renderItemContent(item) +
-    `<button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>`;
+    `<button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-error-light text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>`;
 
   const removeBtn = container.querySelector(".remove-item");
   removeBtn.onclick = (e) => {
@@ -341,7 +341,7 @@ function getRangeHTML(rangeData) {
 function getMobileRangeHTML(rangeData) {
   const fileID = createRandomId("file");
   return `
-    <div class="relative range-card-mobile my-1 rounded-[var(--radius)] bg-white  border border-gray-200/80 p-5 transition-all">
+    <div class="relative range-card-mobile my-1 rounded-custom bg-surface border border-border-light/80 p-5 transition-all">
       <!-- بخش تنظیمات -->
       <div class="settings-section mb-4">
         <!-- ردیف اول: عنوان + تعداد + منوی سه‌نقطه -->
@@ -349,34 +349,34 @@ function getMobileRangeHTML(rangeData) {
           <div class="flex items-center gap-2 flex-1">
             <div class="relative flex-1">
               <input value="${rangeData.rangeName}" type="text" placeholder="عنوان مبحث" 
-                     class="range-name w-full border-0 border-b-2 border-gray-200 bg-transparent px-1 py-2 text-base font-medium text-gray-800 focus:border-gray-400 focus:ring-0 transition-all">
-              <span class="absolute right-0 top-0 text-xs text-gray-400 -translate-y-1/2 bg-white px-1"> مبحث</span>
+                     class="range-name w-full border-0 border-b-2 border-border-light bg-transparent px-1 py-2 text-base font-medium text-primary focus:border-primary-dark focus:ring-0 transition-all">
+              <span class="absolute right-0 top-0 text-xs text-muted bg-surface px-1"> مبحث</span>
             </div>
           </div>
           <!-- منوی کشویی (dropdown) -->
           <div class="dropdown relative">
             <button class="dropdown-toggle action-circle border-0">
-              <i class="bi bi-three-dots-vertical text-lg text-gray-600"></i>
+              <i class="bi bi-three-dots-vertical text-lg text-secondary"></i>
             </button>
-            <div class="dropdown-menu hidden min-w-[140px] absolute top-full left-0 right-auto bg-white border border-gray-200 rounded-[var(--radius)] p-2 shadow-lg z-50 flex-col gap-1">
-              <button class="copy-range flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-[var(--radius)] transition-all w-full text-right"><i class="bi bi-copy text-gray-500"></i> کپی</button>
-              <button class="paste-range flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-[var(--radius)] w-full text-right"><i class="bi bi-clipboard-plus text-gray-500"></i> چسباندن</button>
-              <button class="remove-range flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-[var(--radius)] transition-all w-full text-right"><i class="bi bi-trash3 text-gray-500"></i> حذف</button>
+            <div class="dropdown-menu hidden min-w-[140px] absolute top-full left-0 right-auto bg-surface border border-border-light rounded-custom p-2 shadow-lg z-50 flex-col gap-1">
+              <button class="copy-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom transition-all w-full text-right"><i class="bi bi-copy text-muted"></i> کپی</button>
+              <button class="paste-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom w-full text-right"><i class="bi bi-clipboard-plus text-muted"></i> چسباندن</button>
+              <button class="remove-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom transition-all w-full text-right"><i class="bi bi-trash3 text-muted"></i> حذف</button>
             </div>
           </div>
         </div>
 
         <!-- ردیف دوم: تعداد، نمره، دکمه‌های جابجایی -->
         <div class="flex items-center gap-2 mb-4 overflow-x-auto scrollable-x pb-1">
-          <div class="flex items-center gap-1 bg-gray-50 px-3 py-2 rounded-[var(--radius)] border border-gray-200 flex-shrink-0">
-            <label class="text-sm text-gray-600 ml-1">تعداد:</label>
+          <div class="flex items-center gap-1 bg-surface-dark px-3 py-2 rounded-custom border border-border-light flex-shrink-0">
+            <label class="text-sm text-secondary ml-1">تعداد:</label>
             <input value="${rangeData.count}" data-number-input="true" data-float="false" 
-                   class="range-count w-14 text-center bg-transparent border-0 p-1 text-base font-medium text-gray-800 focus:ring-1 focus:ring-gray-300 rounded-[var(--radius)]">
+                   class="range-count w-14 text-center bg-transparent border-0 p-1 text-base font-medium text-primary focus:ring-1 focus:ring-primary-light rounded-custom">
           </div>
-          <div class="flex items-center gap-1 bg-gray-50 px-3 py-2 rounded-[var(--radius)] border border-gray-200 flex-shrink-0">
-            <label class="text-sm text-gray-600 ml-1">نمره:</label>
+          <div class="flex items-center gap-1 bg-surface-dark px-3 py-2 rounded-custom border border-border-light flex-shrink-0">
+            <label class="text-sm text-secondary ml-1">نمره:</label>
             <input value="${rangeData.score}" data-number-input="true" 
-                   class="range-score w-14 text-center bg-transparent border-0 p-1 text-base font-medium text-gray-800 focus:ring-1 focus:ring-gray-300 rounded-[var(--radius)]">
+                   class="range-score w-14 text-center bg-transparent border-0 p-1 text-base font-medium text-primary focus:ring-1 focus:ring-primary-light rounded-custom">
           </div>
           <button class="move-up action-circle flex-shrink-0"><i class="bi bi-arrow-up-short text-xl"></i></button>
           <button class="move-down action-circle flex-shrink-0"><i class="bi bi-arrow-down-short text-xl"></i></button>
@@ -384,40 +384,40 @@ function getMobileRangeHTML(rangeData) {
 
         <!-- ردیف سوم: دکمه‌های افزودن متن، تصویر و هوش مصنوعی -->
         <div class="flex gap-2">
-          <button class="add-text-item flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-[var(--radius)] py-3 text-sm font-medium transition-all active:scale-[0.98]">
+          <button class="add-text-item flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-3 text-sm font-medium transition-all active:scale-[0.98]">
             <i class="bi bi-plus-lg text-lg"></i> <span>افزودن سوال</span>
           </button>
           <!-- آپلود تصویر -->
           <input type="file" id="${fileID}" accept="image/*" multiple class="sr-only range-images">
-          <label for="${fileID}" class="hidden flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-[var(--radius)] py-3 text-sm font-medium transition-all active:scale-[0.98]">
+          <label for="${fileID}" class="hidden flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-3 text-sm font-medium transition-all active:scale-[0.98]">
             <i class="bi bi-image text-lg"></i> <span>تصویر</span>
           </label>
-          <button class="ai-range flex-1 flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-[var(--radius)] py-3 text-sm font-medium transition-all active:scale-[0.98]">
+          <button class="ai-range flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-3 text-sm font-medium transition-all active:scale-[0.98]">
             <i class="bi bi-openai text-lg"></i> <span>هوش مصنوعی</span>
           </button>
         </div>
 
         <!-- سوییچ و تکست‌آریا برای توضیحات مبحث -->
         <div class="hidden flex items-center gap-2 mt-3">
-          <label class="text-sm text-gray-600">متن سوال:</label>
-          <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
-            <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+          <label class="text-sm text-secondary">متن سوال:</label>
+          <div id="switch" class="relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
+            <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
           </div>
         </div>
         <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-          <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+          <textarea class="range-desc w-full h-15 border border-border-light rounded-custom p-3 text-sm focus:outline-none placeholder-muted" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
         </div>
       </div>
 
       <!-- بخش پیش‌نمایش آیتم‌ها -->
-      <div class="preview-section border-t border-gray-200 pt-3 mt-1">
-        <button class="toggle-items-btn flex gap-2 items-center w-full bg-gray-50 hover:bg-gray-100 rounded-[var(--radius)] px-4 py-3 transition-all ${rangeData.itemsCollapsed ? "collapsed" : ""}">
-          <span class="text-sm font-medium text-gray-700 flex items-center gap-2"><i class="bi bi-grid-3x3-gap-fill text-gray-500"></i>سوالات تعریف شده</span>
-            <span class="range-total flex items-center justify-center min-w-[2rem] h-8 px-2 bg-gray-200 text-gray-700 rounded-full text-sm font-semibold">${toPersianDigits(rangeData.items.length)}</span>
-          <i class="mr-auto transition-transform duration-300 bi-chevron-down text-gray-500 toggle-arrow text-lg"></i>
+      <div class="preview-section border-t border-border-light pt-3 mt-1">
+        <button class="toggle-items-btn flex gap-2 items-center w-full bg-surface-dark hover:bg-surface-darker rounded-custom px-4 py-3 transition-all ${rangeData.itemsCollapsed ? "collapsed" : ""}">
+          <span class="text-sm font-medium text-secondary flex items-center gap-2"><i class="bi bi-grid-3x3-gap-fill text-muted"></i>سوالات تعریف شده</span>
+            <span class="range-total flex items-center justify-center min-w-[2rem] h-8 px-2 bg-surface-darker text-secondary rounded-circle text-sm font-semibold">${toPersianDigits(rangeData.items.length)}</span>
+          <i class="mr-auto transition-transform duration-300 bi-chevron-down text-muted toggle-arrow text-lg"></i>
         </button>
         <div class="items-preview grid grid-cols-2 gap-[5px] mt-1 ${rangeData.itemsCollapsed ? "collapsed" : ""} mt-3">
-          <!-- آیتم‌ها توسط تابع renderRangeItems در اینجا قرار می‌گیرند -->
+          <!-- آیتم‌ها -->
         </div>
       </div>
     </div>
@@ -427,45 +427,45 @@ function getMobileRangeHTML(rangeData) {
 function getDesktopRangeHTML(rangeData) {
   const fileID = createRandomId("file");
   return `
-  <div class="border border-[#ccc] p-2 rounded-md bg-[#f9f9f9] relative overflow-visible">
+  <div class="border border-border-dark p-2 rounded-custom bg-surface-dark relative overflow-visible">
     <div class="range-header flex justify-between items-center font-bold my-1">
       <div class="flex items-center gap-2">
         <div class="relative">
-          <label class="font-normal text-[#777]"> مبحث: </label>
-          <input value="${rangeData.rangeName}" type="text" class="border rounded p-2 range-name" placeholder="عنوان مبحث">
-          <span class="range-total absolute -top-2 -left-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+          <label class="font-normal text-muted"> مبحث: </label>
+          <input value="${rangeData.rangeName}" type="text" class="border border-border-light rounded-custom p-2 range-name" placeholder="عنوان مبحث">
+          <span class="range-total absolute -top-2 -left-2 bg-error text-inverse text-xs font-bold rounded-circle w-5 h-5 flex items-center justify-center">
             ${toPersianDigits(rangeData.items.length)}
           </span>
         </div>
         <div>
-          <label class="font-normal text-[#777]"> تعداد: </label>
-          <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border rounded p-2 range-count" placeholder="تعداد">
+          <label class="font-normal text-muted"> تعداد: </label>
+          <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border border-border-light rounded-custom p-2 range-count" placeholder="تعداد">
         </div>
         <div>
-          <label class="font-normal text-[#777]" > نمره: </label>
-          <input value="${rangeData.score}" data-number-input="true" class="w-20 border rounded p-2 range-score" placeholder="نمره">
+          <label class="font-normal text-muted" > نمره: </label>
+          <input value="${rangeData.score}" data-number-input="true" class="w-20 border border-border-light rounded-custom p-2 range-score" placeholder="نمره">
         </div>
         <div class="inline-block">
           <div class="file-input">
             <input type="file" id="${fileID}" accept="image/*" multiple class="file sr-only range-images">
-            <label for="${fileID}" class="btn px-4 py-2 rounded relative flex items-center justify-center"><i class="bi bi-image"></i></label>
+            <label for="${fileID}" class="btn btn-outline px-4 py-2 rounded-custom relative flex items-center justify-center"><i class="bi bi-image"></i></label>
           </div>
         </div>
-        <button class="add-text-item btn px-3 py-2 rounded"><i class="bi bi-type"></i></button>
-        <button class="ai-range btn px-3 py-2 rounded"><i class="bi bi-openai"></i></button>
-        <label class="font-normal text-[#777]" > متن سوال: </label>
-        <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
-          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+        <button class="add-text-item btn btn-outline px-3 py-2 rounded-custom"><i class="bi bi-type"></i></button>
+        <button class="ai-range btn btn-outline px-3 py-2 rounded-custom"><i class="bi bi-openai"></i></button>
+        <label class="font-normal text-muted" > متن سوال: </label>
+        <div id="switch" class="relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
+          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button class="p-1 text-[#ccc] hover:text-red-500 rounded remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
-        <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
-        <button class="p-1 text-[#ccc] hover:text-[var(--primary)] rounded paste-range transition-all duration-500 ease-out"><i class="bi bi-clipboard-plus"></i></button>
+        <button class="p-1 text-muted hover:text-error rounded-custom remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
+        <button class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
+        <button class="p-1 text-muted hover:text-primary rounded-custom paste-range transition-all duration-500 ease-out"><i class="bi bi-clipboard-plus"></i></button>
       </div>
     </div>
     <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-      <textarea class="range-desc w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+      <textarea class="range-desc w-full h-15 border border-border-light rounded-custom p-3 text-sm focus:outline-none placeholder-muted" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
     </div>
     <div class="items-preview grid grid-cols-6 gap-[5px] mt-1 ${rangeData.itemsCollapsed ? "collapsed" : ""}"></div>
   <div>  
@@ -756,33 +756,32 @@ function createNamesUI() {
   container.innerHTML = `
     <div class="flex items-center gap-2 flex-wrap">
       <div>
-        <label>تعداد:</label>
-        <input type="text" class="names-count-input border rounded p-2 w-10 md:w-20" value="${appState.names.length || appState.namesCount}" data-number-input="true" ${appState.names.length ? "disabled" : ""}>
+        <label class="text-secondary">تعداد:</label>
+        <input type="text" class="names-count-input border border-border-light rounded-custom p-2 w-10 md:w-20" value="${appState.names.length || appState.namesCount}" data-number-input="true" ${appState.names.length ? "disabled" : ""}>
       </div>
       <div class="flex items-center gap-2">
-        <label>فونت:</label>
-        <select class="font-selector border rounded p-2 text-sm bg-white text-gray-800">
+        <label class="text-secondary">فونت:</label>
+        <select class="font-selector border border-border-light rounded-custom p-2 text-sm bg-surface text-primary">
           <option value="'Vazirmatn', sans-serif">وزیرمتن</option>
           <option value="'Shabnam', sans-serif">شبنم</option>
           <option value="'BNazanin', sans-serif">نازنین</option>
         </select>
       </div>
       <div class="names-switch flex gap-1">
-        <label>نمایش نام:</label>
-        <div id="switch" class="relative w-[42px] h-[24px] bg-[#ccc] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out shadow-inner">
-          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-white rounded-[var(--radius)] transition-all duration-500 shadow-md"></div>
+        <label class="text-secondary">نمایش نام:</label>
+        <div id="switch" class="relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
+          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
         </div>
       </div>
       <div class="flex gap-2 md:mr-auto w-full md:w-fit">
       <button class="generate-btn btn px-4 py-2 w-full md:w-fit"><i class="bi bi-clipboard2-check"></i> تولید آزمون</button>
-      <button class="print-btn btn px-4 py-2 w-full md:w-fit"><i class="bi bi-printer"></i> چاپ خروجی</button>
+      <button class="print-btn btn btn-secondary px-4 py-2 w-full md:w-fit"><i class="bi bi-printer"></i> چاپ خروجی</button>
       </div>
     </div>  
     <div class="names-textarea-container overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-      <textarea class="names-textarea mt-1 w-full h-15 border rounded-[var(--radius)] p-3 text-sm focus:outline-none" rows="5" placeholder="نام دانش‌آموزان هر کدام در یک خط">${appState.names.join("\n")}</textarea>
+      <textarea class="names-textarea mt-1 w-full h-15 border border-border-light rounded-custom p-3 text-sm focus:outline-none placeholder-muted" rows="5" placeholder="نام دانش‌آموزان هر کدام در یک خط">${appState.names.join("\n")}</textarea>
     </div>
   `;
-
   const fontSelect = container.querySelector(".font-selector");
   fontSelect.value = appState.font;
 

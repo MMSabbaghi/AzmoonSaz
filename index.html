@@ -11,18 +11,18 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 
-<body class="bg-gray-100 md:p-6">
+<body class="bg-background md:p-6">
 
-  <div class="max-w-6xl mx-auto bg-white p-3 md:p-6 rounded shadow min-h-[85vh]" id="app-container">
+  <div class="max-w-6xl mx-auto bg-surface p-3 md:p-6 rounded-custom shadow-default min-h-[85vh]" id="app-container">
     <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
-      <h1 class="text-2xl font-bold">کوئیز ساز</h1>
+      <h1 class="text-2xl font-bold text-primary">کوئیز ساز</h1>
       <div class="flex gap-2 w-full md:w-fit">
         <button id="exportJson" class="btn px-4 py-2 w-full md:w-fit">
           <i class="bi bi-floppy"></i>
           ذخیره آزمون
         </button>
         <input type="file" id="importJson" class="sr-only">
-        <label for="importJson" class="btn px-4 py-2 w-full md:w-fit">
+        <label for="importJson" class="btn btn-secondary px-4 py-2 w-full md:w-fit">
           <i class="bi bi-folder-plus"></i>
           <span> ورود اطلاعات</span>
         </label>
@@ -32,8 +32,8 @@
     <div id="ranges" class="flex flex-col gap-2"></div>
 
     <button id="addRange" style="width: 100%;" class=" 
-    flex items-center justify-center bg-transparent border-2 border-dashed border-[var(--primary)] text-[var(--primary)] rounded-[var(--radius)] cursor-pointer transition-all duration-300 ease-out px-4 py-2 gap-2
-    hover:border-[#222] hover:text-[#222] hover:shadow-md
+    flex items-center justify-center bg-transparent border-2 border-dashed border-primary text-primary rounded-custom cursor-pointer transition-all duration-300 ease-out px-4 py-2 gap-2
+    hover:border-primary-dark hover:text-primary-dark hover:shadow-md
     my-2
     ">
       <i class="bi bi-plus-lg"></i>
@@ -42,12 +42,12 @@
 
     <div id="sentinel" class="h-[1px]"></div>
     <div class="
-    will-change-[position] border border-dashed border-[var(--border)] rounded-[var(--radius)] justify-center
-    my-1 max-md:hidden md:p-[8px] bg-white export-btns sticky-box" id="sticky">
+    will-change-[position] border border-dashed border-border rounded-custom justify-center
+    my-1 max-md:hidden md:p-[8px] bg-surface export-btns sticky-box" id="sticky">
     </div>
 
     <div id="mobile-bottom-bar"
-      class=" md:hidden fixed bottom-0 left-0 right-0 bg-white z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-2 border-t border-[color:var(--border)]">
+      class="md:hidden fixed bottom-0 left-0 right-0 bg-surface z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-2 border-t border-border">
     </div>
 
     <div id="printable" class="overflow-auto">
@@ -60,68 +60,71 @@
   <!-- ========== مودال ویرایش آیتم (یکپارچه) ========== -->
   <div class="modal modal-edit" style="display: none;">
     <div class="modal-overlay"></div>
-    <div class="modal-content w-[72rem] flex flex-col z-10 p-6 bg-white">
+    <div class="modal-content w-[72rem] flex flex-col z-10 p-6 bg-surface">
       <!-- هدر مودال -->
-      <div class="flex items-center justify-between mb-4 pb-2 border-b">
-        <h2 class="text-xl font-bold">ویرایش سوال</h2>
-        <button class="modal-close-btn text-2xl leading-none hover:text-gray-600">&times;</button>
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-border">
+        <h2 class="text-xl font-bold text-primary">ویرایش سوال</h2>
+        <button class="modal-close-btn text-2xl leading-none hover:text-secondary">&times;</button>
       </div>
 
       <!-- دکمه آپلود تصویر (در صورت نبود تصویر) -->
       <div id="modalImageUploadContainer" class="mb-2">
         <input type="file" id="modalImageUpload" accept="image/*" class="sr-only">
-        <label for="modalImageUpload" class="btn px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
+        <label for="modalImageUpload" class="btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
           <i class="bi bi-image"></i> افزودن تصویر
         </label>
       </div>
 
-      <!-- ========== ویرایشگر متن پیشرفته (Rich Text) با تولبار یکپارچه و Tailwind ========== -->
-      <div class="rich-editor-wrapper relative w-full bg-white border border-gray-300 mb-4" dir="rtl">
-        <!-- تولبار واکنش‌گرا با Tailwind -->
+      <!-- ========== ویرایشگر متن پیشرفته (Rich Text) با تولبار یکپارچه ========== -->
+      <div class="rich-editor-wrapper relative w-full bg-surface border border-border-light mb-4" dir="rtl">
+        <!-- تولبار واکنش‌گرا -->
         <div
-          class="rich-editor-toolbar bg-gray-100 border-b border-gray-200 p-2 z-20 w-full overflow-x-auto whitespace-nowrap md:overflow-visible md:whitespace-normal md:flex md:flex-wrap md:items-center md:gap-2"
+          class="rich-editor-toolbar bg-surface-dark border-b border-border-light p-2 z-20 w-full overflow-x-auto whitespace-nowrap md:overflow-visible md:whitespace-normal md:flex md:flex-wrap md:items-center md:gap-2"
           id="modal-toolbar">
           <div class="toolbar-scroll inline-flex items-center gap-1 md:contents">
             <!-- گروه دکمه‌های استایل -->
-            <div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
+            <div
+              class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light last:border-l-0">
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-command="bold" title="پررنگ"><i class="bi bi-type-bold"></i></button>
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-command="italic" title="ایتالیک"><i class="bi bi-type-italic"></i></button>
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-command="underline" title="زیرخط"><i class="bi bi-type-underline"></i></button>
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-command="strikeThrough" title="خط خورده"><i class="bi bi-type-strikethrough"></i></button>
             </div>
             <!-- گروه چینش -->
-            <div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
+            <div
+              class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light last:border-l-0">
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-command="justifyRight" title="راست چین"><i class="bi bi-justify-right"></i></button>
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-command="justifyCenter" title="وسط چین"><i class="bi bi-text-center"></i></button>
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-command="justifyLeft" title="چپ چین"><i class="bi bi-justify-left"></i></button>
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-command="justifyFull" title="هم‌تراز"><i class="bi bi-justify"></i></button>
             </div>
             <!-- رنگ و اندازه فونت -->
-            <div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-gray-300 last:border-l-0">
+            <div
+              class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light last:border-l-0">
               <div class="toolbar-color-picker relative inline-flex items-center">
                 <input type="color" id="modal-text-color" class="absolute opacity-0 w-0 h-0" value="#333333">
                 <label for="modal-text-color"
-                  class="color-label inline-flex items-center gap-1 px-3 h-9 rounded-full bg-transparent text-gray-700 hover:bg-gray-200 cursor-pointer"><i
+                  class="color-label inline-flex items-center gap-1 px-3 h-9 rounded-circle bg-transparent text-secondary hover:bg-surface-darker cursor-pointer"><i
                     class="bi bi-palette"></i> رنگ</label>
               </div>
               <select id="modal-font-size"
-                class="font-size-select h-9 px-3 border border-gray-300 bg-white text-gray-700 text-sm cursor-pointer outline-none focus:border-gray-500"
+                class="font-size-select h-9 px-3 border border-border-light bg-surface text-secondary text-sm cursor-pointer outline-none focus:border-primary"
                 title="اندازه فونت">
                 <option value="12">۱۲</option>
                 <option value="14">۱۴</option>
@@ -136,49 +139,49 @@
             <!-- undo/redo -->
             <div class="toolbar-group inline-flex items-center gap-0.5 px-1 last:border-l-0">
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-action="undo" title="بازگشت"><i class="bi bi-arrow-counterclockwise"></i></button>
               <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-full p-2 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
                 data-action="redo" title="انجام دوباره"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
           </div>
         </div>
 
-        <!-- باکس ویرایش متن (استایل‌های پایه با Tailwind + placeholder در CSS) -->
-        <div class="rich-editor-content h-[100px] overflow-y-auto p-4 leading-relaxed outline-none bg-white"
+        <!-- باکس ویرایش متن -->
+        <div class="rich-editor-content h-[100px] overflow-y-auto p-4 leading-relaxed outline-none bg-surface"
           id="modal-text-editor" contenteditable="true" data-placeholder="متن سوال را بنویسید..."></div>
       </div>
 
-      <!-- نوار ابزار تنظیمات تصویر (فقط زمانی نمایش داده می‌شود که تصویر وجود دارد) -->
+      <!-- نوار ابزار تنظیمات تصویر -->
       <div id="previewImageToolbar" dir="rtl"
-        class="hidden min-h-[60px] border-y border-gray-200 py-2 flex overflow-x-auto flex-row flex-nowrap items-center gap-4 mb-4">
+        class="hidden min-h-[60px] border-y border-border-light py-2 flex overflow-x-auto flex-row flex-nowrap items-center gap-4 mb-4">
 
         <!-- ارتفاع تصویر -->
         <div class="flex-none flex items-center gap-3 min-w-[180px] flex-1">
-          <span class="text-sm font-medium text-gray-700">ارتفاع:</span>
+          <span class="text-sm font-medium text-secondary">ارتفاع:</span>
           <div class="flex items-center gap-2 flex-1">
             <input type="range" id="previewImgHeight" min="20" max="800" value="300"
-              class="w-24 sm:w-32 h-2 bg-gray-200 rounded-[var(--radius)] appearance-none cursor-pointer accent-blue-600">
+              class="w-24 sm:w-32 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary">
             <span id="previewImgHeightValue"
-              class="text-xs bg-gray-100 px-2 py-1 rounded-[var(--radius)] text-gray-600 w-12 text-center">300px</span>
+              class="text-xs bg-surface-darker px-2 py-1 rounded-custom text-secondary w-12 text-center">300px</span>
           </div>
         </div>
 
         <!-- دکمه‌های تراز -->
-        <div class="flex-none flex items-center gap-1 rounded-[var(--radius)]">
+        <div class="flex-none flex items-center gap-1 rounded-custom">
           <button
-            class="btn px-4 py-2 rounded-[var(--radius)] bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 flex items-center gap-2"
+            class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
             data-align="right" title="تراز به راست">
             <i class="bi bi-align-start"></i>
           </button>
           <button
-            class="btn px-4 py-2 rounded-[var(--radius)] bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 flex items-center gap-2"
+            class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
             data-align="center" title="تراز به وسط">
             <i class="bi bi-align-middle"></i>
           </button>
           <button
-            class="btn px-4 py-2 rounded-[var(--radius)] bg-gray-100 hover:bg-gray-200  text-sm font-medium text-gray-700 flex items-center gap-2"
+            class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
             data-align="left" title="تراز به چپ">
             <i class="bi bi-align-end"></i>
           </button>
@@ -186,7 +189,7 @@
 
         <!-- دکمه برش -->
         <button id="previewCropBtn"
-          class="flex-none btn px-4 py-2 rounded-[var(--radius)] bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 flex items-center gap-2">
+          class="flex-none btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2">
           <i class="bi bi-crop"></i>
           <span class="hidden sm:inline">برش</span>
         </button>
@@ -194,20 +197,20 @@
         <!-- تنظیمات روشنایی و کنتراست -->
         <div class="flex-none flex flex-row items-stretch sm:items-center gap-3 flex-wrap">
           <div class="flex items-center gap-2">
-            <span class="whitespace-nowrap text-sm font-medium text-gray-700">روشنایی:</span>
+            <span class="whitespace-nowrap text-sm font-medium text-secondary">روشنایی:</span>
             <input type="range" id="previewImgBrightness" min="0" max="200" value="100"
-              class="w-20 sm:w-24 h-2 bg-gray-200 rounded-[var(--radius)] appearance-none cursor-pointer accent-blue-600">
+              class="w-20 sm:w-24 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary">
           </div>
           <div class="flex items-center gap-2">
-            <span class="whitespace-nowrap text-sm font-medium text-gray-700">کنتراست:</span>
+            <span class="whitespace-nowrap text-sm font-medium text-secondary">کنتراست:</span>
             <input type="range" id="previewImgContrast" min="0" max="200" value="100"
-              class="w-20 sm:w-24 h-2 bg-gray-200 rounded-[var(--radius)] appearance-none cursor-pointer accent-blue-600">
+              class="w-20 sm:w-24 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary">
           </div>
         </div>
 
         <!-- دکمه حذف -->
         <button id="removeImageBtn"
-          class="flex-none btn px-4 py-2 rounded-[var(--radius)] bg-red-50 hover:bg-red-100 text-sm font-medium text-red-600 flex items-center gap-2">
+          class="flex-none btn px-4 py-2 rounded-custom bg-error-light hover:bg-error text-sm font-medium flex items-center gap-2">
           <i class="bi bi-trash"></i>
           <span class="hidden sm:inline">حذف</span>
         </button>
@@ -215,11 +218,12 @@
 
       <!-- ========== جدول پیش‌نمایش ========== -->
       <div class="mb-4 relative">
-        <table class="w-full border-collapse bg-white" style="border: 1px solid #333;">
+        <table class="w-full border-collapse bg-surface" style="border: 1px solid var(--text-primary);">
           <tr>
-            <td id="modal-Qscore" style="border: 1px solid #333;" class="w-10 text-center font-bold"></td>
+            <td id="modal-Qscore" style="border: 1px solid var(--text-primary);" class="w-10 text-center font-bold">
+            </td>
             <td class="p-2 relative modal-preview-cell" id="modal-preview-cell">
-              <!-- محتوای پیش‌نمایش (متن و تصویر) در اینجا درج می‌شود -->
+              <!-- محتوای پیش‌نمایش -->
             </td>
           </tr>
         </table>
@@ -228,8 +232,8 @@
       <!-- چک‌باکس نمایش متن و دکمه ذخیره -->
       <div class="flex items-center justify-between mb-2">
         <label class="flex items-center gap-1">
-          <input type="checkbox" id="modal-show-text" class="w-5 h-5">
-          <span>نمایش متن سوال</span>
+          <input type="checkbox" id="modal-show-text" class="w-5 h-5 accent-primary">
+          <span class="text-secondary">نمایش متن سوال</span>
         </label>
         <button id="save-modal-btn" class="btn px-3 py-1">
           <i class="bi bi-floppy"></i> ذخیره
@@ -239,19 +243,19 @@
     </div>
   </div>
 
-  <!-- مودال برش تصویر (یکپارچه) -->
+  <!-- مودال برش تصویر -->
   <div id="cropModal"
-    class="crop-modal fixed inset-0 bg-black/80 backdrop-blur z-[9999] flex items-center justify-center p-4 invisible opacity-0 transition-all">
-    <div class="crop-panel
-    md:max-w-[600px] bg-white rounded-[var(--radius)] p-2.5 w-full max-w-[450px] scale-90 transition-transform duration-300
-    ">
-      <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><i class="bi bi-crop"></i> برش تصویر</h3>
+    class="crop-modal fixed inset-0 bg-overlay backdrop-blur z-[9999] flex items-center justify-center p-4 invisible opacity-0 transition-all">
+    <div
+      class="crop-panel md:max-w-[600px] bg-surface rounded-custom p-2.5 w-full max-w-[450px] scale-90 transition-transform duration-300">
+      <h3 class="text-lg font-medium mb-4 flex items-center gap-2 text-primary"><i class="bi bi-crop"></i> برش تصویر
+      </h3>
       <div class="crop-container w-full max-h-[400px] mb-2.5">
         <img id="cropImage" class="block max-w-full" src="" alt="برای کراپ">
       </div>
       <div class="crop-actions flex gap-3 mt-5">
         <button id="applyCrop" class="btn flex-1 py-3">اعمال برش</button>
-        <button id="cancelCrop" class="btn flex-1 py-3">لغو</button>
+        <button id="cancelCrop" class="btn btn-secondary flex-1 py-3">لغو</button>
       </div>
     </div>
   </div>
@@ -259,53 +263,52 @@
   <!-- ========== مودال هوشمند پرامپت‌ساز (AI Prompt) ========== -->
   <div class="modal modal-ai" style="display: none;">
     <div class="modal-overlay"></div>
-    <div class="modal-content max-w-[42rem] md:p-4 bg-white shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="modal-content max-w-[42rem] md:p-4 bg-surface shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- هدر -->
-      <div class="flex items-center justify-between border-b p-4 sticky top-0 bg-white z-10">
-        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+      <div class="flex items-center justify-between border-b border-border-light p-4 sticky top-0 bg-surface z-10">
+        <h2 class="text-lg font-bold text-primary flex items-center gap-2">
           <i class="bi bi-magic"></i> ساخت سوال با هوش مصنوعی
         </h2>
-        <button class="modal-close-btn text-gray-400 hover:text-gray-600 transition">
+        <button class="modal-close-btn text-muted hover:text-secondary transition">
           <i class="bi bi-x-lg"></i>
         </button>
       </div>
 
       <!-- محتوا -->
       <div class="py-5 space-y-3">
-        <div class="relative bg-white/70 backdrop-blur-sm border border-gray-200 
-            rounded-[var(--radius)] p-5 shadow-sm transition-all duration-200
+        <div class="relative bg-background/70 backdrop-blur-sm border border-border-light 
+            rounded-custom p-5 shadow-sm transition-all duration-200
             focus-within:shadow-md">
 
           <!-- عنوان -->
           <div class="flex items-center justify-between">
-            <label for="aiTopicInput" class="text-sm font-semibold text-gray-800">
+            <label for="aiTopicInput" class="text-sm font-semibold text-primary">
               توضیح نوع سوال
             </label>
 
             <!-- چیپ تعداد سوال -->
-            <div class="flex items-center gap-2  
-                px-3 py-1.5 rounded-[var(--radius)] border">
-              <span class="text-xs font-medium">تعداد</span>
-              <input type="text" id="aiCountInput" data-number-input="true" data-float="false" class="w-10 bg-transparent text-center text-sm font-semibold 
-               focus:outline-none" placeholder="۰">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-custom border border-border-light">
+              <span class="text-xs font-medium text-secondary">تعداد</span>
+              <input type="text" id="aiCountInput" data-number-input="true" data-float="false"
+                class="w-10 bg-transparent text-center text-sm font-semibold text-primary focus:outline-none"
+                placeholder="۰">
             </div>
           </div>
 
           <!-- فیلد توضیحات -->
           <div class="relative my-1">
-            <textarea id="aiTopicInput" rows="2" class="w-full resize-none bg-gray-50 border border-gray-200
-             rounded-[var(--radius)] p-2 md:pl-10 text-sm text-gray-700
-             placeholder:text-gray-400"
+            <textarea id="aiTopicInput" rows="2" class="w-full resize-none bg-surface-dark border border-border-light
+             rounded-custom p-2 md:pl-10 text-sm text-secondary placeholder-muted"
               placeholder="مثلاً: سوالات تستی از فصل حد و پیوستگی، سطح متوسط رو به سخت، ترکیبی..."></textarea>
 
             <!-- آیکن راهنما -->
-            <div class="absolute top-3 left-3 text-gray-400">
+            <div class="absolute top-3 left-3 text-muted">
               <i class="bi bi-pencil-square text-sm"></i>
             </div>
           </div>
 
           <!-- توضیح کمکی -->
-          <p class="text-xs text-gray-500 flex items-start gap-2 leading-relaxed">
+          <p class="text-xs text-muted flex items-start gap-2 leading-relaxed">
             <i class="bi bi-info-circle"></i>
             توضیح دقیق درباره مبحث، نوع سوال، درجه سختی و سبک طراحی کمک می‌کند خروجی دقیق‌تری دریافت کنید.
           </p>
@@ -314,55 +317,55 @@
 
 
         <!-- بخش پرامپت پیشنهادی -->
-        <div id="AiModal" class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-2">
+        <div id="AiModal" class="bg-surface-dark p-4 rounded-custom space-y-2">
           <div class="flex items-center justify-between">
-            <label class="font-medium text-gray-700 flex items-center gap-1">
+            <label class="font-medium text-secondary flex items-center gap-1">
               <i class="bi bi-chat-dots"></i> پرامپت تولید سوال
             </label>
-            <button id="copyAiPromptBtn" class="btn px-3 py-1 flex items-center gap-1">
+            <button id="copyAiPromptBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
               <i class="bi bi-clipboard"></i> کپی
             </button>
           </div>
           <div id="aiPromptDisplay"
-            class="hidden bg-white border border-gray-200 rounded-lg p-3 font-mono text-sm text-gray-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+            class="hidden bg-surface border border-border-light rounded-custom p-3 font-mono text-sm text-secondary whitespace-pre-wrap max-h-32 overflow-y-auto">
           </div>
-          <p class="text-xs text-gray-500 flex items-center gap-1">
+          <p class="text-xs text-muted flex items-center gap-1">
             <i class="bi bi-info-circle"></i> این پرامپت را برای AI بفرستید و خروجی را در بخش پایین بچسبانید.
           </p>
         </div>
 
         <!-- بخش ورودی JSON -->
-        <div class="bg-gray-50 p-4 rounded-[var(--radius)] space-y-3">
+        <div class="bg-surface-dark p-4 rounded-custom space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <label class="font-medium text-gray-700 flex items-center gap-1">
+            <label class="font-medium text-secondary flex items-center gap-1">
               <i class="bi bi-filetype-json"></i> خروجی AI
             </label>
             <div class="flex gap-2">
-              <button id="pasteAiJsonBtn" class="btn px-3 py-1 flex items-center gap-1">
+              <button id="pasteAiJsonBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
                 <i class="bi bi-clipboard-plus"></i> چسباندن
               </button>
             </div>
           </div>
           <textarea id="aiJsonInput" rows="4"
-            class="hidden w-full border border-gray-300 rounded-[var(--radius)]  p-2 font-mono text-sm bg-white"
+            class="hidden w-full border border-border-light rounded-custom p-2 font-mono text-sm bg-surface"
             placeholder='{ "items": [ {"text": "فرمول $...$"} ] }'></textarea>
-          <p class="text-xs text-gray-500 flex items-center gap-1">
+          <p class="text-xs text-muted flex items-center gap-1">
             <i class="bi bi-info-circle"></i> پاسخ AI را اینجا بچسبانید.
           </p>
         </div>
 
-        <button id="addAiItemsToRangeBtn" class="btn justify-center px-3 py-1 flex items-center gap-1"
+        <button id="addAiItemsToRangeBtn" class="btn btn-secondary justify-center px-3 py-1 flex items-center gap-1"
           style="width: 100%;">
           <i class="bi bi-plus-lg"></i> افزودن
         </button>
 
         <!-- بخش پیش‌نمایش کارت‌ها -->
-        <div id="aiPreviewContainer" class="border-t pt-4 space-y-3 hidden">
-          <h3 class="font-medium text-gray-700 flex items-center gap-1">
+        <div id="aiPreviewContainer" class="border-t border-border-light pt-4 space-y-3 hidden">
+          <h3 class="font-medium text-secondary flex items-center gap-1">
             <i class="bi bi-card-list"></i> پیش‌نمایش آیتم‌ها
           </h3>
           <div id="aiItemsContainer" class="grid grid-cols-1 gap-3 max-h-80 pr-1"></div>
-          <p id="aiEmptyPreviewMsg" class="text-sm text-gray-400 text-center py-4 hidden">
+          <p id="aiEmptyPreviewMsg" class="text-sm text-muted text-center py-4 hidden">
             <i class="bi bi-inbox"></i> هیچ آیتمی برای نمایش وجود ندارد.
           </p>
         </div>
@@ -372,14 +375,14 @@
 
   <button id="toTop" title="برو بالا" class="
     fixed bottom-7 right-7 z-[1000]
-    w-14 h-14 rounded-full
-    bg-[var(--primary)]
-    text-white text-2xl
+    w-14 h-14 rounded-circle
+    bg-primary-gradient
+    text-inverse text-2xl
     flex items-center justify-center
     transition-all duration-300 ease-out
     opacity-0 invisible translate-y-6
     hover:-translate-y-1 hover:scale-110
-    hover:shadow-xl
+    hover:shadow-lg
     max-md:bottom-[calc(80px+env(safe-area-inset-bottom))]
     max-md:w-14 max-md:h-14 max-md:text-[1.8rem]
   ">
