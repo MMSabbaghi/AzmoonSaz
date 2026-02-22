@@ -240,6 +240,22 @@ function animateRemoveItem(element, callback) {
   }, 300);
 }
 
+function renderRangesWithAnimation() {
+  rangesContainer.innerHTML = "";
+  appState.ranges.forEach((r, index) => {
+    setTimeout(() => {
+      const el = createRangeElement(r);
+      el.classList.add("range-item-enter");
+      rangesContainer.appendChild(el);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.classList.remove("range-item-enter");
+        });
+      });
+    }, index * 100);
+  });
+}
+
 // ========== Item Rendering ==========
 function renderItemContent(item, options = {}) {
   const { rangeDesc = "", imageClass = "", textClass = "" } = options;
@@ -1801,6 +1817,71 @@ rangesContainer.addEventListener("touchmove", handleTouchMoveDrag, {
 });
 rangesContainer.addEventListener("touchend", handleTouchEndDrag);
 
+// ========== IndexedDB Storage ==========
+const APP_DB_NAME = "QuizAppDB";
+const APP_STATE_KEY = "appState";
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(APP_DB_NAME, 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(APP_STATE_KEY)) {
+        db.createObjectStore(APP_STATE_KEY, { keyPath: "id" });
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function saveStateToDB(state) {
+  const db = await openDB();
+  const tx = db.transaction(APP_STATE_KEY, "readwrite");
+  const store = tx.objectStore(APP_STATE_KEY);
+  store.put({ id: "currentState", data: state });
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function loadStateFromDB() {
+  const db = await openDB();
+  const tx = db.transaction(APP_STATE_KEY, "readonly");
+  const store = tx.objectStore(APP_STATE_KEY);
+  const request = store.get("currentState");
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result?.data);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function clearStateFromDB() {
+  const db = await openDB();
+  const tx = db.transaction(APP_STATE_KEY, "readwrite");
+  const store = tx.objectStore(APP_STATE_KEY);
+  store.delete("currentState");
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function saveStateToIndexedDB() {
+  try {
+    await saveStateToDB(appState);
+    showToast("داده‌ها با موفقیت در حافظه ذخیره شدند.");
+  } catch (err) {
+    console.error(err);
+    showToast("خطا در ذخیره‌سازی", "error");
+  }
+}
+
+document
+  .getElementById("saveToIndexedDB")
+  .addEventListener("click", saveStateToIndexedDB);
+
 // ========== Import/Export ==========
 function buildItemsFromRangeData(rangeData) {
   if (rangeData.items) {
@@ -1850,26 +1931,16 @@ function importRangesFromData(data) {
   });
 }
 
+function applyImportedData(data) {
+  importRangesFromData(data);
+  renderRangesWithAnimation();
+  renderNamesSection();
+}
+
 function processImportedFile(fileContent) {
   try {
     const data = JSON.parse(fileContent);
-    importRangesFromData(data);
-
-    rangesContainer.innerHTML = "";
-    appState.ranges.forEach((r, index) => {
-      setTimeout(() => {
-        const el = createRangeElement(r);
-        el.classList.add("range-item-enter");
-        rangesContainer.appendChild(el);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            el.classList.remove("range-item-enter");
-          });
-        });
-      }, index * 100);
-    });
-
-    renderNamesSection();
+    applyImportedData(data);
   } catch (err) {
     console.error("Invalid JSON file:", err);
     showToast("فایل JSON نامعتبر است!", "error");
@@ -2120,11 +2191,31 @@ function setupCropButton() {
 }
 
 // ========== Initialization ==========
+
 document.addEventListener("DOMContentLoaded", function () {
   document.body.style.fontFamily = appState.font;
 
   namesUI = createNamesUI();
   placeNamesUI();
+
+  loadStateFromDB()
+    .then((savedState) => {
+      if (savedState && Object.keys(savedState).length > 0) {
+        showConfirm({
+          msg: "داده‌های ذخیره شده قبلی یافت شد. آیا می‌خواهید بازیابی کنید؟",
+          on_confirm: () => applyImportedData(savedState),
+          on_cancel: async () => {
+            try {
+              await clearStateFromDB();
+            } catch (err) {
+              console.error("خطا در پاک کردن داده:", err);
+              showToast("خطا در پاک کردن داده", "error");
+            }
+          },
+        });
+      }
+    })
+    .catch((err) => console.warn("خطا در بازیابی از داده های ذخیره شده!", err));
 
   initRichTextEditor();
   initPreviewImageToolbar();

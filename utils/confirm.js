@@ -113,12 +113,14 @@
   document.body.appendChild(overlay);
 
   const cancel = overlay.querySelector(".confirm-btn-cancel");
-  const confirm = overlay.querySelector(".confirm-btn-confirm");
+  const confirmBtn = overlay.querySelector(".confirm-btn-confirm");
 
   let onConfirm = null;
+  let onCancel = null;
 
-  function showConfirm({ msg, on_confirm }) {
+  function showConfirm({ msg, on_confirm, on_cancel }) {
     onConfirm = on_confirm;
+    onCancel = on_cancel;
     overlay.querySelector("#confirm-text").innerHTML = msg;
     overlay.style.display = "flex";
   }
@@ -127,16 +129,22 @@
     overlay.style.display = "none";
   }
 
-  cancel.onclick = hideConfirm;
+  cancel.onclick = function () {
+    hideConfirm();
+    if (typeof onCancel === "function") onCancel();
+  };
 
-  confirm.onclick = function () {
+  confirmBtn.onclick = function () {
     hideConfirm();
     if (typeof onConfirm === "function") onConfirm();
   };
 
   // Optional: click outside to close
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) hideConfirm();
+    if (e.target === overlay) {
+      hideConfirm();
+      if (typeof onCancel === "function") onCancel();
+    }
   });
 
   // Expose globally
