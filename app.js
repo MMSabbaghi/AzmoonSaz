@@ -110,7 +110,7 @@ const appState = {
 };
 
 const TEXT_DEFAULTS = {
-  html: "<p>متن جدید</p>",
+  html: "",
   align: "RIGHT",
 };
 
