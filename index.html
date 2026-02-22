@@ -15,6 +15,14 @@
 <body class="bg-background md:p-6">
 
   <div class="max-w-6xl mx-auto bg-surface p-3 md:p-6 rounded-custom shadow-default min-h-[85vh]" id="app-container">
+    <div id="restore-banner" class="hidden bg-surface-dark p-3 rounded-custom mb-2 flex items-center justify-between">
+      <span>تلاش قبل ناتمام مانده است.</span>
+      <div class="flex gap-2">
+        <button id="restore-continue"
+          class="btn btn-sm bg-white text-primary hover:bg-gray-100 truncate">بازیابی</button>
+        <button id="restore-new" class="btn btn-sm bg-white text-primary hover:bg-gray-100 truncate">تلاش جدید</button>
+      </div>
+    </div>
     <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
       <h1 class="text-2xl font-bold text-primary">کوئیز ساز</h1>
       <div class="flex gap-2 w-full md:w-fit">

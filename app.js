@@ -99,41 +99,46 @@ function exportDataObject(data, filename = "data.json") {
   URL.revokeObjectURL(a.href);
 }
 
-// ========== Restore data ==========
-async function handleRestoreCancel(savedState) {
-  try {
-    await clearStateFromDB();
-    showConfirm({
-      msg: "آیا می‌خواهید از داده‌های ذخیره‌شده قبلی خروجی بگیرید؟",
-      on_confirm: () => {
-        exportDataObject(savedState, "backup.json");
-      },
-    });
-  } catch (err) {
-    console.error("خطا در پاک کردن داده:", err);
-    showToast("خطا در پاک کردن داده های موقت!", "error");
-  }
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
 }
 
-async function checkAndRestoreFromDB() {
-  try {
-    const savedState = await loadStateFromDB();
-    if (savedState && Object.keys(savedState).length > 0) {
-      showConfirm({
-        msg: "داده‌های ذخیره شده قبلی یافت شد. آیا می‌خواهید بازیابی کنید؟",
-        on_confirm: () => {
-          applyImportedData(savedState);
-        },
-        on_cancel: () => handleRestoreCancel(savedState),
-      });
-    }
-  } catch (err) {
-    console.warn("خطا در بازیابی از IndexedDB", err);
-  }
+function createDeepProxy(target, onChange) {
+  const handler = {
+    get(obj, prop) {
+      const value = obj[prop];
+      if (value && typeof value === "object") {
+        return createDeepProxy(value, onChange);
+      }
+      return value;
+    },
+    set(obj, prop, newValue) {
+      obj[prop] = newValue;
+      onChange();
+      return true;
+    },
+    deleteProperty(obj, prop) {
+      delete obj[prop];
+      onChange();
+      return true;
+    },
+  };
+  return new Proxy(target, handler);
 }
 
 // ========== Global State Management ==========
-const appState = {
+
+let autoSave = () => {};
+
+const rawState = {
   ranges: [],
   names: [],
   namesCount: 1,
@@ -150,6 +155,8 @@ const appState = {
     topic: "",
   },
 };
+
+let appState = createDeepProxy(rawState, () => autoSave());
 
 const TEXT_DEFAULTS = {
   html: "",
@@ -1881,7 +1888,8 @@ async function saveStateToDB(state) {
   const db = await openDB();
   const tx = db.transaction(APP_STATE_KEY, "readwrite");
   const store = tx.objectStore(APP_STATE_KEY);
-  store.put({ id: "currentState", data: state });
+  const plainState = JSON.parse(JSON.stringify(state));
+  store.put({ id: "currentState", data: plainState });
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = (e) => reject(e.target.error);
@@ -1923,6 +1931,72 @@ async function saveStateToIndexedDB() {
 document
   .getElementById("saveToIndexedDB")
   .addEventListener("click", saveStateToIndexedDB);
+
+// ========== Auto save and Restore data ==========
+autoSave = debounce(() => {
+  saveStateToDB(appState).catch((err) => console.warn("Auto-save error:", err));
+}, 2000);
+
+function showRestoreBanner(savedState) {
+  const banner = document.getElementById("restore-banner");
+  if (!banner) return;
+
+  const continueBtn = document.getElementById("restore-continue");
+  const newBtn = document.getElementById("restore-new");
+  const newContinue = continueBtn.cloneNode(true);
+  const newNew = newBtn.cloneNode(true);
+  continueBtn.parentNode.replaceChild(newContinue, continueBtn);
+  newBtn.parentNode.replaceChild(newNew, newBtn);
+
+  newContinue.addEventListener("click", () =>
+    handleRestoreContinue(savedState),
+  );
+  newNew.addEventListener("click", handleRestoreNew);
+
+  banner.classList.remove("hidden");
+}
+
+function hideRestoreBanner() {
+  const banner = document.getElementById("restore-banner");
+  if (banner) banner.classList.add("hidden");
+}
+
+function handleRestoreContinue(savedState) {
+  applyImportedData(savedState);
+  hideRestoreBanner();
+  showToast("داده های قبلی بازیابی شد.");
+}
+
+function handleRestoreNew() {
+  showConfirm({
+    msg: "آیا مطمئن هستید؟ با شروع جدید، داده ذخیره‌شده قبلی پاک می‌شود.",
+    on_confirm: async () => {
+      await clearStateFromDB();
+      clearAppState();
+      hideRestoreBanner();
+      showToast("داده‌ها پاک شدند.");
+    },
+  });
+}
+
+function clearAppState() {
+  appState.ranges = [];
+  appState.names = [];
+  appState.namesCount = 1;
+  rangesContainer.innerHTML = "";
+  renderNamesSection();
+}
+
+async function checkAndRestoreFromDB() {
+  try {
+    const savedState = await loadStateFromDB();
+    if (savedState && Object.keys(savedState).length > 0) {
+      showRestoreBanner(savedState);
+    }
+  } catch (err) {
+    console.warn("خطا در بازیابی از IndexedDB", err);
+  }
+}
 
 // ========== Import/Export ==========
 function buildItemsFromRangeData(rangeData) {
@@ -2232,6 +2306,9 @@ document.addEventListener("DOMContentLoaded", function () {
   namesUI = createNamesUI();
   placeNamesUI();
 
+  setInterval(() => {
+    saveStateToDB(appState).catch(console.warn);
+  }, 30000);
   checkAndRestoreFromDB();
 
   initRichTextEditor();
