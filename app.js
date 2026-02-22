@@ -90,6 +90,48 @@ function handleFileUpload({ target, onChange, readAs }) {
   });
 }
 
+function exportDataObject(data, filename = "data.json") {
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ========== Restore data ==========
+async function handleRestoreCancel(savedState) {
+  try {
+    await clearStateFromDB();
+    showConfirm({
+      msg: "آیا می‌خواهید از داده‌های ذخیره‌شده قبلی خروجی بگیرید؟",
+      on_confirm: () => {
+        exportDataObject(savedState, "backup.json");
+      },
+    });
+  } catch (err) {
+    console.error("خطا در پاک کردن داده:", err);
+    showToast("خطا در پاک کردن داده های موقت!", "error");
+  }
+}
+
+async function checkAndRestoreFromDB() {
+  try {
+    const savedState = await loadStateFromDB();
+    if (savedState && Object.keys(savedState).length > 0) {
+      showConfirm({
+        msg: "داده‌های ذخیره شده قبلی یافت شد. آیا می‌خواهید بازیابی کنید؟",
+        on_confirm: () => {
+          applyImportedData(savedState);
+        },
+        on_cancel: () => handleRestoreCancel(savedState),
+      });
+    }
+  } catch (err) {
+    console.warn("خطا در بازیابی از IndexedDB", err);
+  }
+}
+
 // ========== Global State Management ==========
 const appState = {
   ranges: [],
@@ -1948,7 +1990,7 @@ function processImportedFile(fileContent) {
 }
 
 function exportData() {
-  const exportData = {
+  exportDataObject({
     names: appState.names,
     namesCount: appState.namesCount,
     ranges: appState.ranges.map((r) => ({
@@ -1958,15 +2000,7 @@ function exportData() {
       desc: r.desc,
       items: r.items,
     })),
-  };
-  const blob = new Blob([JSON.stringify(exportData)], {
-    type: "application/json",
   });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "data.json";
-  a.click();
-  URL.revokeObjectURL(a.href);
 }
 
 document.getElementById("exportJson").onclick = exportData;
@@ -2192,34 +2226,6 @@ function setupCropButton() {
 }
 
 // ========== Initialization ==========
-async function checkAndRestoreFromDB() {
-  try {
-    const savedState = await loadStateFromDB();
-    if (savedState && Object.keys(savedState).length > 0) {
-      showConfirm({
-        msg: "داده‌های ذخیره شده قبلی یافت شد. آیا می‌خواهید بازیابی کنید؟",
-        on_confirm: () => {
-          applyImportedData(savedState);
-        },
-        on_cancel: async () => {
-          try {
-            await clearStateFromDB();
-            showConfirm({
-              msg: "آیا می‌خواهید از داده‌های قبلی خروجی بگیرید؟",
-              on_confirm: exportData,
-            });
-          } catch (err) {
-            console.error("خطا در پاک کردن داده:", err);
-            showToast("خطا در پاک کردن داده های موقت!", "error");
-          }
-        },
-      });
-    }
-  } catch (err) {
-    console.warn("خطا در بازیابی از IndexedDB", err);
-  }
-}
-
 document.addEventListener("DOMContentLoaded", function () {
   document.body.style.fontFamily = appState.font;
 
