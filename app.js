@@ -1947,7 +1947,7 @@ function processImportedFile(fileContent) {
   }
 }
 
-function handleExportJson() {
+function exportData() {
   const exportData = {
     names: appState.names,
     namesCount: appState.namesCount,
@@ -1966,9 +1966,10 @@ function handleExportJson() {
   a.href = URL.createObjectURL(blob);
   a.download = "data.json";
   a.click();
+  URL.revokeObjectURL(a.href);
 }
 
-document.getElementById("exportJson").onclick = handleExportJson;
+document.getElementById("exportJson").onclick = exportData;
 
 handleFileUpload({
   target: document.getElementById("importJson"),
@@ -2191,6 +2192,33 @@ function setupCropButton() {
 }
 
 // ========== Initialization ==========
+async function checkAndRestoreFromDB() {
+  try {
+    const savedState = await loadStateFromDB();
+    if (savedState && Object.keys(savedState).length > 0) {
+      showConfirm({
+        msg: "داده‌های ذخیره شده قبلی یافت شد. آیا می‌خواهید بازیابی کنید؟",
+        on_confirm: () => {
+          applyImportedData(savedState);
+        },
+        on_cancel: async () => {
+          try {
+            await clearStateFromDB();
+            showConfirm({
+              msg: "آیا می‌خواهید از داده‌های قبلی خروجی بگیرید؟",
+              on_confirm: exportData,
+            });
+          } catch (err) {
+            console.error("خطا در پاک کردن داده:", err);
+            showToast("خطا در پاک کردن داده های موقت!", "error");
+          }
+        },
+      });
+    }
+  } catch (err) {
+    console.warn("خطا در بازیابی از IndexedDB", err);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", function () {
   document.body.style.fontFamily = appState.font;
@@ -2198,24 +2226,7 @@ document.addEventListener("DOMContentLoaded", function () {
   namesUI = createNamesUI();
   placeNamesUI();
 
-  loadStateFromDB()
-    .then((savedState) => {
-      if (savedState && Object.keys(savedState).length > 0) {
-        showConfirm({
-          msg: "داده‌های ذخیره شده قبلی یافت شد. آیا می‌خواهید بازیابی کنید؟",
-          on_confirm: () => applyImportedData(savedState),
-          on_cancel: async () => {
-            try {
-              await clearStateFromDB();
-            } catch (err) {
-              console.error("خطا در پاک کردن داده:", err);
-              showToast("خطا در پاک کردن داده", "error");
-            }
-          },
-        });
-      }
-    })
-    .catch((err) => console.warn("خطا در بازیابی از داده های ذخیره شده!", err));
+  checkAndRestoreFromDB();
 
   initRichTextEditor();
   initPreviewImageToolbar();
