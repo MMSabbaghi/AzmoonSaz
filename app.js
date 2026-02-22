@@ -706,8 +706,11 @@ function setupDropdownMenu(rangeElement) {
   });
 
   const closeDropdownOnOutsideClick = (e) => {
-    if (!dropdown.contains(e.target) && !dropdownToggle.contains(e.target)) {
-      dropdownMenu.classList.remove("hidden");
+    if (
+      !dropdownMenu.contains(e.target) &&
+      !dropdownToggle.contains(e.target)
+    ) {
+      dropdownMenu.classList.add("hidden");
     }
   };
   document.addEventListener("click", closeDropdownOnOutsideClick);
