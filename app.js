@@ -1177,7 +1177,7 @@ function createQuestionRowHtml(qNum, item, range) {
           ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
         </span>
       </td>
-      <td class="p-0">
+      <td class="px-2">
         ${renderItemForQuiz(item, range.desc)}
       </td>
     </tr>`;
