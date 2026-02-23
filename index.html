@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>ساخت کوییز</title>
+  <title>آزمون ساز</title>
   <link href="./utils/cropper/cropper.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="./icons/bootstrap-icons.min.css">
   <script src="./utils/3.4.17"></script>
@@ -15,30 +15,57 @@
 <body class="bg-background md:p-6">
 
   <div class="max-w-6xl mx-auto bg-surface p-3 md:p-6 rounded-custom shadow-default min-h-[85vh]" id="app-container">
-    <div id="restore-banner" class="hidden bg-surface-dark p-3 rounded-custom mb-2 flex items-center justify-between">
-      <span>تلاش قبل ناتمام مانده است.</span>
-      <div class="flex gap-2">
-        <button id="restore-continue"
-          class="btn btn-sm bg-white text-primary hover:bg-gray-100 truncate">بازیابی</button>
-        <button id="restore-new" class="btn btn-sm bg-white text-primary hover:bg-gray-100 truncate">تلاش جدید</button>
-      </div>
-    </div>
-    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
-      <h1 class="text-2xl font-bold text-primary">کوئیز ساز</h1>
-      <div class="flex gap-2 w-full md:w-fit">
-        <button id="saveToIndexedDB" class="btn btn-outline px-4 py-2">
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2 relative">
+      <h1 class="text-2xl font-bold text-primary">آزمون ساز</h1>
+
+      <!-- دکمه‌های دسکتاپ (فقط آیکون با tooltip) -->
+      <div class="hidden md:flex gap-2 bg-surface">
+        <button id="newButton" class="btn btn-outline px-4 py-2" data-tooltip="شروع جدید">
+          <i class="bi bi-folder-plus"></i>
+        </button>
+        <button id="saveToIndexedDB" class="btn btn-outline px-4 py-2" data-tooltip="ذخیره">
           <i class="bi bi-floppy"></i>
         </button>
-        <button id="exportJson" class="btn px-4 py-2 w-full md:w-fit truncate">
+        <button id="exportJson" class="btn btn-outline  px-4 py-2" data-tooltip="گرفتن خروجی">
           <i class="bi bi-file-earmark-arrow-up"></i>
-          گرفتن خروجی
         </button>
-        <input type="file" id="importJson" class="sr-only">
-        <label for="importJson" class="btn btn-secondary px-4 py-2 w-full md:w-fit truncate">
+        <input type="file" id="importJson" class="sr-only" accept=".json">
+        <label for="importJson" class="btn btn-outline px-4 py-2" data-tooltip="ورود اطلاعات">
           <i class="bi bi-file-earmark-arrow-down"></i>
-          <span> ورود اطلاعات</span>
         </label>
       </div>
+
+      <!-- دکمه همبرگری موبایل -->
+      <div class="md:hidden">
+        <button id="saveToIndexedDBMobile" class="btn btn-outline p-2 text-xl border-none" data-tooltip="ذخیره">
+          <i class="bi bi-floppy"></i>
+        </button>
+        <button id="hamburgerBtn" class="btn btn-outline p-2 text-xl border-none">
+          <i class="bi bi-list"></i>
+        </button>
+      </div>
+
+      <!-- Drawer منوی موبایل (در راست) -->
+      <div id="mobileDrawer"
+        class="fixed top-0 right-0 h-full w-64 bg-surface shadow-lg z-50 transform transition-transform duration-300 ease-in-out translate-x-full">
+        <div class="flex flex-col gap-1 p-4">
+          <button id="newButtonMobile"
+            class="flex items-center gap-2 px-4 py-3 text-secondary hover:bg-surface-dark rounded-custom w-full">
+            <i class="bi bi-folder-plus"></i> شروع جدید
+          </button>
+          <button id="exportJsonMobile"
+            class="flex items-center gap-2 px-4 py-3 text-secondary hover:bg-surface-dark rounded-custom w-full">
+            <i class="bi bi-file-earmark-arrow-up"></i> گرفتن خروجی
+          </button>
+          <label for="importJsonMobile"
+            class="px-4 py-3 text-secondary hover:bg-surface-dark rounded-custom w-full cursor-pointer text-center">
+            <i class="bi bi-file-earmark-arrow-down"></i> ورود اطلاعات
+          </label>
+          <input type="file" id="importJsonMobile" accept=".json" class="sr-only">
+        </div>
+      </div>
+
+      <div id="drawerBackdrop" class="fixed inset-0 bg-overlay backdrop-blur z-40 hidden"></div>
     </div>
 
     <div id="ranges" class="flex flex-col gap-2"></div>
@@ -386,7 +413,7 @@
   </div>
 
   <button id="toTop" title="برو بالا" class="
-    fixed bottom-7 right-7 z-[1000]
+    fixed bottom-7 right-7 z-50
     w-14 h-14 rounded-circle
     bg-primary-gradient
     text-inverse text-2xl

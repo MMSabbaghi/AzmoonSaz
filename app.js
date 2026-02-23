@@ -111,23 +111,23 @@ function debounce(func, wait) {
   };
 }
 
-function createDeepProxy(target, onChange) {
+function createDeepProxy(target) {
   const handler = {
     get(obj, prop) {
       const value = obj[prop];
       if (value && typeof value === "object") {
-        return createDeepProxy(value, onChange);
+        return new Proxy(value, handler);
       }
       return value;
     },
     set(obj, prop, newValue) {
       obj[prop] = newValue;
-      onChange();
+      if (_autoSave) _autoSave();
       return true;
     },
     deleteProperty(obj, prop) {
       delete obj[prop];
-      onChange();
+      if (_autoSave) _autoSave();
       return true;
     },
   };
@@ -136,7 +136,7 @@ function createDeepProxy(target, onChange) {
 
 // ========== Global State Management ==========
 
-let autoSave = () => {};
+let _autoSave = null;
 
 const rawState = {
   ranges: [],
@@ -156,7 +156,7 @@ const rawState = {
   },
 };
 
-let appState = createDeepProxy(rawState, () => autoSave());
+let appState = createDeepProxy(rawState);
 
 const TEXT_DEFAULTS = {
   html: "",
@@ -362,7 +362,7 @@ function renderRangeItems(rangeElement, rangeId) {
 function createItemThumbnailElement(item, rangeDiv, rangeId) {
   const container = document.createElement("div");
   container.className =
-    "item-thumbnail max-md:p-[8px] relative border border-[#ddd] rounded-[6px] p-1 bg-white transition-all duration-200 cursor-pointer hover:border-[#333] hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]";
+    "item-thumbnail  h-[100px] text-xs overflow-hidden max-md:p-[8px] relative border border-[#ddd] rounded-[6px] p-1 bg-white transition-all duration-200 cursor-pointer hover:border-[#333] hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]";
   container.dataset.itemId = item.id;
   container.innerHTML =
     renderItemContent(item) +
@@ -1924,7 +1924,9 @@ async function clearStateFromDB() {
 async function saveStateToIndexedDB() {
   try {
     await saveStateToDB(appState);
-    showToast("داده‌ها با موفقیت در حافظه ذخیره شدند.");
+    showToast(
+      "داده‌ها در حافظه موقت ذخیره شدند. برای ذخیره دائمی، خروجی بگیرید.",
+    );
   } catch (err) {
     console.error(err);
     showToast("خطا در ذخیره‌سازی", "error");
@@ -1936,51 +1938,9 @@ document
   .addEventListener("click", saveStateToIndexedDB);
 
 // ========== Auto save and Restore data ==========
-autoSave = debounce(() => {
+_autoSave = debounce(() => {
   saveStateToDB(appState).catch((err) => console.warn("Auto-save error:", err));
 }, 2000);
-
-function showRestoreBanner(savedState) {
-  const banner = document.getElementById("restore-banner");
-  if (!banner) return;
-
-  const continueBtn = document.getElementById("restore-continue");
-  const newBtn = document.getElementById("restore-new");
-  const newContinue = continueBtn.cloneNode(true);
-  const newNew = newBtn.cloneNode(true);
-  continueBtn.parentNode.replaceChild(newContinue, continueBtn);
-  newBtn.parentNode.replaceChild(newNew, newBtn);
-
-  newContinue.addEventListener("click", () =>
-    handleRestoreContinue(savedState),
-  );
-  newNew.addEventListener("click", handleRestoreNew);
-
-  banner.classList.remove("hidden");
-}
-
-function hideRestoreBanner() {
-  const banner = document.getElementById("restore-banner");
-  if (banner) banner.classList.add("hidden");
-}
-
-function handleRestoreContinue(savedState) {
-  applyImportedData(savedState);
-  hideRestoreBanner();
-  showToast("داده های قبلی بازیابی شد.");
-}
-
-function handleRestoreNew() {
-  showConfirm({
-    msg: "آیا مطمئن هستید؟ با شروع جدید، داده ذخیره‌شده قبلی پاک می‌شود.",
-    on_confirm: async () => {
-      await clearStateFromDB();
-      clearAppState();
-      hideRestoreBanner();
-      showToast("داده‌ها پاک شدند.");
-    },
-  });
-}
 
 function clearAppState() {
   appState.ranges = [];
@@ -1993,12 +1953,24 @@ function clearAppState() {
 async function checkAndRestoreFromDB() {
   try {
     const savedState = await loadStateFromDB();
-    if (savedState && Object.keys(savedState).length > 0) {
-      showRestoreBanner(savedState);
+    if (savedState && savedState.ranges && savedState.ranges.length) {
+      applyImportedData(savedState);
+      showToast("داده‌های قبلی بازیابی شدند.");
     }
   } catch (err) {
     console.warn("خطا در بازیابی از IndexedDB", err);
   }
+}
+
+function handleNewAttempt() {
+  showConfirm({
+    msg: "آیا مطمئن هستید؟ همه داده‌های فعلی پاک می‌شوند.",
+    on_confirm: async () => {
+      await clearStateFromDB();
+      clearAppState();
+      showToast("داده‌ها پاک شدند.");
+    },
+  });
 }
 
 // ========== Import/Export ==========
@@ -2079,14 +2051,6 @@ function exportData() {
     })),
   });
 }
-
-document.getElementById("exportJson").onclick = exportData;
-
-handleFileUpload({
-  target: document.getElementById("importJson"),
-  onChange: processImportedFile,
-  readAs: "Text",
-});
 
 // ========== UI Helpers (Sticky, To Top) ==========
 const moveToTopBtn = document.getElementById("toTop");
@@ -2302,6 +2266,93 @@ function setupCropButton() {
   });
 }
 
+// ========== Header menu ==========
+function initializeDesktopButtons() {
+  const newBtn = document.getElementById("newButton");
+  const saveBtn = document.getElementById("saveToIndexedDB");
+  const exportBtn = document.getElementById("exportJson");
+
+  if (newBtn) newBtn.addEventListener("click", handleNewAttempt);
+  if (saveBtn) saveBtn.addEventListener("click", saveStateToIndexedDB);
+  if (exportBtn) exportBtn.addEventListener("click", exportData);
+}
+
+function initializeMobileButtons() {
+  const newMobileBtn = document.getElementById("newButtonMobile");
+  const saveMobileBtn = document.getElementById("saveToIndexedDBMobile");
+  const exportMobileBtn = document.getElementById("exportJsonMobile");
+
+  if (newMobileBtn) newMobileBtn.addEventListener("click", handleNewAttempt);
+  if (saveMobileBtn)
+    saveMobileBtn.addEventListener("click", saveStateToIndexedDB);
+  if (exportMobileBtn) exportMobileBtn.addEventListener("click", exportData);
+}
+
+function initializeMobileFileUpload() {
+  const importInput = document.getElementById("importJsonMobile");
+  if (importInput) {
+    handleFileUpload({
+      target: importInput,
+      onChange: processImportedFile,
+      readAs: "Text",
+    });
+  }
+}
+
+function initializeDesktopFileUpload() {
+  const importInput = document.getElementById("importJson");
+  if (importInput) {
+    handleFileUpload({
+      target: importInput,
+      onChange: processImportedFile,
+      readAs: "Text",
+    });
+  }
+}
+
+function initializeHamburgerMenu() {
+  const hamburgerBtn = document.getElementById("hamburgerBtn");
+  const drawer = document.getElementById("mobileDrawer");
+  const backdrop = document.getElementById("drawerBackdrop");
+
+  if (!hamburgerBtn || !drawer || !backdrop) return;
+
+  function openDrawer() {
+    drawer.classList.remove("translate-x-full");
+    drawer.classList.add("translate-x-0");
+    backdrop.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeDrawer() {
+    drawer.classList.add("translate-x-full");
+    drawer.classList.remove("translate-x-0");
+    backdrop.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  hamburgerBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (drawer.classList.contains("translate-x-full")) {
+      openDrawer();
+    } else {
+      closeDrawer();
+    }
+  });
+
+  backdrop.addEventListener("click", closeDrawer);
+
+  drawer.querySelectorAll("button, label").forEach((el) => {
+    el.addEventListener("click", closeDrawer);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !drawer.classList.contains("translate-x-full")) {
+      closeDrawer();
+    }
+  });
+}
+
 // ========== Initialization ==========
 document.addEventListener("DOMContentLoaded", function () {
   document.body.style.fontFamily = appState.font;
@@ -2309,9 +2360,12 @@ document.addEventListener("DOMContentLoaded", function () {
   namesUI = createNamesUI();
   placeNamesUI();
 
-  setInterval(() => {
-    saveStateToDB(appState).catch(console.warn);
-  }, 30000);
+  initializeDesktopButtons();
+  initializeMobileButtons();
+  initializeMobileFileUpload();
+  initializeDesktopFileUpload();
+  initializeHamburgerMenu();
+
   checkAndRestoreFromDB();
 
   initRichTextEditor();
