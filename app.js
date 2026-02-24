@@ -2052,6 +2052,75 @@ function exportData() {
   });
 }
 
+// ========== Share Functions (JSON only, mobile) ==========
+async function shareJSON() {
+  const data = {
+    names: appState.names,
+    namesCount: appState.namesCount,
+    ranges: appState.ranges.map((r) => ({
+      rangeName: r.rangeName,
+      count: r.count,
+      score: r.score,
+      desc: r.desc,
+      items: r.items,
+    })),
+  };
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const file = new File([blob], "quiz-data.json", { type: "application/json" });
+  await shareOrDownloadFile(file, "quiz-data.json", data);
+}
+
+async function shareOrDownloadFile(file, fileName, fallbackData = null) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: "آزمون",
+        text: "فایل JSON آزمون",
+      });
+      showToast("با موفقیت به اشتراک گذاشته شد");
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.warn("Share failed, falling back to download", err);
+        fallbackDownload(file, fileName, fallbackData);
+      }
+    }
+  } else {
+    fallbackDownload(file, fileName, fallbackData);
+  }
+}
+
+function fallbackDownload(file, fileName, fallbackData) {
+  if (fallbackData) {
+    exportDataObject(fallbackData, fileName);
+  } else {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  showToast("فایل ذخیره شد");
+}
+
+function handleExportClick() {
+  if (!isMobile()) {
+    exportData();
+    return;
+  }
+  showConfirm({
+    msg: "نحوه ذخیره را انتخاب کنید:",
+    on_confirm: () => exportData(),
+    on_cancel: () => shareJSON(),
+    confirmText: "دانلود",
+    cancelText: "اشتراک گذاری",
+    confirmIcon: "bi-download",
+    cancelIcon: "bi-share",
+  });
+}
+
 // ========== UI Helpers (Sticky, To Top) ==========
 const moveToTopBtn = document.getElementById("toTop");
 const sticky = document.getElementById("sticky");
@@ -2285,7 +2354,8 @@ function initializeMobileButtons() {
   if (newMobileBtn) newMobileBtn.addEventListener("click", handleNewAttempt);
   if (saveMobileBtn)
     saveMobileBtn.addEventListener("click", saveStateToIndexedDB);
-  if (exportMobileBtn) exportMobileBtn.addEventListener("click", exportData);
+  if (exportMobileBtn)
+    exportMobileBtn.addEventListener("click", handleExportClick);
 }
 
 function initializeMobileFileUpload() {

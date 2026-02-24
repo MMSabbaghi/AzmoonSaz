@@ -33,7 +33,6 @@
       color: var(--primary-dark);
     }
 
-
     .confirm-buttons {
       display: flex;
       gap: 8px;
@@ -47,6 +46,10 @@
       border-radius: var(--radius) ;
       font-size: 14px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
     }
 
     .confirm-btn-confirm {
@@ -64,16 +67,16 @@
       to { background: rgba(0, 0, 0, 0.4); }
     }
 
-              @keyframes slideDown {
-            from {
-              opacity: 0;
-              transform: translateY(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
     @keyframes popupIn {
       from {
@@ -97,31 +100,55 @@
   overlay.innerHTML = `
     <div class="confirm-box">
       <h3 id="confirm-text">آیا اطمینان دارید؟</h3>
-
       <div class="confirm-buttons">
-        <button class="confirm-btn confirm-btn-cancel">
-        <i class="bi bi-x-lg"></i>
-        لغو
+        <button class="confirm-btn confirm-btn-cancel" id="cancelBtn">
+          <i class="bi bi-x-lg"></i>
+          <span id="cancelText">لغو</span>
         </button>
-        <button class="confirm-btn confirm-btn-confirm">
-        <i class="bi bi-check-lg"></i>
-        تأیید
+        <button class="confirm-btn confirm-btn-confirm" id="confirmBtn">
+          <i class="bi bi-check-lg"></i>
+          <span id="confirmText">تأیید</span>
         </button>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
 
-  const cancel = overlay.querySelector(".confirm-btn-cancel");
-  const confirmBtn = overlay.querySelector(".confirm-btn-confirm");
+  const cancelBtn = overlay.querySelector("#cancelBtn");
+  const confirmBtn = overlay.querySelector("#confirmBtn");
+  const cancelText = overlay.querySelector("#cancelText");
+  const confirmText = overlay.querySelector("#confirmText");
+  const confirmIcon = confirmBtn.querySelector("i");
+  const cancelIcon = cancelBtn.querySelector("i");
 
   let onConfirm = null;
   let onCancel = null;
 
-  function showConfirm({ msg, on_confirm, on_cancel }) {
+  function showConfirm({
+    msg,
+    on_confirm,
+    on_cancel,
+    confirmText: customConfirmText = "تأیید",
+    cancelText: customCancelText = "لغو",
+    confirmIcon: customConfirmIcon = "bi-check-lg",
+    cancelIcon: customCancelIcon = "bi-x-lg",
+  }) {
     onConfirm = on_confirm;
     onCancel = on_cancel;
+
+    // Update text and icons
     overlay.querySelector("#confirm-text").innerHTML = msg;
+    confirmText.textContent = customConfirmText;
+    cancelText.textContent = customCancelText;
+
+    // Update icons if provided
+    if (customConfirmIcon) {
+      confirmIcon.className = `bi ${customConfirmIcon}`;
+    }
+    if (customCancelIcon) {
+      cancelIcon.className = `bi ${customCancelIcon}`;
+    }
+
     overlay.style.display = "flex";
   }
 
@@ -129,7 +156,7 @@
     overlay.style.display = "none";
   }
 
-  cancel.onclick = function () {
+  cancelBtn.onclick = function () {
     hideConfirm();
     if (typeof onCancel === "function") onCancel();
   };
