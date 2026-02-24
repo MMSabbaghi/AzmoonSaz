@@ -1014,9 +1014,9 @@ async function tryProcessImagePasteInModal(items) {
             src,
             height: ITEM_DEFAULTS.image.height,
             align: ITEM_DEFAULTS.image.align,
-            showText: modalShowText.checked,
             imageId: createRandomId("img"),
           };
+          temp.showText = modalShowText.checked;
           updateModalPreviewFromTemp();
         } else {
           showConfirm({
@@ -1153,6 +1153,7 @@ async function pasteItemsToRange(rangeId) {
               imageId: item.image.imageId || createRandomId("img"),
             }
           : null,
+        showText: item.showText !== false,
       };
       addItemToRange(rangeId, newItem);
     });
@@ -1295,7 +1296,7 @@ function closeModalElement(modalElement) {
   document.body.classList.remove("overflow-hidden");
   setTimeout(() => {
     modalElement.style.display = "none";
-  }, 300); // مطابق با transition
+  }, 300);
 }
 
 function setupModal(modalElement, options = {}) {
@@ -1356,25 +1357,52 @@ const previewImgContrast = document.getElementById("previewImgContrast");
 const previewCropBtn = document.getElementById("previewCropBtn");
 
 function updateTempItemFromTextEditor() {
+  if (_updatingEditorFromCode) return;
+
   const temp = appState.modal.tempItem;
   if (!temp) return;
 
-  const editor = modalTextEditor;
-  const hasContent = editor.innerText.trim() !== "";
+  const rangeId = appState.modal.rangeId;
+  const range = appState.ranges.find((r) => r.id === rangeId);
+  const rangeDesc = range ? range.desc || "" : "";
 
-  if (hasContent) {
-    if (!temp.text) {
-      temp.text = {
-        html: editor.innerHTML,
-        align: ITEM_DEFAULTS.text.align,
-      };
+  const editor = modalTextEditor;
+  const currentText = editor.innerText.trim();
+  const currentHTML = editor.innerHTML;
+
+  if (_userModified) {
+    if (currentText === "") {
+      _updatingEditorFromCode = true;
+      editor.innerHTML = rangeDesc;
+      _updatingEditorFromCode = false;
+      temp.text = null;
+      _userModified = false;
     } else {
-      temp.text.html = editor.innerHTML;
+      if (!temp.text) {
+        temp.text = { html: currentHTML, align: ITEM_DEFAULTS.text.align };
+      } else {
+        temp.text.html = currentHTML;
+      }
     }
   } else {
-    temp.text = null;
+    if (currentText === "") {
+      if (rangeDesc !== "") {
+        _updatingEditorFromCode = true;
+        editor.innerHTML = rangeDesc;
+        _updatingEditorFromCode = false;
+      }
+      temp.text = null;
+    } else if (currentText === rangeDesc.trim()) {
+      temp.text = null;
+    } else {
+      _userModified = true;
+      if (!temp.text) {
+        temp.text = { html: currentHTML, align: ITEM_DEFAULTS.text.align };
+      } else {
+        temp.text.html = currentHTML;
+      }
+    }
   }
-
   updateModalPreviewFromTemp();
 }
 
@@ -1401,11 +1429,29 @@ function openModalWithTempItem() {
   if (!temp) return;
 
   setupModalEditorFromTemp(temp);
+
+  const range = appState.ranges.find((r) => r.id === appState.modal.rangeId);
+  const rangeDesc = range ? range.desc || "" : "";
+
+  if (!temp.text || !temp.text.html.trim()) {
+    if (rangeDesc) {
+      _updatingEditorFromCode = true;
+      modalTextEditor.innerHTML = rangeDesc;
+      _updatingEditorFromCode = false;
+      temp.text = null;
+      _userModified = false;
+    } else {
+      modalTextEditor.innerHTML = "";
+      temp.text = null;
+      _userModified = false;
+    }
+  } else {
+    _userModified = true;
+  }
+
   updateModalPreviewFromTemp();
   updateModalImageUI();
-
   modalShowText.checked = temp.showText !== false;
-
   openModalElement(modalEdit);
 }
 
@@ -1502,16 +1548,30 @@ function closeEditModal() {
   setTimeout(() => {
     modalTextEditor.innerHTML = "";
   }, 300);
+
+  _updatingEditorFromCode = false;
+  _userModified = false;
 }
 
 modalTextEditor.addEventListener("focus", function () {
-  if (appState.modal.tempItem && appState.modal.tempItem.image) {
-    if (!modalShowText.checked) {
-      modalShowText.checked = true;
-      appState.modal.tempItem.showText = true;
-      updateModalPreviewFromTemp();
-    }
+  const temp = appState.modal.tempItem;
+  if (!temp) return;
+
+  if (!temp.showText) {
+    modalShowText.checked = true;
+    temp.showText = true;
   }
+
+  if (!temp.text) {
+    temp.text = {
+      html: "",
+      align: ITEM_DEFAULTS.text.align,
+    };
+    modalTextEditor.innerHTML = "";
+    modalTextEditor.style.textAlign = "right";
+  }
+
+  updateModalPreviewFromTemp();
 });
 
 modalShowText.addEventListener("change", function (e) {
@@ -1544,13 +1604,18 @@ modalImageUpload.addEventListener("change", function (e) {
   if (file && appState.modal.tempItem) {
     const reader = new FileReader();
     reader.onload = (ev) => {
-      appState.modal.tempItem.image = {
-        src: ev.target.result,
-        height: ITEM_DEFAULTS.image.height,
-        align: ITEM_DEFAULTS.image.align,
-        showText: modalShowText.checked,
-        imageId: createRandomId("img"),
-      };
+      const temp = appState.modal.tempItem;
+      if (!temp.image) {
+        temp.image = {
+          src: ev.target.result,
+          height: ITEM_DEFAULTS.image.height,
+          align: ITEM_DEFAULTS.image.align,
+          imageId: createRandomId("img"),
+        };
+      } else {
+        temp.image.src = ev.target.result;
+        temp.image.imageId = createRandomId("img");
+      }
       updateModalPreviewFromTemp();
       updateModalImageUI();
     };
@@ -2096,7 +2161,10 @@ async function shareJSON() {
       count: r.count,
       score: r.score,
       desc: r.desc,
-      items: r.items,
+      items: r.items.map((item) => ({
+        ...item,
+        showText: item.showText !== false,
+      })),
     })),
   };
   const jsonStr = JSON.stringify(data, null, 2);
@@ -2193,6 +2261,9 @@ moveToTopBtn.addEventListener("click", () => {
 });
 
 // ========== Rich Text Editor Initialization ==========
+let _updatingEditorFromCode = false;
+let _userModified = false;
+
 function initRichTextEditor() {
   const toolbar = document.getElementById("modal-toolbar");
   if (!toolbar) return;
