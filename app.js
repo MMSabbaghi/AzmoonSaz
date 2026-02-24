@@ -158,14 +158,9 @@ const rawState = {
 
 let appState = createDeepProxy(rawState);
 
-const TEXT_DEFAULTS = {
-  html: "",
-  align: "RIGHT",
-};
-
-const IMAGE_DEFAULTS = {
-  height: 75,
-  align: "RIGHT",
+const ITEM_DEFAULTS = {
+  text: { html: "", align: "RIGHT" },
+  image: { height: 75, align: "RIGHT" },
   showText: true,
 };
 
@@ -208,31 +203,32 @@ function reorderRangesInState(newOrderIds) {
 
 // ========== Item Creation ==========
 function createTextItem(
-  html = TEXT_DEFAULTS.html,
-  align = TEXT_DEFAULTS.align,
+  html = ITEM_DEFAULTS.text.html,
+  align = ITEM_DEFAULTS.text.align,
+  showText = ITEM_DEFAULTS.showText,
 ) {
   return {
     id: createRandomId("item"),
     text: { html, align },
     image: null,
+    showText,
   };
 }
 
 function createImageItem(
   src,
   imageId = createRandomId("img"),
-  height = IMAGE_DEFAULTS.height,
-  align = IMAGE_DEFAULTS.align,
-  showText = IMAGE_DEFAULTS.showText,
+  height = ITEM_DEFAULTS.image.height,
+  align = ITEM_DEFAULTS.image.align,
+  showText = ITEM_DEFAULTS.showText,
 ) {
   return {
     id: createRandomId("item"),
     text: null,
-    image: { src, height, align, showText, imageId },
+    image: { src, height, align, imageId },
+    showText,
   };
 }
-
-let justSwiped = false;
 
 // ========== Animation Helpers ==========
 function animateAddElement(element, enterClass) {
@@ -310,14 +306,12 @@ function renderItemContent(item, options = {}) {
   const { rangeDesc = "", imageClass = "", textClass = "" } = options;
   let html = "";
 
-  if (item.image && item.image.showText) {
-    const text = item.text ? item.text.html : rangeDesc;
-    if (text) {
+  if (item.showText) {
+    const textContent = item.text ? item.text.html : rangeDesc;
+    if (textContent && textContent.trim() !== "") {
       const align = item.text ? item.text.align.toLowerCase() : "right";
-      html += `<div class="${textClass}" style="text-align: ${align};">${text}</div>`;
+      html += `<div class="${textClass}" style="text-align: ${align};">${textContent}</div>`;
     }
-  } else if (item.text && !item.image) {
-    html += `<div class="${textClass}" style="text-align: ${item.text.align.toLowerCase()};">${item.text.html}</div>`;
   }
 
   if (item.image) {
@@ -364,8 +358,12 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
   container.className =
     "item-thumbnail  h-[100px] text-xs overflow-hidden max-md:p-[8px] relative border border-[#ddd] rounded-[6px] p-1 bg-white transition-all duration-200 cursor-pointer hover:border-[#333] hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]";
   container.dataset.itemId = item.id;
+
+  const range = appState.ranges.find((r) => r.id === rangeId);
+  const rangeDesc = range ? range.desc : "";
+
   container.innerHTML =
-    renderItemContent(item) +
+    renderItemContent(item, { rangeDesc }) +
     `<button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-error-light text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>`;
 
   const removeBtn = container.querySelector(".remove-item");
@@ -1014,8 +1012,8 @@ async function tryProcessImagePasteInModal(items) {
         if (!temp.image) {
           temp.image = {
             src,
-            height: IMAGE_DEFAULTS.height,
-            align: IMAGE_DEFAULTS.align,
+            height: ITEM_DEFAULTS.image.height,
+            align: ITEM_DEFAULTS.image.align,
             showText: modalShowText.checked,
             imageId: createRandomId("img"),
           };
@@ -1065,7 +1063,13 @@ async function handlePasteOutsideModal(items) {
       const blob = items[i].getAsFile();
       const reader = new FileReader();
       reader.onload = (ev) => {
-        const newItem = createImageItem(ev.target.result);
+        const newItem = createImageItem(
+          ev.target.result,
+          createRandomId("img"),
+          ITEM_DEFAULTS.image.height,
+          ITEM_DEFAULTS.image.align,
+          ITEM_DEFAULTS.showText,
+        );
         openModalForNewItem(activeRangeId, newItem);
       };
       reader.readAsDataURL(blob);
@@ -1076,9 +1080,22 @@ async function handlePasteOutsideModal(items) {
   try {
     const text = await navigator.clipboard.readText();
     const pastedArray = JSON.parse(text);
+
     if (Array.isArray(pastedArray)) {
       const itemsToAdd = pastedArray.map((item) => {
-        if (item.image || item.text) {
+        if (item.src) {
+          return {
+            id: createRandomId("item"),
+            text: null,
+            image: {
+              src: item.src,
+              height: item.height || ITEM_DEFAULTS.image.height,
+              align: item.align || ITEM_DEFAULTS.image.align,
+              imageId: item.imageId || createRandomId("img"),
+            },
+            showText: item.showCaption !== false,
+          };
+        } else {
           return {
             id: item.id || createRandomId("item"),
             text: item.text ? { ...item.text } : null,
@@ -1088,18 +1105,17 @@ async function handlePasteOutsideModal(items) {
                   imageId: item.image.imageId || createRandomId("img"),
                 }
               : null,
+            showText: item.showText !== false,
           };
-        } else {
-          return createImageItem(
-            item.src,
-            item.imageId,
-            item.height,
-            item.align,
-            item.showCaption !== false,
-          );
         }
       });
+
       itemsToAdd.forEach((item) => addItemToRange(activeRangeId, item));
+      showToast(
+        `${toPersianDigits(itemsToAdd.length)} آیتم با موفقیت اضافه شد.`,
+      );
+    } else {
+      showToast("داده‌ها معتبر نیستند.", "error");
     }
   } catch (err) {
     console.error("Invalid JSON:", err);
@@ -1348,7 +1364,10 @@ function updateTempItemFromTextEditor() {
 
   if (hasContent) {
     if (!temp.text) {
-      temp.text = { html: editor.innerHTML, align: "RIGHT" };
+      temp.text = {
+        html: editor.innerHTML,
+        align: ITEM_DEFAULTS.text.align,
+      };
     } else {
       temp.text.html = editor.innerHTML;
     }
@@ -1385,7 +1404,7 @@ function openModalWithTempItem() {
   updateModalPreviewFromTemp();
   updateModalImageUI();
 
-  modalShowText.checked = temp.image ? temp.image.showText : false;
+  modalShowText.checked = temp.showText !== false;
 
   openModalElement(modalEdit);
 }
@@ -1437,7 +1456,7 @@ function updateModalPreviewFromTemp() {
   modalQscore.innerHTML = `
     ${toPersianDigits(1)}
     <span class="font-normal text-xs">
-      ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
+      ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ""}
     </span>
   `;
 
@@ -1489,17 +1508,28 @@ modalTextEditor.addEventListener("focus", function () {
   if (appState.modal.tempItem && appState.modal.tempItem.image) {
     if (!modalShowText.checked) {
       modalShowText.checked = true;
-      appState.modal.tempItem.image.showText = true;
+      appState.modal.tempItem.showText = true;
       updateModalPreviewFromTemp();
     }
   }
 });
 
 modalShowText.addEventListener("change", function (e) {
-  if (appState.modal.tempItem?.image) {
-    appState.modal.tempItem.image.showText = e.target.checked;
-    updateModalPreviewFromTemp();
+  const temp = appState.modal.tempItem;
+  if (!temp) return;
+
+  temp.showText = e.target.checked;
+
+  if (e.target.checked && !temp.text) {
+    temp.text = {
+      html: "",
+      align: ITEM_DEFAULTS.text.align,
+    };
+    modalTextEditor.innerHTML = "";
+    modalTextEditor.style.textAlign = "right";
   }
+
+  updateModalPreviewFromTemp();
 });
 
 saveModalBtn.addEventListener("click", () => {
@@ -1516,8 +1546,8 @@ modalImageUpload.addEventListener("change", function (e) {
     reader.onload = (ev) => {
       appState.modal.tempItem.image = {
         src: ev.target.result,
-        height: IMAGE_DEFAULTS.height,
-        align: IMAGE_DEFAULTS.align,
+        height: ITEM_DEFAULTS.image.height,
+        align: ITEM_DEFAULTS.image.align,
         showText: modalShowText.checked,
         imageId: createRandomId("img"),
       };
@@ -1985,6 +2015,7 @@ function buildItemsFromRangeData(rangeData) {
             imageId: it.image.imageId || createRandomId("img"),
           }
         : null,
+      showText: it.showText !== false,
     }));
   } else if (rangeData.images) {
     return rangeData.images.map((img) => ({
@@ -1992,11 +2023,11 @@ function buildItemsFromRangeData(rangeData) {
       text: null,
       image: {
         src: img.src,
-        height: img.height || IMAGE_DEFAULTS.height,
-        align: img.align || IMAGE_DEFAULTS.align,
-        showText: img.showCaption !== false,
+        height: img.height || ITEM_DEFAULTS.image.height,
+        align: img.align || ITEM_DEFAULTS.image.align,
         imageId: img.imageId || createRandomId("img"),
       },
+      showText: img.showCaption !== false,
     }));
   }
   return [];
@@ -2047,7 +2078,10 @@ function exportData() {
       count: r.count,
       score: r.score,
       desc: r.desc,
-      items: r.items,
+      items: r.items.map((item) => ({
+        ...item,
+        showText: item.showText !== false,
+      })),
     })),
   });
 }
