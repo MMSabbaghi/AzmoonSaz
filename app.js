@@ -153,6 +153,7 @@ const rawState = {
     isOpen: false,
     rangeId: null,
     topic: "",
+    items: [],
   },
 };
 
@@ -1693,6 +1694,7 @@ const aiCountInput = document.getElementById("aiCountInput");
 function openAIModal(rangeId, topic) {
   appState.aiModal.rangeId = rangeId;
   appState.aiModal.topic = topic;
+  appState.aiModal.items = [];
   appState.aiModal.isOpen = true;
 
   const range = appState.ranges.find((r) => r.id === rangeId);
@@ -1703,7 +1705,9 @@ function openAIModal(rangeId, topic) {
 
   aiJsonInput.value = "";
   aiItemsContainer.innerHTML = "";
-  aiEmptyPreviewMsg.classList.add("hidden");
+  aiEmptyPreviewMsg.classList.remove("hidden");
+  aiPreviewContainer.classList.add("hidden");
+  updateAddButtonState();
 
   openModalElement(modalAI);
 }
@@ -1711,6 +1715,7 @@ function openAIModal(rangeId, topic) {
 function closeAIModal() {
   appState.aiModal.rangeId = null;
   appState.aiModal.topic = "";
+  appState.aiModal.items = [];
   appState.aiModal.isOpen = false;
 
   closeModalElement(modalAI);
@@ -1759,34 +1764,74 @@ pasteAiJsonBtn.addEventListener("click", async () => {
 function processAIPasteData(raw) {
   try {
     const data = extractJSON(raw);
+    appState.aiModal.items = data.items || [];
 
     aiItemsContainer.innerHTML = "";
-    if (data.items.length === 0) {
+    if (appState.aiModal.items.length === 0) {
       aiEmptyPreviewMsg.classList.remove("hidden");
-      return;
+      aiPreviewContainer.classList.add("hidden");
     } else {
       aiEmptyPreviewMsg.classList.add("hidden");
       aiPreviewContainer.classList.remove("hidden");
+      renderAIPreviewItems();
     }
 
-    renderAIPreviewItems(data.items);
-
+    // اسکرول به بخش پیش‌نمایش
     aiModalContent.scrollTo({
       top: aiPreviewContainer.offsetTop - aiModalContent.offsetTop,
       behavior: "smooth",
     });
+
+    updateAddButtonState(); // به‌روزرسانی وضعیت دکمه افزودن
   } catch (error) {
     showToast("داده نامعتبر است.", "error");
   }
 }
 
-function renderAIPreviewItems(items) {
+function updateAddButtonState() {
+  const hasItems = appState.aiModal.items.length > 0;
+  if (hasItems) {
+    addAiItemsToRangeBtn.removeAttribute("disabled");
+    addAiItemsToRangeBtn.classList.remove("opacity-50", "cursor-not-allowed");
+  } else {
+    addAiItemsToRangeBtn.setAttribute("disabled", "disabled");
+    addAiItemsToRangeBtn.classList.add("opacity-50", "cursor-not-allowed");
+  }
+}
+
+function removeAiPreviewItem(index) {
+  appState.aiModal.items.splice(index, 1);
+  if (appState.aiModal.items.length === 0) {
+    aiEmptyPreviewMsg.classList.remove("hidden");
+    aiPreviewContainer.classList.add("hidden");
+    aiItemsContainer.innerHTML = "";
+  } else {
+    renderAIPreviewItems();
+  }
+  updateAddButtonState();
+}
+
+function renderAIPreviewItems() {
+  const items = appState.aiModal.items;
+  aiItemsContainer.innerHTML = "";
+
   items.forEach((item, idx) => {
     if (!item.text || typeof item.text !== "string") return;
 
     const card = document.createElement("div");
     card.className =
-      "border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow transition";
+      "border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow transition relative"; // relative برای جای‌گیری دکمه حذف
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className =
+      "absolute top-2 left-2 w-6 h-6 bg-error-light text-error rounded-full flex items-center justify-center text-sm opacity-70 hover:opacity-100 transition-opacity border-0 cursor-pointer z-10";
+    deleteBtn.innerHTML = "&times;";
+    deleteBtn.setAttribute("aria-label", "حذف آیتم");
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      removeAiPreviewItem(idx);
+    };
+    card.appendChild(deleteBtn);
 
     const header = document.createElement("div");
     header.className =
@@ -1815,28 +1860,21 @@ addAiItemsToRangeBtn.addEventListener("click", () => {
     return;
   }
 
-  const cards = aiItemsContainer.querySelectorAll(".card-text");
-  if (cards.length === 0) {
-    showToast("ابتدا پیش‌نمایش را بررسی کنید", "error");
+  const items = appState.aiModal.items;
+  if (items.length === 0) {
+    showToast("هیچ آیتمی برای افزودن وجود ندارد", "error");
     return;
   }
 
-  try {
-    const data = extractJSON(aiJsonInput.value.trim());
-    if (!Array.isArray(data.items)) throw new Error("items آرایه نیست");
+  items.forEach((item) => {
+    if (item.text) {
+      const newItem = createTextItem(item.text, "RIGHT");
+      addItemToRange(rangeId, newItem);
+    }
+  });
 
-    data.items.forEach((item) => {
-      if (item.text) {
-        const newItem = createTextItem(item.text, "RIGHT");
-        addItemToRange(rangeId, newItem);
-      }
-    });
-
-    showToast(`${data.items.length} آیتم به مبحث اضافه شد`);
-    closeAIModal();
-  } catch (err) {
-    showToast("خطا در افزودن آیتم‌ها: " + err.message, "error");
-  }
+  showToast(`${toPersianDigits(items.length)} آیتم به مبحث اضافه شد`);
+  closeAIModal();
 });
 
 // ========== Drag & Drop ==========
