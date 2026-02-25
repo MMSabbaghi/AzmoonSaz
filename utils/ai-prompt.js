@@ -1,24 +1,26 @@
+// ========== AI Prompt Generator ==========
 function getAIPrompt(topic, count) {
   return `
-لطفاً دقیقا ${count} سوال ریاضی با موضوع "${topic}" تولید کن.
+لطفاً دقیقاً ${count} سوال ریاضی با موضوع "${topic}" تولید کن.
 
 الزامات خروجی:
-1. هر آیتم باید یک سوال واقعی و قابل حل باشد. هیچ متن اضافه، تعریف درس یا توضیح تولید نشود.
-2. خروجی باید فقط یک شیء JSON معتبر باشد.
-3. ساختار JSON باید به شکل زیر باشد:
+1. خروجی باید فقط یک شیء JSON معتبر باشد و هیچ متن دیگری قبل یا بعد از آن ننویس.
+2. ساختار JSON باید به صورت زیر باشد:
 {
   "items": [
-    { "text": "متن سوال" }
+    { "text": "متن سوال اول" },
+    { "text": "متن سوال دوم" }
   ]
 }
-4. تعداد آیتم‌ها دقیقا ${count} باشد و هر آیتم فقط کلید "text" داشته باشد.
+3. تعداد آیتم‌ها دقیقاً ${count} باشد.
+4. درون رشته‌های JSON، هر کاراکتر خاص باید به درستی escape شود. مخصوصاً:
+   - برای نوشتن فرمول‌های LaTeX، از **دو بک‌اسلش** استفاده کنید. مثلاً برای نوشتن \dots باید در رشته JSON "\\dots" بنویسید.
+   - اگر در متن سوال از علامت نقل قول استفاده می‌کنید، آن را با \\" escape کنید.
+   - از کاراکتر newline درون رشته استفاده نکنید (می‌توانید از \n استفاده کنید اما ترجیحاً از فاصله استفاده کنید).
 5. فرمول‌ها می‌توانند با $...$ یا $$...$$ نوشته شوند.
-6. کاراکترهای خاص (^, _, {, }, (, )) نیازی به escape ندارند مگر در رشته JSON.
-7. هیچ کاما یا کاراکتر اضافی در انتهای آرایه نباید باشد.
-8. خروجی باید مستقیم با JSON.parse قابل استفاده و KaTeX-ready باشد.
-9. مطمئن شوید همه سوال‌ها واقعی و قابل حل باشند.
+6. اطمینان حاصل کنید که همه سوال‌ها واقعی و قابل حل باشند و فقط متن سوال را شامل شوند (بدون توضیح اضافه).
 
-نمونه خروجی صحیح:
+نمونه صحیح:
 {
   "items": [
     { "text": "حاصل عبارت $(x+5)^2$ را با استفاده از اتحاد مربع دو جمله‌ای بسط دهید." },
@@ -29,51 +31,82 @@ function getAIPrompt(topic, count) {
 `;
 }
 
-function prepareJSONString(str) {
-  if (typeof str !== "string") throw new Error("ورودی باید رشته باشد");
+// ========== JSON Extraction & Validation ==========
 
-  str = str.trim();
-
-  const first = str.indexOf("{");
-  const last = str.lastIndexOf("}");
-  if (first === -1 || last === -1 || last <= first) {
-    throw new Error("JSON معتبر یافت نشد");
+function safeParseJsonString(raw) {
+  try {
+    return JSON.parse('"' + raw + '"');
+  } catch (e) {
+    const fixed = raw.replace(/\\(?!["\\/bfnrtu])/g, "\\\\");
+    try {
+      return JSON.parse('"' + fixed + '"');
+    } catch (e2) {
+      return null;
+    }
   }
-
-  let jsonStr = str.substring(first, last + 1);
-
-  // اصلاح بک‌اسلش‌ها روی خود رشته
-  jsonStr = jsonStr.replace(/\\+/g, "\\\\");
-
-  return jsonStr;
 }
 
 function extractJSON(str) {
-  const jsonStr = prepareJSONString(str);
-
   if (!str || typeof str !== "string") {
     throw new Error("ورودی خالی یا نامعتبر است");
   }
 
-  const textPattern = /"text"\s*:\s*"((?:\\.|[^"\\])*)"/g;
-  const validItems = [];
-  let match;
+  let cleaned = str.trim();
 
-  while ((match = textPattern.exec(str)) !== null) {
-    const rawText = match[1];
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    cleaned = codeBlockMatch[1].trim();
+  }
+
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+      const validItems = parsed.items.filter(
+        (item) =>
+          item && typeof item.text === "string" && item.text.trim() !== "",
+      );
+      if (validItems.length > 0) {
+        return { items: validItems };
+      }
+    }
+  } catch (e) {
+    console.log(e);
+  }
+
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = cleaned.substring(firstBrace, lastBrace + 1);
     try {
-      // اعتبارسنجی رشته با parse کوتاه
-      const parsedText = JSON.parse('"' + rawText + '"');
-      validItems.push({ text: parsedText });
+      const parsed = JSON.parse(candidate);
+      if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+        const validItems = parsed.items.filter(
+          (item) =>
+            item && typeof item.text === "string" && item.text.trim() !== "",
+        );
+        if (validItems.length > 0) {
+          return { items: validItems };
+        }
+      }
     } catch (e) {
-      console.warn("آیتم نامعتبر حذف شد:", rawText, e.message);
-      continue;
+      console.log(e);
     }
   }
 
-  if (validItems.length === 0) {
+  const textPattern = /"text"\s*:\s*"((?:\\.|[^"\\])*)"\s*(?:,|\})/g;
+  const matches = [];
+  let match;
+  while ((match = textPattern.exec(cleaned)) !== null) {
+    const rawText = match[1];
+    const parsedText = safeParseJsonString(rawText);
+    if (parsedText !== null && parsedText.trim() !== "") {
+      matches.push({ text: parsedText });
+    }
+  }
+
+  if (matches.length === 0) {
     throw new Error("هیچ آیتم معتبر پیدا نشد یا فرمت JSON نامعتبر است");
   }
 
-  return { items: validItems };
+  return { items: matches };
 }
