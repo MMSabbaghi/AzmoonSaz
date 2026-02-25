@@ -341,6 +341,11 @@ function renderRangeItems(rangeElement, rangeId) {
     fragment.appendChild(itemContainer);
   });
   preview.appendChild(fragment);
+
+  preview.querySelectorAll(".item-thumbnail").forEach((thumb) => {
+    renderMathInContainer(thumb);
+  });
+
   requestAnimationFrame(() => {
     preview.querySelectorAll(".item-thumbnail-enter").forEach((el) => {
       el.classList.remove("item-thumbnail-enter");
@@ -1696,10 +1701,11 @@ function openAIModal(rangeId, topic) {
   appState.aiModal.topic = topic;
   appState.aiModal.items = [];
   appState.aiModal.isOpen = true;
-
-  const range = appState.ranges.find((r) => r.id === rangeId);
   aiTopicInput.value = topic;
-  aiCountInput.value = range ? range.count : 3;
+
+  const participantCount =
+    appState.names.length > 0 ? appState.names.length : appState.namesCount;
+  aiCountInput.value = participantCount;
 
   updatePromptDisplay();
 
