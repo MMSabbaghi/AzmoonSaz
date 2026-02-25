@@ -2469,6 +2469,42 @@ function setupCropButton() {
   });
 }
 
+function setupCropModalEvents() {
+  const applyBtn = document.getElementById("applyCrop");
+  const cancelBtn = document.getElementById("cancelCrop");
+  const cropModal = document.getElementById("cropModal");
+
+  applyBtn.addEventListener("click", function () {
+    if (!cropper || !selectedPreviewImage) return;
+
+    const canvas = cropper.getCroppedCanvas();
+    if (canvas) {
+      selectedPreviewImage.src = canvas.toDataURL("image/png");
+      selectedPreviewImage.style.filter = "none";
+      previewImgBrightness.value = 100;
+      previewImgContrast.value = 100;
+
+      if (appState.modal.tempItem?.image) {
+        appState.modal.tempItem.image.src = selectedPreviewImage.src;
+      }
+    }
+
+    cropModal.classList.remove("visible");
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+  });
+
+  cancelBtn.addEventListener("click", function () {
+    cropModal.classList.remove("visible");
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+  });
+}
+
 // ========== Header menu ==========
 function initializeDesktopButtons() {
   const newBtn = document.getElementById("newButton");
@@ -2557,6 +2593,79 @@ function initializeHamburgerMenu() {
   });
 }
 
+// ========== Mobile UX ==========
+function setupMobileSwipeToClose(modalElement) {
+  const content = modalElement.querySelector(".modal-content");
+  if (!content) return;
+
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+  const threshold = 100;
+
+  const onTouchStart = (e) => {
+    if (!modalElement.classList.contains("modal--visible")) return;
+    if (content.scrollTop > 0) return;
+    if (e.touches.length > 1) return;
+    startY = e.touches[0].clientY;
+    isDragging = true;
+    content.style.transition = "none";
+  };
+
+  const onTouchMove = (e) => {
+    if (!isDragging) return;
+
+    const deltaY = e.touches[0].clientY - startY;
+    if (deltaY <= 0) {
+      isDragging = false;
+      return;
+    }
+
+    e.preventDefault();
+    currentY = deltaY;
+
+    const translateY = Math.min(deltaY, 200);
+    content.style.transform = `translateY(${translateY}px)`;
+    content.style.opacity = 1 - deltaY / 300;
+  };
+
+  const onTouchEnd = () => {
+    if (!isDragging) return;
+    content.style.transition = "transform 0.3s ease, opacity 0.3s ease";
+
+    if (currentY > threshold) {
+      closeModalElement(modalElement);
+    } else {
+      content.style.transform = "";
+      content.style.opacity = "";
+    }
+
+    isDragging = false;
+    startY = 0;
+    currentY = 0;
+  };
+
+  content.addEventListener("touchstart", onTouchStart, { passive: false });
+  content.addEventListener("touchmove", onTouchMove, { passive: false });
+  content.addEventListener("touchend", onTouchEnd);
+  content.addEventListener("touchcancel", onTouchEnd);
+}
+
+function setupInputScrollOnFocus() {
+  document.addEventListener("focusin", (e) => {
+    const target = e.target;
+    if (target.matches('input, textarea, [contenteditable="true"]')) {
+      setTimeout(() => {
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        });
+      }, 100);
+    }
+  });
+}
+
 // ========== Initialization ==========
 document.addEventListener("DOMContentLoaded", function () {
   document.body.style.fontFamily = appState.font;
@@ -2578,32 +2687,13 @@ document.addEventListener("DOMContentLoaded", function () {
   setupModal(modalEdit);
   setupModal(modalAI);
 
-  document.getElementById("applyCrop").addEventListener("click", function () {
-    if (!cropper || !selectedPreviewImage) return;
-    const canvas = cropper.getCroppedCanvas();
-    if (canvas) {
-      selectedPreviewImage.src = canvas.toDataURL("image/png");
-      selectedPreviewImage.style.filter = "none";
-      previewImgBrightness.value = 100;
-      previewImgContrast.value = 100;
-      if (appState.modal.tempItem?.image) {
-        appState.modal.tempItem.image.src = selectedPreviewImage.src;
-      }
-    }
-    document.getElementById("cropModal").classList.remove("visible");
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
-  });
+  if (isMobile()) {
+    setupMobileSwipeToClose(modalEdit);
+    setupMobileSwipeToClose(modalAI);
+  }
 
-  document.getElementById("cancelCrop").addEventListener("click", function () {
-    document.getElementById("cropModal").classList.remove("visible");
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
-  });
+  setupInputScrollOnFocus();
+  setupCropModalEvents();
 
   window.addEventListener("resize", () => {
     const isNowMobile = window.innerWidth <= 768;
