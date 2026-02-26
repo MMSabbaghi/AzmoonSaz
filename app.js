@@ -1823,11 +1823,11 @@ function renderAIPreviewItems() {
   aiItemsContainer.innerHTML = "";
 
   items.forEach((item, idx) => {
-    if (!item.text || typeof item.text !== "string") return;
+    if (!item.text || !item.text.html) return;
 
     const card = document.createElement("div");
     card.className =
-      "border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow transition relative"; // relative برای جای‌گیری دکمه حذف
+      "border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow transition relative";
 
     const deleteBtn = document.createElement("button");
     deleteBtn.className =
@@ -1846,10 +1846,10 @@ function renderAIPreviewItems() {
     header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${toPersianDigits(idx + 1)}`;
     card.appendChild(header);
 
-    const textDiv = document.createElement("div");
-    textDiv.className = "card-text text-gray-800";
-    textDiv.textContent = normalizeMathSpaces(item.text);
-    card.appendChild(textDiv);
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "card-text text-gray-800";
+    contentDiv.innerHTML = item.text.html;
+    card.appendChild(contentDiv);
 
     aiItemsContainer.appendChild(card);
   });
@@ -1875,7 +1875,12 @@ addAiItemsToRangeBtn.addEventListener("click", () => {
 
   items.forEach((item) => {
     if (item.text) {
-      const newItem = createTextItem(item.text, "RIGHT");
+      const newItem = {
+        id: createRandomId("item"),
+        text: { ...item.text },
+        image: null,
+        showText: true,
+      };
       addItemToRange(rangeId, newItem);
     }
   });
