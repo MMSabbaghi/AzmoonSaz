@@ -1,8 +1,15 @@
 // ========== AI Prompt Generator (Strict Image-Based Replication Mode) ==========
 
-function getAIPrompt(topic, count) {
+function getAIPrompt(topic, count, type) {
   const subject =
     topic && typeof topic === "string" && topic.trim() ? topic.trim() : "";
+
+  let lengthRule = "";
+  if (type === "descriptive") {
+    lengthRule = "متن می‌تواند چندخطی باشد و شامل پاراگراف باشد.";
+  } else {
+    lengthRule = "متن سوال باید حداکثر در دو خط نوشته شود، کوتاه و مستقیم.";
+  }
 
   return `
 شما یک طراح حرفه‌ای سوالات آموزشی هستید.
@@ -22,6 +29,7 @@ function getAIPrompt(topic, count) {
 - true_false (صحیح و غلط)
 - short_answer (کوتاه پاسخ)
 - fill_blank (جای خالی)
+- multi_select(چند انتخابی که کاربر باید دور موارد درست خط بکشد.)
 - یا هر فرم استاندارد موجود در تصویر
 
 2) ساختار نگارشی، شماره‌گذاری، فاصله‌ها، جای خالی‌ها (........)،
@@ -33,17 +41,10 @@ function getAIPrompt(topic, count) {
 6) نوع سوال جدید طراحی نکن.
 
 =================================
-قوانین طول سوال
+قوانین طول سوال (بر اساس نوع "${type}")
 =================================
 
-- اگر نوع سوال descriptive باشد:
-  متن می‌تواند چندخطی باشد.
-  می‌تواند شامل پاراگراف و اینتر باشد.
-
-- اگر نوع سوال غیر از descriptive باشد:
-  متن سوال باید حداکثر در دو خط نوشته شود.
-  از توضیح اضافی خودداری کن.
-  سوال کوتاه، مستقیم و استاندارد باشد.
+${lengthRule}
 
 =================================
 قوانین فرمول
@@ -66,7 +67,7 @@ function getAIPrompt(topic, count) {
 {
   "items": [
     {
-      "type": "descriptive | multiple_choice | true_false | short_answer | fill_blank",
+      "type": "${type}",
       "text": "متن کامل سوال با رعایت قوانین بالا"
     }
   ]
@@ -79,7 +80,7 @@ function getAIPrompt(topic, count) {
 اگر تصویر وجود نداشت:
 =================================
 
-بر اساس موضوع "${subject}" یک سوال استاندارد طراحی کن
+بر اساس موضوع "${subject}" یک سوال استاندارد از نوع "${type}" طراحی کن
 و قوانین طول و فرمت بالا را رعایت کن.
 
 اکنون فقط JSON را تولید کن.

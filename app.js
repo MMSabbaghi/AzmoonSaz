@@ -153,6 +153,7 @@ const rawState = {
     isOpen: false,
     rangeId: null,
     topic: "",
+    type: "descriptive",
     items: [],
   },
 };
@@ -1696,6 +1697,7 @@ const aiEmptyPreviewMsg = document.getElementById("aiEmptyPreviewMsg");
 const addAiItemsToRangeBtn = document.getElementById("addAiItemsToRangeBtn");
 const aiTopicInput = document.getElementById("aiTopicInput");
 const aiCountInput = document.getElementById("aiCountInput");
+const aiTypeSelect = document.getElementById("aiTypeSelect");
 
 function openAIModal(rangeId, topic) {
   appState.aiModal.rangeId = rangeId;
@@ -1719,19 +1721,37 @@ function openAIModal(rangeId, topic) {
   openModalElement(modalAI);
 }
 
-function closeAIModal() {
-  appState.aiModal.rangeId = null;
-  appState.aiModal.topic = "";
+function openAIModal(rangeId, topic) {
+  appState.aiModal.rangeId = rangeId;
+  appState.aiModal.topic = topic;
   appState.aiModal.items = [];
-  appState.aiModal.isOpen = false;
+  appState.aiModal.type = "descriptive";
+  appState.aiModal.isOpen = true;
 
-  closeModalElement(modalAI);
+  aiTopicInput.value = topic;
+  const typeSelect = document.getElementById("aiTypeSelect");
+  if (typeSelect) typeSelect.value = appState.aiModal.type;
+
+  const participantCount =
+    appState.names.length > 0 ? appState.names.length : appState.namesCount;
+  aiCountInput.value = participantCount;
+
+  updatePromptDisplay();
+
+  aiJsonInput.value = "";
+  aiItemsContainer.innerHTML = "";
+  aiEmptyPreviewMsg.classList.remove("hidden");
+  aiPreviewContainer.classList.add("hidden");
+  updateAddButtonState();
+
+  openModalElement(modalAI);
 }
 
 function generatePrompt() {
   const topic = aiTopicInput.value.trim();
   const count = aiCountInput.value;
-  return getAIPrompt(topic, count);
+  const type = appState.aiModal.type;
+  return getAIPrompt(topic, count, type);
 }
 
 function updatePromptDisplay() {
@@ -1887,6 +1907,11 @@ addAiItemsToRangeBtn.addEventListener("click", () => {
 
   showToast(`${toPersianDigits(items.length)} آیتم به مبحث اضافه شد`);
   closeAIModal();
+});
+
+aiTypeSelect.addEventListener("change", (e) => {
+  appState.aiModal.type = e.target.value;
+  updatePromptDisplay();
 });
 
 // ========== Drag & Drop ==========
