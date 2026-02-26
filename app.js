@@ -308,7 +308,8 @@ function renderItemContent(item, options = {}) {
   let html = "";
 
   if (item.showText) {
-    const textContent = item.text ? item.text.html : rangeDesc;
+    let textContent = item.text ? item.text.html : rangeDesc;
+    textContent = String(textContent);
     if (textContent && textContent.trim() !== "") {
       const align = item.text ? item.text.align.toLowerCase() : "right";
       html += `<div class="${textClass}" style="text-align: ${align};">${textContent}</div>`;
