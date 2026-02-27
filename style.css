@@ -218,10 +218,6 @@ input:focus {
 }
 
 /* AI Modal */
-.mode-extract,
-.mode-generate {
-  transition: opacity 0.3s ease;
-}
 .mode-extract.hidden,
 .mode-generate.hidden {
   opacity: 0;

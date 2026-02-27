@@ -41,14 +41,6 @@ function pickRandomItems(source, count) {
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
-function normalizeMathSpaces(text) {
-  return text
-    .replace(/\$[ \t]+/g, "$")
-    .replace(/[ \t]+\$/g, "$")
-    .replace(/\$\$[ \t]+/g, "$$")
-    .replace(/[ \t]+\$\$/g, "$$");
-}
-
 async function copyToClipboard(textToCopy) {
   try {
     await navigator.clipboard.writeText(textToCopy);
@@ -132,6 +124,89 @@ function createDeepProxy(target) {
     },
   };
   return new Proxy(target, handler);
+}
+
+async function pasteToTextarea(textareaId) {
+  try {
+    const text = await navigator.clipboard.readText();
+    const textarea = document.getElementById(textareaId);
+    if (textarea) {
+      textarea.value = text;
+      showToast("متن با موفقیت چسبانده شد");
+    } else {
+      showToast("عنصر مورد نظر یافت نشد", "error");
+    }
+  } catch (err) {
+    console.error("خطا در خواندن کلیپ‌بورد:", err);
+    showToast("خطا در خواندن کلیپ‌بورد", "error");
+  }
+}
+
+function addImageFromBlobToRange(rangeId, blob) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const newItem = createImageItem(
+      ev.target.result,
+      createRandomId("img"),
+      ITEM_DEFAULTS.image.height,
+      ITEM_DEFAULTS.image.align,
+      ITEM_DEFAULTS.showText,
+    );
+    addItemToRange(rangeId, newItem);
+  };
+  reader.readAsDataURL(blob);
+}
+
+function addItemsFromJSONToRange(rangeId, jsonString) {
+  try {
+    const pastedArray = JSON.parse(jsonString);
+    if (!Array.isArray(pastedArray)) throw new Error("Not an array");
+
+    const itemsToAdd = pastedArray.map((item) => createItemFromData(item));
+    itemsToAdd.forEach((item) => addItemToRange(rangeId, item));
+    showToast(`${toPersianDigits(itemsToAdd.length)} آیتم با موفقیت اضافه شد.`);
+  } catch (err) {
+    console.error("Invalid JSON:", err);
+    showToast("داده‌ها معتبر نیستند.", "error");
+  }
+}
+
+function createItemFromData(dataItem) {
+  if (dataItem.src) {
+    return {
+      id: createRandomId("item"),
+      text: null,
+      image: {
+        src: dataItem.src,
+        height: dataItem.height || ITEM_DEFAULTS.image.height,
+        align: dataItem.align || ITEM_DEFAULTS.image.align,
+        imageId: dataItem.imageId || createRandomId("img"),
+      },
+      showText: dataItem.showCaption !== false,
+    };
+  }
+
+  return {
+    id: dataItem.id || createRandomId("item"),
+    text: dataItem.text ? { ...dataItem.text } : null,
+    image: dataItem.image
+      ? {
+          ...dataItem.image,
+          imageId: dataItem.image.imageId || createRandomId("img"),
+        }
+      : null,
+    showText: dataItem.showText !== false,
+  };
+}
+
+async function tryPasteJSONToRange(rangeId) {
+  try {
+    const text = await navigator.clipboard.readText();
+    addItemsFromJSONToRange(rangeId, text);
+  } catch (err) {
+    console.error("Failed to read clipboard text:", err);
+    showToast("محتوای کلیپ‌بورد معتبر نیست.", "error");
+  }
 }
 
 // ========== Global State Management ==========
@@ -226,15 +301,6 @@ function createImageItem(
 }
 
 // ========== Animation Helpers ==========
-function animateAddElement(element, enterClass) {
-  element.classList.add(enterClass);
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      element.classList.remove(enterClass);
-    });
-  });
-}
-
 function animateRemoveRange(element, callback) {
   const height = element.offsetHeight;
   element.style.transition =
@@ -614,7 +680,7 @@ function setupPasteRangeButton(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".paste-range").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      pasteItemsToRange(rangeId);
+      tryPasteJSONToRange(rangeId);
     });
   });
 }
@@ -961,26 +1027,6 @@ function renderNamesSection() {
   });
 }
 
-function updateNamesFromElement(element) {
-  if (element && element.tagName === "TEXTAREA") {
-    appState.names = element.value.split("\n");
-  } else if (
-    element &&
-    element.tagName === "INPUT" &&
-    element.dataset.numberInput
-  ) {
-    const value = parseInt(element.value) || 1;
-    appState.namesCount = value;
-  }
-  renderNamesSection();
-}
-
-function syncNamesFromTextarea(sourceElement) {
-  updateNamesFromElement(
-    sourceElement || document.querySelector(".names-textarea"),
-  );
-}
-
 function adjustMobilePadding() {
   if (!isMobile()) return;
   const bottomBar = document.getElementById("mobile-bottom-bar");
@@ -1058,68 +1104,18 @@ async function tryProcessTextPasteInModal(items) {
 }
 
 async function handlePasteOutsideModal(items) {
+  let hasImage = false;
+
   for (let i = 0; i < items.length; i++) {
     if (items[i].type.indexOf("image") !== -1) {
+      hasImage = true;
       const blob = items[i].getAsFile();
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const newItem = createImageItem(
-          ev.target.result,
-          createRandomId("img"),
-          ITEM_DEFAULTS.image.height,
-          ITEM_DEFAULTS.image.align,
-          ITEM_DEFAULTS.showText,
-        );
-        openModalForNewItem(activeRangeId, newItem);
-      };
-      reader.readAsDataURL(blob);
-      return;
+      addImageFromBlobToRange(activeRangeId, blob);
     }
   }
 
-  try {
-    const text = await navigator.clipboard.readText();
-    const pastedArray = JSON.parse(text);
-
-    if (Array.isArray(pastedArray)) {
-      const itemsToAdd = pastedArray.map((item) => {
-        if (item.src) {
-          return {
-            id: createRandomId("item"),
-            text: null,
-            image: {
-              src: item.src,
-              height: item.height || ITEM_DEFAULTS.image.height,
-              align: item.align || ITEM_DEFAULTS.image.align,
-              imageId: item.imageId || createRandomId("img"),
-            },
-            showText: item.showCaption !== false,
-          };
-        } else {
-          return {
-            id: item.id || createRandomId("item"),
-            text: item.text ? { ...item.text } : null,
-            image: item.image
-              ? {
-                  ...item.image,
-                  imageId: item.image.imageId || createRandomId("img"),
-                }
-              : null,
-            showText: item.showText !== false,
-          };
-        }
-      });
-
-      itemsToAdd.forEach((item) => addItemToRange(activeRangeId, item));
-      showToast(
-        `${toPersianDigits(itemsToAdd.length)} آیتم با موفقیت اضافه شد.`,
-      );
-    } else {
-      showToast("داده‌ها معتبر نیستند.", "error");
-    }
-  } catch (err) {
-    console.error("Invalid JSON:", err);
-    showToast("محتوا معتبر نیست و نمی‌تواند به عنوان آیتم اضافه شود.", "error");
+  if (!hasImage) {
+    await tryPasteJSONToRange(activeRangeId);
   }
 }
 
@@ -1135,31 +1131,6 @@ document.addEventListener("paste", async (e) => {
   else if (wizardState.isOpen) return;
   else await handlePasteOutsideModal(items);
 });
-
-async function pasteItemsToRange(rangeId) {
-  try {
-    const text = await navigator.clipboard.readText();
-    const items = JSON.parse(text);
-    if (!Array.isArray(items)) throw new Error("Not an array");
-    items.forEach((item) => {
-      const newItem = {
-        id: item.id || createRandomId("item"),
-        text: item.text ? { ...item.text } : null,
-        image: item.image
-          ? {
-              ...item.image,
-              imageId: item.image.imageId || createRandomId("img"),
-            }
-          : null,
-        showText: item.showText !== false,
-      };
-      addItemToRange(rangeId, newItem);
-    });
-    showToast("آیتم‌ها با موفقیت اضافه شدند.");
-  } catch (err) {
-    showToast("محتوای کلیپ‌بورد معتبر نیست.", "error");
-  }
-}
 
 // ========== Quiz Generation ==========
 function buildQuizData(names, ranges) {
@@ -1933,26 +1904,6 @@ function detectQuestionType(text) {
   return "descriptive";
 }
 
-function pasteToExtractResponse() {
-  navigator.clipboard
-    .readText()
-    .then((text) => {
-      document.getElementById("extractResponseInput").value = text;
-      showToast("متن با موفقیت چسبانده شد");
-    })
-    .catch(() => showToast("خطا در خواندن کلیپ‌بورد", "error"));
-}
-
-function pasteToGenerateResponse() {
-  navigator.clipboard
-    .readText()
-    .then((text) => {
-      document.getElementById("generateResponseInput").value = text;
-      showToast("متن با موفقیت چسبانده شد");
-    })
-    .catch(() => showToast("خطا در خواندن کلیپ‌بورد", "error"));
-}
-
 function previewGeneratedItems() {
   const raw = document.getElementById("generateResponseInput").value.trim();
   if (!raw) {
@@ -2101,16 +2052,20 @@ function initWizardEvents() {
     });
   document
     .getElementById("processExtractBtn")
-    ?.addEventListener("click", pasteToExtractResponse);
+    ?.addEventListener("click", () => pasteToTextarea("extractResponseInput"));
+
   document
     .getElementById("pasteGenerateBtn")
-    ?.addEventListener("click", pasteToGenerateResponse);
+    ?.addEventListener("click", () => pasteToTextarea("generateResponseInput"));
+
   document
     .getElementById("previewGenerateBtn")
     ?.addEventListener("click", previewGeneratedItems);
+
   document
     .getElementById("addGeneratedBtn")
     ?.addEventListener("click", addGeneratedItemsToRange);
+
   document.getElementById("wizardPrevBtn")?.addEventListener("click", prevStep);
   document.getElementById("wizardNextBtn")?.addEventListener("click", nextStep);
   document
@@ -2373,29 +2328,9 @@ function handleNewAttempt() {
 // ========== Import/Export ==========
 function buildItemsFromRangeData(rangeData) {
   if (rangeData.items) {
-    return rangeData.items.map((it) => ({
-      id: it.id || createRandomId("item"),
-      text: it.text ? { ...it.text } : null,
-      image: it.image
-        ? {
-            ...it.image,
-            imageId: it.image.imageId || createRandomId("img"),
-          }
-        : null,
-      showText: it.showText !== false,
-    }));
+    return rangeData.items.map((it) => createItemFromData(it));
   } else if (rangeData.images) {
-    return rangeData.images.map((img) => ({
-      id: createRandomId("item"),
-      text: null,
-      image: {
-        src: img.src,
-        height: img.height || ITEM_DEFAULTS.image.height,
-        align: img.align || ITEM_DEFAULTS.image.align,
-        imageId: img.imageId || createRandomId("img"),
-      },
-      showText: img.showCaption !== false,
-    }));
+    return rangeData.images.map((img) => createItemFromData(img));
   }
   return [];
 }
