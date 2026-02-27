@@ -2422,7 +2422,7 @@ function importRangesFromData(data) {
       score: r.score || 1,
       desc: r.desc || "",
       items,
-      itemsCollapsed: false,
+      itemsCollapsed: true,
     };
     appState.ranges.push(rangeWithId);
   });
