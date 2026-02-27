@@ -274,9 +274,14 @@
           <input type="checkbox" id="modal-show-text" class="w-5 h-5 accent-primary">
           <span class="text-secondary">نمایش متن سوال</span>
         </label>
-        <button id="save-modal-btn" class="btn px-3 py-1">
-          <i class="bi bi-floppy"></i> ذخیره
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="generateSimilarBtn" class="btn btn-outline px-3 py-1 flex items-center gap-2">
+            <i class="bi bi-magic"></i> ساخت مشابه
+          </button>
+          <button id="save-modal-btn" class="btn px-3 py-1">
+            <i class="bi bi-floppy"></i> ذخیره
+          </button>
+        </div>
       </div>
 
     </div>
@@ -299,125 +304,117 @@
     </div>
   </div>
 
-  <!-- ========== مودال هوشمند پرامپت‌ساز (AI Prompt) ========== -->
+  <!-- ========== مودال هوش مصنوعی ========== -->
   <div class="modal modal-ai" style="display: none;">
     <div class="modal-overlay"></div>
     <div class="modal-content max-w-[42rem] md:p-4 bg-surface shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-      <!-- هدر -->
-      <div class="flex items-center justify-between border-b border-border-light p-4 bg-surface z-10">
+
+      <!-- هدر ثابت -->
+      <div class="flex items-center justify-between border-b border-border-light p-4 bg-surface sticky top-0 z-10">
         <h2 class="text-lg font-bold text-primary flex items-center gap-2">
-          <i class="bi bi-magic"></i> ساخت سوال با هوش مصنوعی
+          <i class="bi bi-magic"></i>
+          <span id="aiModalTitle">استخراج سوال از تصویر</span>
         </h2>
         <button class="modal-close-btn text-muted hover:text-secondary transition">
           <i class="bi bi-x-lg"></i>
         </button>
       </div>
 
-      <!-- محتوا -->
-      <div class="py-5 space-y-3">
-
-        <div
-          class="relative bg-background/70 backdrop-blur-sm border border-border-light rounded-custom p-5 shadow-sm transition-all duration-200 focus-within:shadow-md">
-          <!-- ردیف عنوان و کنترل‌ها -->
-          <div class="flex items-center justify-between gap-4">
-            <label for="aiTopicInput" class="text-sm font-semibold text-primary whitespace-nowrap">
-              توضیح نوع سوال
-            </label>
-            <div class="flex items-center gap-2">
-              <!-- انتخاب نوع سوال -->
-              <div class="flex items-center gap-2 px-3 py-1.5 rounded-custom border border-border-light">
-                <span class="text-xs font-medium text-secondary">نوع</span>
-                <select id="aiTypeSelect"
-                  class="bg-transparent text-sm font-semibold text-primary focus:outline-none border-none">
-                  <option value="descriptive">تشریحی</option>
-                  <option value="multiple_choice">چهارگزینه‌ای</option>
-                  <option value="true_false">صحیح/غلط</option>
-                  <option value="short_answer">پاسخ کوتاه</option>
-                  <option value="fill_blank">جای خالی</option>
-                  <option value="multi_select">چندانتخابی</option>
-                </select>
-              </div>
-              <!-- تعداد سوال (بدون تغییر) -->
-              <div class="flex items-center gap-2 px-3 py-1.5 rounded-custom border border-border-light">
-                <span class="text-xs font-medium text-secondary">تعداد</span>
-                <input type="text" id="aiCountInput" data-number-input="true" data-float="false"
-                  class="w-10 bg-transparent text-center text-sm font-semibold text-primary focus:outline-none"
-                  placeholder="۰">
-              </div>
-            </div>
-          </div>
-          <!-- فیلد توضیحات (بدون تغییر) -->
-          <div class="relative my-1">
-            <textarea id="aiTopicInput" rows="2"
-              class="w-full resize-none bg-surface-dark border border-border-light rounded-custom p-2 md:pl-10 text-sm text-secondary placeholder-muted"
-              placeholder="مثلاً: سوالات تستی از فصل حد و پیوستگی، سطح متوسط رو به سخت، ترکیبی..."></textarea>
-            <div class="absolute top-3 left-3 text-muted">
-              <i class="bi bi-pencil-square text-sm"></i>
-            </div>
-          </div>
-          <!-- توضیح کمکی (بدون تغییر) -->
-          <p class="text-xs text-muted flex items-start gap-2 leading-relaxed">
-            <i class="bi bi-info-circle"></i>
-            توضیح دقیق درباره مبحث، نوع سوال، درجه سختی و سبک طراحی کمک می‌کند خروجی دقیق‌تری دریافت کنید.
+      <!-- حالت استخراج (EXTRACT) -->
+      <div id="aiExtractMode" class="mode-extract p-4 space-y-4">
+        <div class="bg-primary-light/10 border-r-4 border-primary p-3 rounded-custom">
+          <p class="text-sm text-secondary flex items-start gap-2">
+            <i class="bi bi-info-circle-fill text-primary mt-0.5"></i>
+            این پرامپت را کپی کرده و همراه با تصویر سوال برای هوش مصنوعی ارسال کنید. پاسخ را در کادر پایین بچسبانید.
           </p>
         </div>
 
-        <!-- بخش پرامپت پیشنهادی -->
-        <div id="AiModal" class="bg-surface-dark p-4 rounded-custom space-y-2">
-          <div class="flex items-center justify-between">
+        <div class="bg-surface-dark p-3 rounded-custom">
+          <div class="flex items-center justify-between mb-2">
             <label class="font-medium text-secondary flex items-center gap-1">
-              <i class="bi bi-chat-dots"></i> پرامپت تولید سوال
+              <i class="bi bi-chat-dots"></i> پرامپت استخراج
             </label>
-            <button id="copyAiPromptBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
+            <button id="copyExtractPromptBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
               <i class="bi bi-clipboard"></i> کپی
             </button>
           </div>
-          <div id="aiPromptDisplay"
-            class="hidden bg-surface border border-border-light rounded-custom p-3 font-mono text-sm text-secondary whitespace-pre-wrap max-h-32 overflow-y-auto">
+          <div id="extractPromptDisplay"
+            class="bg-surface border border-border-light rounded-custom p-3 font-mono text-sm text-secondary whitespace-pre-wrap max-h-20 overflow-y-auto">
           </div>
-          <p class="text-xs text-muted flex items-center gap-1">
-            <i class="bi bi-info-circle"></i> این پرامپت را برای AI بفرستید و خروجی را در بخش پایین بچسبانید.
-          </p>
         </div>
 
-        <!-- بخش ورودی JSON -->
-        <div class="bg-surface-dark p-4 rounded-custom space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="bg-surface-dark p-3 rounded-custom">
+          <div class="flex items-center justify-between mb-2">
             <label class="font-medium text-secondary flex items-center gap-1">
-              <i class="bi bi-filetype-json"></i> خروجی AI
+              <i class="bi bi-filetype-json"></i> پاسخ AI (JSON)
             </label>
-            <div class="flex gap-2">
-              <button id="pasteAiJsonBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
-                <i class="bi bi-clipboard-plus"></i> چسباندن
-              </button>
-            </div>
+            <button id="processExtractBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
+              <i class="bi bi-clipboard-pulse"></i> چسباندن و پردازش
+            </button>
           </div>
-          <textarea id="aiJsonInput" rows="4"
-            class="hidden w-full border border-border-light rounded-custom p-2 font-mono text-sm bg-surface"
-            placeholder='{ "items": [ {"text": "فرمول $...$"} ] }'></textarea>
-          <p class="text-xs text-muted flex items-center gap-1">
-            <i class="bi bi-info-circle"></i> پاسخ AI را اینجا بچسبانید.
+          <textarea id="extractResponseInput" rows="2"
+            class="w-full border border-border-light rounded-custom p-2 font-mono text-sm bg-surface"
+            placeholder='{ "items": [{"type": "...", "text": "..."}] }'></textarea>
+        </div>
+      </div>
+
+      <!-- حالت ساخت مشابه (GENERATE) -->
+      <div id="aiGenerateMode" class="mode-generate p-4 space-y-4 hidden">
+        <div class="bg-primary-light/10 border-r-4 border-primary p-3 rounded-custom">
+          <p class="text-sm text-secondary flex items-start gap-2">
+            <i class="bi bi-info-circle-fill text-primary mt-0.5"></i>
+            پرامپت زیر را کپی کرده و برای هوش مصنوعی ارسال کنید. پاسخ (آرایه‌ای از سوالات) را در کادر پایین بچسبانید.
           </p>
         </div>
 
-        <button id="addAiItemsToRangeBtn" class="btn btn-secondary justify-center px-3 py-1 flex items-center gap-1"
-          style="width: 100%;">
-          <i class="bi bi-plus-lg"></i> افزودن
-        </button>
+        <div class="bg-surface-dark p-3 rounded-custom">
+          <div class="flex items-center gap-4 mb-3">
+            <label class="text-sm font-medium text-secondary">تعداد سوالات مشابه:</label>
+            <input type="number" id="generateCountInput" value="5" min="1" max="20"
+              class="w-20 border border-border-light rounded-custom p-2 text-center">
+          </div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="font-medium text-secondary flex items-center gap-1">
+              <i class="bi bi-chat-dots"></i> پرامپت ساخت مشابه
+            </label>
+            <button id="copyGeneratePromptBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
+              <i class="bi bi-clipboard"></i> کپی
+            </button>
+          </div>
+          <div id="generatePromptDisplay"
+            class="bg-surface border border-border-light rounded-custom p-3 font-mono text-sm text-secondary whitespace-pre-wrap max-h-20 overflow-y-auto">
+          </div>
+        </div>
 
-        <!-- بخش پیش‌نمایش کارت‌ها -->
-        <div id="aiPreviewContainer" class="border-t border-border-light pt-4 space-y-3 hidden">
-          <h3 class="font-medium text-secondary flex items-center gap-1">
+        <div class="bg-surface-dark p-3 rounded-custom">
+          <div class="flex items-center justify-between mb-2">
+            <label class="font-medium text-secondary flex items-center gap-1 mb-2">
+              <i class="bi bi-filetype-json"></i> پاسخ AI (آرایه‌ای از سوالات)
+            </label>
+            <button id="pasteGenerateBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
+              <i class="bi bi-clipboard-plus"></i> چسباندن
+            </button>
+          </div>
+          <textarea id="generateResponseInput" rows="2"
+            class="w-full border border-border-light rounded-custom p-2 font-mono text-sm bg-surface"
+            placeholder='{ "items": [{"type": "...", "text": "..."}] }'></textarea>
+          <div class="flex gap-2 mt-2">
+            <button id="previewGenerateBtn" class="btn btn-outline flex-1">پیش‌نمایش</button>
+            <button id="addGeneratedBtn" class="btn btn-primary flex-1" disabled>افزودن به مبحث</button>
+          </div>
+        </div>
+        <div id="generatePreviewContainer" class="border-t border-border-light pt-3 hidden">
+          <h3 class="font-medium text-secondary flex items-center gap-1 mb-2">
             <i class="bi bi-card-list"></i> پیش‌نمایش آیتم‌ها
           </h3>
-          <div id="aiItemsContainer" class="grid grid-cols-1 gap-3 max-h-80 pr-1 overflow-y-auto pb-10"></div>
-          <p id="aiEmptyPreviewMsg" class="text-sm text-muted text-center py-4 hidden">
-            <i class="bi bi-inbox"></i> هیچ آیتمی برای نمایش وجود ندارد.
-          </p>
+          <div id="generateItemsPreview" class="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pb-2"></div>
+          <p id="generateEmptyPreview" class="text-sm text-muted text-center py-2 hidden">هیچ آیتمی برای نمایش وجود
+            ندارد.</p>
         </div>
       </div>
     </div>
   </div>
+
 
   <button id="toTop" title="برو بالا" class="
     fixed bottom-7 right-7 z-50

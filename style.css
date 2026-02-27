@@ -217,6 +217,18 @@ input:focus {
   padding: 1rem;
 }
 
+/* AI Modal */
+.mode-extract,
+.mode-generate {
+  transition: opacity 0.3s ease;
+}
+.mode-extract.hidden,
+.mode-generate.hidden {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
 /* ========== Rich Text Editor ========== */
 .rich-editor-content[contenteditable="true"]:empty:before {
   content: attr(data-placeholder);

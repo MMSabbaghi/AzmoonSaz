@@ -1,94 +1,86 @@
-// ========== AI Prompt Generator (Strict Image-Based Replication Mode) ==========
+// ========== AI Prompt Generator (Unified) ==========
+function getAIPrompt(options) {
+  const { task } = options;
 
-function getAIPrompt(topic, count, type) {
-  const subject =
-    topic && typeof topic === "string" && topic.trim() ? topic.trim() : "";
+  let prompt = "تو یک دستیار هوشمند برای تولید محتوای آموزشی هستی.\n\n";
 
-  let lengthRule = "";
-  if (type === "descriptive") {
-    lengthRule = "متن می‌تواند چندخطی باشد و شامل پاراگراف باشد.";
-  } else {
-    lengthRule = "متن سوال باید حداکثر در دو خط نوشته شود، کوتاه و مستقیم.";
-  }
+  switch (task) {
+    case "extract":
+      prompt += `## وظیفه: استخراج تمام سوالات از تصویر یک آزمون
 
-  return `
-شما یک طراح حرفه‌ای سوالات آموزشی هستید.
+تصویر یک برگه آزمون به تو داده شده است. لطفاً تمام سوالات را به صورت مجزا استخراج کن و در قالب یک آرایه JSON برگردان.
 
-هدف:
-تولید سوالاتی کاملاً مشابه سوال موجود در تصویر (در صورت وجود).
-
-=================================
-قوانین تحلیل تصویر
-=================================
-
-اگر تصویر ارسال شده است:
-
-1) ابتدا نوع سوال را دقیقاً تشخیص بده:
-- descriptive (تشریحی)
-- multiple_choice (چهارگزینه‌ای)
-- true_false (صحیح و غلط)
-- short_answer (کوتاه پاسخ)
-- fill_blank (جای خالی)
-- multi_select(چند انتخابی که کاربر باید دور موارد درست خط بکشد.)
-- یا هر فرم استاندارد موجود در تصویر
-
-2) ساختار نگارشی، شماره‌گذاری، فاصله‌ها، جای خالی‌ها (........)،
-نحوه نوشتن گزینه‌ها و ترتیب بخش‌ها را دقیقاً حفظ کن.
-
-3) فقط اعداد، مقادیر عددی، اسامی یا حروف را تغییر بده.
-4) سطح دشواری باید معادل تصویر باشد.
-5) فرم سوال را تغییر نده.
-6) نوع سوال جدید طراحی نکن.
-
-=================================
-قوانین طول سوال (بر اساس نوع "${type}")
-=================================
-
-${lengthRule}
-
-=================================
-قوانین فرمول
-=================================
-
-- فرمول‌ها باید داخل متن سوال نوشته شوند.
-- از LaTeX استفاده کن.
-- فرمول‌های داخل جمله با $...$
-- فرمول مستقل در خط جدا با $$...$$
-- آرایه جداگانه برای فرمول تولید نکن.
-
-=================================
-قوانین خروجی
-=================================
-
-1) فقط یک JSON معتبر تولید کن.
-2) هیچ توضیح اضافه‌ای ننویس.
-3) ساختار دقیق خروجی باید به شکل زیر باشد:
-
+قوانین:
+1. هر سوال باید شامل متن کامل سوال باشد.
+2. اگر سوال چندبخشی است (مثلاً با زیرسوال‌های الف، ب، ج)، آن را به عنوان یک سوال واحد در نظر بگیر و ساختار را حفظ کن.
+3. فرمول‌های ریاضی را با $...$ (داخل خط) یا $$...$$ (جدا) مشخص کن.
+4. نوع سوال (تشریحی، تستی، ...) را تا حد امکان تشخیص بده و در فیلد type قرار بده.
+5. خروجی JSON با فرمت زیر:
 {
   "items": [
     {
-      "type": "${type}",
-      "text": "متن کامل سوال با رعایت قوانین بالا"
+      "type": "نوع سوال",
+      "text": "متن کامل سوال با فرمت HTML"
     }
   ]
 }
 
-4) تعداد آیتم‌ها دقیقاً ${count} باشد.
-5) JSON کاملاً معتبر باشد.
+فقط JSON معتبر برگردان و هیچ توضیح اضافه‌ای ننویس.`;
+      break;
 
-=================================
-اگر تصویر وجود نداشت:
-=================================
+    case "generate-similar":
+      prompt += `## وظیفه: تولید سوالات مشابه بر اساس نمونه داده شده
 
-بر اساس موضوع "${subject}" یک سوال استاندارد از نوع "${type}" طراحی کن
-و قوانین طول و فرمت بالا را رعایت کن.
+یک نمونه سوال در اختیار تو قرار گرفته است. لطفاً ${options.count || 5} سوال مشابه (با تغییر اعداد، متغیرها، یا متن) تولید کن که از نظر سبک و سطح با نمونه همخوانی داشته باشند.
 
-اکنون فقط JSON را تولید کن.
-`;
+نمونه سوال:
+${options.sampleText || ""}
+
+نوع سوال: ${options.type || "نامشخص"}
+
+قوانین:
+1. هر سوال باید ساختاری دقیقا مشابه نمونه داشته باشد و تو فقط حق داری فرمول ها را تغییر دهی..
+2. فرمول‌های ریاضی را با $...$ (داخل خط) یا $$...$$ (جدا) مشخص کن.
+3. نوع سوال را در هر آیتم مشخص کن.
+4. خروجی JSON با فرمت زیر:
+{
+  "items": [
+    {
+      "type": "نوع سوال",
+      "text": "متن کامل سوال با فرمت HTML"
+    }
+  ]
+}
+
+فقط JSON معتبر برگردان و هیچ توضیح اضافه‌ای ننویس.`;
+      break;
+
+    case "extract-from-text":
+      prompt += `## وظیفه: استخراج تمام سوالات از متن یک آزمون
+
+متن کامل آزمون در زیر آورده شده است. لطفاً تمام سوالات را به صورت مجزا استخراج کن و در قالب یک آرایه JSON برگردان.
+
+قوانین:
+1. هر سوال باید شامل متن کامل سوال باشد.
+2. اگر سوال چندبخشی است، آن را به عنوان یک سوال واحد در نظر بگیر.
+3. فرمول‌های ریاضی را با $...$ یا $$...$$ مشخص کن.
+4. نوع سوال را در فیلد type مشخص کن.
+5. خروجی JSON با فرمت استاندارد.
+
+متن آزمون:
+${options.text || ""}
+
+فقط JSON معتبر برگردان.`;
+      break;
+
+    default:
+      prompt += "وظیفه نامشخص است.";
+  }
+
+  return prompt;
 }
 
 // ========== JSON Extraction & Validation ==========
-
 function safeParseJsonString(raw) {
   try {
     return JSON.parse('"' + raw + '"');
@@ -108,52 +100,33 @@ function extractJSON(str) {
   }
 
   let cleaned = str.trim();
-
   const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlockMatch) {
-    cleaned = codeBlockMatch[1].trim();
-  }
+  if (codeBlockMatch) cleaned = codeBlockMatch[1].trim();
 
   const firstBrace = cleaned.indexOf("{");
   const lastBrace = cleaned.lastIndexOf("}");
-
-  if (firstBrace === -1 || lastBrace === -1) {
+  if (firstBrace === -1 || lastBrace === -1)
     throw new Error("ساختار JSON پیدا نشد");
-  }
 
   const candidate = cleaned.substring(firstBrace, lastBrace + 1);
-
   let parsed;
-
   try {
     parsed = JSON.parse(candidate);
   } catch (e) {
     throw new Error("JSON نامعتبر است");
   }
 
-  if (!parsed.items || !Array.isArray(parsed.items)) {
+  if (!parsed.items || !Array.isArray(parsed.items))
     throw new Error("ساختار items معتبر نیست");
-  }
 
   const validItems = parsed.items
     .filter((item) => item && item.text)
     .map((item) => {
       const type = item.type || "descriptive";
-
-      let style = "";
-
-      if (type === "descriptive") {
-        style = "white-space: pre-wrap;";
-      } else {
-        style = `
-          white-space: normal;
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-        `;
-      }
-
+      let style =
+        type === "descriptive"
+          ? "white-space: pre-wrap;"
+          : "white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;";
       return {
         type,
         text: {
@@ -163,9 +136,6 @@ function extractJSON(str) {
       };
     });
 
-  if (!validItems.length) {
-    throw new Error("هیچ سوال معتبری استخراج نشد");
-  }
-
+  if (!validItems.length) throw new Error("هیچ سوال معتبری استخراج نشد");
   return { items: validItems };
 }

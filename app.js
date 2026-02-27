@@ -604,18 +604,6 @@ function setupRemoveRangeButton(rangeElement, rangeId) {
   });
 }
 
-function setupAiRangeButton(rangeElement, rangeId) {
-  rangeElement.querySelectorAll(".ai-range").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const range = appState.ranges.find((r) => r.id === rangeId);
-      if (range) {
-        openAIModal(rangeId, range.rangeName || "");
-      }
-    });
-  });
-}
-
 function setupCopyRangeButton(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".copy-range").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1685,234 +1673,307 @@ function renderMathInContainer(container) {
 }
 
 // ========== AI Prompt Modal ==========
+const AI_MODES = {
+  EXTRACT: "extract",
+  GENERATE: "generate",
+};
+
+const aiModalState = {
+  mode: AI_MODES.EXTRACT,
+  rangeId: null,
+  sourceItem: null,
+  generatedItems: [],
+  extractedItem: null,
+};
+
 const modalAI = document.querySelector(".modal-ai");
-const aiModalContent = modalAI.querySelector(".modal-content");
-const aiPromptDisplay = document.getElementById("aiPromptDisplay");
-const aiJsonInput = document.getElementById("aiJsonInput");
-const copyAiPromptBtn = document.getElementById("copyAiPromptBtn");
-const pasteAiJsonBtn = document.getElementById("pasteAiJsonBtn");
-const aiItemsContainer = document.getElementById("aiItemsContainer");
-const aiPreviewContainer = document.getElementById("aiPreviewContainer");
-const aiEmptyPreviewMsg = document.getElementById("aiEmptyPreviewMsg");
-const addAiItemsToRangeBtn = document.getElementById("addAiItemsToRangeBtn");
-const aiTopicInput = document.getElementById("aiTopicInput");
-const aiCountInput = document.getElementById("aiCountInput");
-const aiTypeSelect = document.getElementById("aiTypeSelect");
+const aiExtractMode = document.getElementById("aiExtractMode");
+const aiGenerateMode = document.getElementById("aiGenerateMode");
+const aiModalTitle = document.getElementById("aiModalTitle");
 
-function openAIModal(rangeId, topic) {
-  appState.aiModal.rangeId = rangeId;
-  appState.aiModal.topic = topic;
-  appState.aiModal.items = [];
-  appState.aiModal.isOpen = true;
-  aiTopicInput.value = topic;
+const extractPromptDisplay = document.getElementById("extractPromptDisplay");
+const extractResponseInput = document.getElementById("extractResponseInput");
+const copyExtractPromptBtn = document.getElementById("copyExtractPromptBtn");
+const processExtractBtn = document.getElementById("processExtractBtn");
 
-  const participantCount =
-    appState.names.length > 0 ? appState.names.length : appState.namesCount;
-  aiCountInput.value = participantCount;
+const generateCountInput = document.getElementById("generateCountInput");
+const generatePromptDisplay = document.getElementById("generatePromptDisplay");
+const copyGeneratePromptBtn = document.getElementById("copyGeneratePromptBtn");
+const generateResponseInput = document.getElementById("generateResponseInput");
+const previewGenerateBtn = document.getElementById("previewGenerateBtn");
+const addGeneratedBtn = document.getElementById("addGeneratedBtn");
+const generatePreviewContainer = document.getElementById(
+  "generatePreviewContainer",
+);
+const generateItemsPreview = document.getElementById("generateItemsPreview");
+const generateEmptyPreview = document.getElementById("generateEmptyPreview");
 
-  updatePromptDisplay();
+function detectQuestionType(text) {
+  if (text.includes("؟") && text.includes("1.") && text.includes("2.")) {
+    return "multiple_choice";
+  }
+  if (text.includes("صحیح") || text.includes("غلط")) {
+    return "true_false";
+  }
+  if (text.includes("........")) {
+    return "fill_blank";
+  }
+  return "descriptive";
+}
 
-  aiJsonInput.value = "";
-  aiItemsContainer.innerHTML = "";
-  aiEmptyPreviewMsg.classList.remove("hidden");
-  aiPreviewContainer.classList.add("hidden");
-  updateAddButtonState();
+function setAIModalMode(mode) {
+  aiModalState.mode = mode;
+  if (mode === AI_MODES.EXTRACT) {
+    aiExtractMode.classList.remove("hidden");
+    aiGenerateMode.classList.add("hidden");
+    aiModalTitle.textContent = "استخراج سوال از تصویر";
+  } else {
+    aiExtractMode.classList.add("hidden");
+    aiGenerateMode.classList.remove("hidden");
+    aiModalTitle.textContent = "ساخت سوالات مشابه";
+  }
+}
+
+function openExtractModal(rangeId) {
+  aiModalState.rangeId = rangeId;
+  aiModalState.extractedItem = null;
+  setAIModalMode(AI_MODES.EXTRACT);
+
+  // تولید پرامپت استخراج
+  const prompt = getAIPrompt({ task: "extract" });
+  extractPromptDisplay.textContent = prompt;
+
+  // پاک کردن فیلدها
+  extractResponseInput.value = "";
 
   openModalElement(modalAI);
 }
 
-function openAIModal(rangeId, topic) {
-  appState.aiModal.rangeId = rangeId;
-  appState.aiModal.topic = topic;
-  appState.aiModal.items = [];
-  appState.aiModal.type = "descriptive";
-  appState.aiModal.isOpen = true;
-
-  aiTopicInput.value = topic;
-  const typeSelect = document.getElementById("aiTypeSelect");
-  if (typeSelect) typeSelect.value = appState.aiModal.type;
-
-  const participantCount =
-    appState.names.length > 0 ? appState.names.length : appState.namesCount;
-  aiCountInput.value = participantCount;
-
-  updatePromptDisplay();
-
-  aiJsonInput.value = "";
-  aiItemsContainer.innerHTML = "";
-  aiEmptyPreviewMsg.classList.remove("hidden");
-  aiPreviewContainer.classList.add("hidden");
-  updateAddButtonState();
-
-  openModalElement(modalAI);
-}
-
-function generatePrompt() {
-  const topic = aiTopicInput.value.trim();
-  const count = aiCountInput.value;
-  const type = appState.aiModal.type;
-  return getAIPrompt(topic, count, type);
-}
-
-function updatePromptDisplay() {
-  aiPromptDisplay.textContent = generatePrompt();
-}
-
-aiTopicInput.addEventListener("input", updatePromptDisplay);
-aiCountInput.addEventListener("input", updatePromptDisplay);
-
-copyAiPromptBtn.addEventListener("click", () => {
-  const topic = aiTopicInput.value.trim();
-  const count = aiCountInput.value;
-
-  if (!topic || !count) {
-    showToast("لطفا توضیحات و تعداد سوال را وارد کنید.", "error");
+function openGenerateModal(rangeId, sourceItem) {
+  if (!sourceItem || !sourceItem.text) {
+    showToast("لطفاً ابتدا یک سوال متنی انتخاب کنید", "error");
     return;
   }
-  copyToClipboard(aiPromptDisplay.textContent);
-});
 
-pasteAiJsonBtn.addEventListener("click", async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    aiJsonInput.value = text;
-    const raw = text.trim();
-    if (!raw) {
-      showToast("لطفاً داده ها را وارد کنید", "error");
-      return;
-    }
+  aiModalState.rangeId = rangeId;
+  aiModalState.sourceItem = JSON.parse(JSON.stringify(sourceItem));
+  aiModalState.generatedItems = [];
+  setAIModalMode(AI_MODES.GENERATE);
 
-    processAIPasteData(raw);
-  } catch (err) {
-    showToast("خطا در چسباندن", "error");
+  updateGeneratePrompt();
+
+  generateResponseInput.value = "";
+  generatePreviewContainer.classList.add("hidden");
+  generateItemsPreview.innerHTML = "";
+  addGeneratedBtn.disabled = true;
+
+  openModalElement(modalAI);
+}
+
+function updateGeneratePrompt() {
+  if (!aiModalState.sourceItem) return;
+  const count = parseInt(generateCountInput.value) || 5;
+  const type = detectQuestionType(aiModalState.sourceItem.text.html);
+  const prompt = getAIPrompt({
+    task: "generate-similar",
+    sampleText: aiModalState.sourceItem.text.html,
+    count,
+    type,
+  });
+  generatePromptDisplay.textContent = prompt;
+}
+
+function processExtractResponse() {
+  const raw = extractResponseInput.value.trim();
+  if (!raw) {
+    showToast("لطفاً پاسخ AI را وارد کنید", "error");
+    return;
   }
-});
 
-function processAIPasteData(raw) {
   try {
     const data = extractJSON(raw);
-    appState.aiModal.items = data.items || [];
+    if (!data.items || data.items.length === 0)
+      throw new Error("آیتمی یافت نشد");
 
-    aiItemsContainer.innerHTML = "";
-    if (appState.aiModal.items.length === 0) {
-      aiEmptyPreviewMsg.classList.remove("hidden");
-      aiPreviewContainer.classList.add("hidden");
-    } else {
-      aiEmptyPreviewMsg.classList.add("hidden");
-      aiPreviewContainer.classList.remove("hidden");
-      renderAIPreviewItems();
-    }
+    const item = data.items[0];
+    const newItem = {
+      id: createRandomId("item"),
+      text: { ...item.text },
+      image: null,
+      showText: true,
+    };
 
-    // اسکرول به بخش پیش‌نمایش
-    aiModalContent.scrollTo({
-      top: aiPreviewContainer.offsetTop - aiModalContent.offsetTop,
-      behavior: "smooth",
-    });
+    aiModalState.extractedItem = newItem;
 
-    updateAddButtonState(); // به‌روزرسانی وضعیت دکمه افزودن
-  } catch (error) {
-    showToast("داده نامعتبر است.", "error");
+    closeModalElement(modalAI);
+    openModalForNewItem(aiModalState.rangeId, newItem);
+  } catch (err) {
+    showToast(err.message, "error");
   }
 }
 
-function updateAddButtonState() {
-  const hasItems = appState.aiModal.items.length > 0;
-  if (hasItems) {
-    addAiItemsToRangeBtn.removeAttribute("disabled");
-    addAiItemsToRangeBtn.classList.remove("opacity-50", "cursor-not-allowed");
-  } else {
-    addAiItemsToRangeBtn.setAttribute("disabled", "disabled");
-    addAiItemsToRangeBtn.classList.add("opacity-50", "cursor-not-allowed");
+function previewGeneratedItems() {
+  const raw = generateResponseInput.value.trim();
+  if (!raw) {
+    showToast("لطفاً پاسخ AI را وارد کنید", "error");
+    return;
+  }
+
+  try {
+    const data = extractJSON(raw);
+    if (!data.items || data.items.length === 0)
+      throw new Error("آیتمی یافت نشد");
+
+    const items = data.items.map((item) => ({
+      id: createRandomId("item"),
+      text: { ...item.text },
+      image: null,
+      showText: true,
+    }));
+
+    aiModalState.generatedItems = items;
+    renderGeneratedPreview(items);
+
+    generatePreviewContainer.classList.remove("hidden");
+    addGeneratedBtn.disabled = false;
+  } catch (err) {
+    showToast(err.message, "error");
   }
 }
 
-function removeAiPreviewItem(index) {
-  appState.aiModal.items.splice(index, 1);
-  if (appState.aiModal.items.length === 0) {
-    aiEmptyPreviewMsg.classList.remove("hidden");
-    aiPreviewContainer.classList.add("hidden");
-    aiItemsContainer.innerHTML = "";
-  } else {
-    renderAIPreviewItems();
+function renderGeneratedPreview(items) {
+  generateItemsPreview.innerHTML = "";
+  if (items.length === 0) {
+    generateEmptyPreview.classList.remove("hidden");
+    return;
   }
-  updateAddButtonState();
-}
+  generateEmptyPreview.classList.add("hidden");
 
-function renderAIPreviewItems() {
-  const items = appState.aiModal.items;
-  aiItemsContainer.innerHTML = "";
-
-  items.forEach((item, idx) => {
-    if (!item.text || !item.text.html) return;
-
+  items.forEach((item, index) => {
     const card = document.createElement("div");
     card.className =
-      "border border-gray-200 rounded-lg p-4 bg-white shadow-sm hover:shadow transition relative";
+      "relative bg-surface border border-border-light rounded-custom p-3 text-sm";
 
     const deleteBtn = document.createElement("button");
     deleteBtn.className =
-      "absolute top-2 left-2 w-6 h-6 bg-error-light text-error rounded-full flex items-center justify-center text-sm opacity-70 hover:opacity-100 transition-opacity border-0 cursor-pointer z-10";
+      "absolute top-2 left-2 w-6 h-6 bg-error-light text-error rounded-full flex items-center justify-center text-sm opacity-70 hover:opacity-100 border-0 cursor-pointer";
     deleteBtn.innerHTML = "&times;";
-    deleteBtn.setAttribute("aria-label", "حذف آیتم");
     deleteBtn.onclick = (e) => {
       e.stopPropagation();
-      removeAiPreviewItem(idx);
+      removeGeneratedItem(index);
     };
     card.appendChild(deleteBtn);
 
     const header = document.createElement("div");
     header.className =
-      "text-xs text-gray-400 mb-2 border-b pb-1 flex items-center gap-1";
-    header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${toPersianDigits(idx + 1)}`;
+      "text-xs text-muted mb-1 pb-1 border-b border-border-light flex items-center gap-1";
+    header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${toPersianDigits(index + 1)}`;
     card.appendChild(header);
 
-    const contentDiv = document.createElement("div");
-    contentDiv.className = "card-text text-gray-800";
-    contentDiv.innerHTML = item.text.html;
-    card.appendChild(contentDiv);
+    const content = document.createElement("div");
+    content.className = "text-secondary";
+    content.innerHTML = item.text.html;
+    card.appendChild(content);
 
-    aiItemsContainer.appendChild(card);
+    generateItemsPreview.appendChild(card);
   });
 
-  renderMathInElement(aiItemsContainer, {
-    delimiters: MATH_RENDER_DELIMITERS,
-    throwOnError: false,
-  });
+  renderMathInContainer(generateItemsPreview);
 }
 
-addAiItemsToRangeBtn.addEventListener("click", () => {
-  const rangeId = appState.aiModal.rangeId;
-  if (!rangeId) {
-    showToast("مشکلی پیش آمده، لطفاً دوباره تلاش کنید", "error");
-    return;
+function removeGeneratedItem(index) {
+  aiModalState.generatedItems.splice(index, 1);
+  if (aiModalState.generatedItems.length === 0) {
+    generatePreviewContainer.classList.add("hidden");
+    addGeneratedBtn.disabled = true;
+  } else {
+    renderGeneratedPreview(aiModalState.generatedItems);
   }
+}
 
-  const items = appState.aiModal.items;
-  if (items.length === 0) {
-    showToast("هیچ آیتمی برای افزودن وجود ندارد", "error");
-    return;
-  }
+function addGeneratedItemsToRange() {
+  if (aiModalState.generatedItems.length === 0) return;
 
-  items.forEach((item) => {
-    if (item.text) {
-      const newItem = {
-        id: createRandomId("item"),
-        text: { ...item.text },
-        image: null,
-        showText: true,
-      };
-      addItemToRange(rangeId, newItem);
+  const rangeId = aiModalState.rangeId;
+  aiModalState.generatedItems.forEach((item) => addItemToRange(rangeId, item));
+
+  showToast(
+    `${toPersianDigits(aiModalState.generatedItems.length)} آیتم به مبحث اضافه شد`,
+  );
+  closeAIModal();
+}
+
+function closeAIModal() {
+  closeModalElement(modalAI);
+  aiModalState.rangeId = null;
+  aiModalState.sourceItem = null;
+  aiModalState.generatedItems = [];
+  aiModalState.extractedItem = null;
+}
+
+function initAIModalEvents() {
+  copyExtractPromptBtn.addEventListener("click", () => {
+    copyToClipboard(extractPromptDisplay.textContent);
+  });
+
+  processExtractBtn.addEventListener("click", processExtractResponse);
+
+  generateCountInput.addEventListener("input", () => {
+    if (aiModalState.mode === AI_MODES.GENERATE) {
+      updateGeneratePrompt();
     }
   });
 
-  showToast(`${toPersianDigits(items.length)} آیتم به مبحث اضافه شد`);
-  closeAIModal();
-});
+  copyGeneratePromptBtn.addEventListener("click", () => {
+    copyToClipboard(generatePromptDisplay.textContent);
+  });
 
-aiTypeSelect.addEventListener("change", (e) => {
-  appState.aiModal.type = e.target.value;
-  updatePromptDisplay();
-});
+  previewGenerateBtn.addEventListener("click", previewGeneratedItems);
+
+  addGeneratedBtn.addEventListener("click", addGeneratedItemsToRange);
+
+  document.querySelectorAll(".modal-ai .modal-close-btn").forEach((btn) => {
+    btn.addEventListener("click", closeAIModal);
+  });
+
+  const pasteGenerateBtn = document.getElementById("pasteGenerateBtn");
+  if (pasteGenerateBtn) {
+    pasteGenerateBtn.addEventListener("click", pasteGenerateResponse);
+  }
+}
+
+const generateSimilarBtn = document.getElementById("generateSimilarBtn");
+if (generateSimilarBtn) {
+  generateSimilarBtn.addEventListener("click", () => {
+    const temp = appState.modal.tempItem;
+    if (!temp || !temp.text) {
+      showToast("لطفاً ابتدا یک سوال متنی ایجاد کنید", "error");
+      return;
+    }
+    const currentRangeId = appState.modal.rangeId;
+    saveModalChanges();
+    openGenerateModal(currentRangeId, temp);
+  });
+}
+
+function setupAiRangeButton(rangeElement, rangeId) {
+  rangeElement.querySelectorAll(".ai-range").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openExtractModal(rangeId);
+    });
+  });
+}
+
+async function pasteGenerateResponse() {
+  try {
+    const text = await navigator.clipboard.readText();
+    generateResponseInput.value = text;
+    showToast("متن با موفقیت چسبانده شد");
+  } catch (err) {
+    showToast("خطا در خواندن کلیپ‌بورد", "error");
+  }
+}
 
 // ========== Drag & Drop ==========
 let draggedElement = null;
@@ -2767,6 +2828,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupMobileSwipeToClose(modalAI);
   }
 
+  initAIModalEvents();
   setupInputScrollOnFocus();
   setupCropModalEvents();
 
