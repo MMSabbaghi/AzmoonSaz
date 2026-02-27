@@ -580,20 +580,20 @@ function getDesktopRangeHTML(rangeData) {
         <div class="inline-block">
           <div class="file-input">
             <input type="file" id="${fileID}" accept="image/*" multiple class="file sr-only range-images">
-            <label for="${fileID}" class="btn btn-outline px-4 py-2 rounded-custom relative flex items-center justify-center"><i class="bi bi-image"></i></label>
+            <label data-tooltip="تصویر سوال" for="${fileID}" class="btn btn-outline px-4 py-2 rounded-custom relative flex items-center justify-center"><i class="bi bi-image"></i></label>
           </div>
         </div>
-        <button class="add-text-item btn btn-outline px-3 py-2 rounded-custom"><i class="bi bi-type"></i></button>
-        <button class="ai-range btn btn-outline px-3 py-2 rounded-custom"><i class="bi bi-openai"></i></button>
+        <button data-tooltip="تعریف سوال" class="add-text-item btn btn-outline px-3 py-2 rounded-custom"><i class="bi bi-type"></i></button>
+        <button data-tooltip="هوش مصنوعی" class="ai-range btn btn-outline px-3 py-2 rounded-custom"><i class="bi bi-openai"></i></button>
         <label class="font-normal text-muted" > متن سوال: </label>
         <div id="switch" class="relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
           <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button class="p-1 text-muted hover:text-error rounded-custom remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
-        <button class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
-        <button class="p-1 text-muted hover:text-primary rounded-custom paste-range transition-all duration-500 ease-out"><i class="bi bi-clipboard-plus"></i></button>
+        <button data-tooltip="حذف مبحث" class="p-1 text-muted hover:text-error rounded-custom remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
+        <button data-tooltip="کپی آیتم ها" class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
+        <button data-tooltip="چسباندن" class="p-1 text-muted hover:text-primary rounded-custom paste-range transition-all duration-500 ease-out"><i class="bi bi-clipboard-plus"></i></button>
       </div>
     </div>
     <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
