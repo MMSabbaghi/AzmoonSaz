@@ -274,15 +274,21 @@ input[type="range"]::-moz-range-track {
 }
 /* ========== Print Styles ========== */
 @media print {
-  body * {
+  body *:not(#printable):not(#printable *) {
     visibility: hidden;
-    background-color: white;
   }
+
   #printable,
   #printable * {
     visibility: visible;
+    overflow: visible !important;
+    max-height: none !important;
   }
   #printable {
+    background-color: white;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
     position: absolute;
     top: 0;
     left: 0;
@@ -301,6 +307,7 @@ input[type="range"]::-moz-range-track {
     page-break-inside: avoid;
   }
 }
+
 #printable td,
 #printable td.questions td,
 #printable th {
