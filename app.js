@@ -149,13 +149,6 @@ const rawState = {
     itemId: null,
     tempItem: null,
   },
-  aiModal: {
-    isOpen: false,
-    rangeId: null,
-    topic: "",
-    type: "descriptive",
-    items: [],
-  },
 };
 
 let appState = createDeepProxy(rawState);
@@ -1138,11 +1131,9 @@ document.addEventListener("paste", async (e) => {
 
   e.preventDefault();
 
-  if (appState.modal.tempItem) {
-    await handlePasteInModal(items);
-  } else {
-    await handlePasteOutsideModal(items);
-  }
+  if (appState.modal.tempItem) await handlePasteInModal(items);
+  else if (wizardState.isOpen) return;
+  else await handlePasteOutsideModal(items);
 });
 
 async function pasteItemsToRange(rangeId) {
@@ -1897,6 +1888,7 @@ function updateGeneratePrompt() {
 function openWizard(mode, rangeId, sourceItem = null) {
   wizardState.mode = mode;
   wizardState.rangeId = rangeId;
+  wizardState.isOpen = true;
   wizardState.generatedItems = [];
   wizardState.extractedItem = null;
   wizardState.sourceItem = sourceItem;
