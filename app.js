@@ -1757,8 +1757,9 @@ function validateStep3() {
     if (align) wizardState.extractedItem.text.align = align.toUpperCase();
   }
 
-  // استفاده از appState.namesCount به جای wizard-similar-count
-  wizardState.count = appState.namesCount || 5;
+  const countInput = document.getElementById("wizard-similar-count");
+  wizardState.count = countInput ? parseInt(countInput.value) || 5 : 5;
+
   wizardState.mode = "generate";
   wizardState.sourceItem = wizardState.extractedItem;
   return true;
@@ -1846,6 +1847,8 @@ function updateStepContent() {
       editor.innerHTML = "";
       editor.style.textAlign = "right";
     }
+    const countInput = document.getElementById("wizard-similar-count");
+    if (countInput) countInput.value = wizardState.count;
     updateWizardPreview();
   } else if (wizardState.step === 4) {
     updateGeneratePrompt();

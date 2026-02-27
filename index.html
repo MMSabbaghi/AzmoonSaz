@@ -350,8 +350,6 @@
           <span class="text-xs mt-1 block">پیش‌نمایش</span>
         </div>
       </div>
-
-      <!-- کانتینر مراحل (هر مرحله یک div با کلاس step) -->
       <div class="steps-container relative min-h-[300px]">
         <!-- مرحله ۱: کپی پرامپت استخراج -->
         <div class="step step-1 transition-all duration-300 ease-in-out" data-step="1">
@@ -392,12 +390,12 @@
 
         <!-- مرحله ۳: ویرایش سوال (بدون ابزار تصویر) -->
         <div class="step step-3 hidden transition-all duration-300 ease-in-out" data-step="3">
-          <!-- ویرایشگر متن ساده (ریچ تکست) بدون ابزار تصویر -->
+          <!-- ویرایشگر متن ساده (ریچ تکست) -->
           <div class="rich-editor-wrapper relative w-full bg-surface border border-border-light mb-4" dir="rtl">
             <div
               class="rich-editor-toolbar bg-surface-dark border-b border-border-light p-2 flex flex-wrap items-center gap-1"
               id="wizard-toolbar">
-              <!-- همان دکمه‌های استایل، چینش و undo/redo (بدون رنگ و اندازه) -->
+              <!-- دکمه‌های استایل، چینش و undo/redo -->
               <button type="button"
                 class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
                 data-command="bold" title="پررنگ"><i class="bi bi-type-bold"></i></button>
@@ -432,9 +430,16 @@
               id="wizard-text-editor" contenteditable="true" data-placeholder="متن سوال را ویرایش کنید..."></div>
           </div>
 
-          <!-- پیش‌نمایش سوال (مثل مودال ویرایش) -->
+          <!-- پیش‌نمایش سوال + تعداد سوالات مشابه -->
           <div class="mb-4">
-            <label class="font-medium text-secondary mb-2 block">پیش‌نمایش:</label>
+            <div class="flex items-center justify-between mb-2">
+              <label class="font-medium text-secondary">پیش‌نمایش:</label>
+              <div class="flex items-center gap-2">
+                <label class="text-sm font-medium text-secondary">تعداد سوالات مشابه:</label>
+                <input data-number-input="true" data-float="false" id="wizard-similar-count"
+                  class="w-20 border border-border-light rounded-custom p-2 text-center" min="1" max="20" value="5">
+              </div>
+            </div>
             <table class="w-full border-collapse bg-surface" style="border: 1px solid var(--text-primary);">
               <tr>
                 <td style="border: 1px solid var(--text-primary);" class="w-10 text-center font-bold"
@@ -443,18 +448,9 @@
               </tr>
             </table>
           </div>
-
-          <!-- گزینه ساخت سوالات مشابه -->
-          <div class="flex items-center justify-between border-t border-border-light pt-4 mt-2">
-            <div class="flex items-center gap-2">
-              <label class="text-sm font-medium text-secondary">تعداد سوالات مشابه:</label>
-              <input type="number" id="wizard-similar-count"
-                class="w-20 border border-border-light rounded-custom p-2 text-center" min="1" max="20" value="5">
-            </div>
-          </div>
         </div>
 
-        <!-- مرحله ۴: پرامپت ساخت مشابه -->
+        <!-- مرحله ۴: پرامپت ساخت مشابه (هم‌سطح) -->
         <div class="step step-4 hidden transition-all duration-300 ease-in-out" data-step="4">
           <div class="bg-primary-light/10 border-r-4 border-primary p-3 rounded-custom mb-4">
             <p class="text-sm text-secondary">پرامپت زیر را کپی کرده و برای هوش مصنوعی ارسال کنید تا سوالات مشابه تولید
@@ -499,18 +495,17 @@
               ندارد.</p>
           </div>
         </div>
-      </div>
 
-      <!-- دکمه‌های ناوبری -->
-      <div class="flex mt-6 pt-4 border-t border-border-light">
-        <button id="wizardPrevBtn" class="btn btn-secondary px-6" disabled>قبلی</button>
-        <button id="wizardNextBtn" class="btn mr-auto btn-primary px-6">بعدی</button>
+        <!-- دکمه‌های ناوبری (درون steps-container و پس از همه مراحل) -->
+        <div class="flex mt-6 pt-4 border-t border-border-light">
+          <button id="wizardPrevBtn" class="btn btn-secondary px-6" disabled>قبلی</button>
+          <button id="wizardNextBtn" class="btn mr-auto btn-primary px-6">بعدی</button>
+        </div>
       </div>
     </div>
-  </div>
 
 
-  <button id="toTop" title="برو بالا" class="
+    <button id="toTop" title="برو بالا" class="
     fixed bottom-7 right-7 z-50
     w-14 h-14 rounded-circle
     bg-primary-gradient
@@ -523,17 +518,17 @@
     max-md:bottom-[calc(80px+env(safe-area-inset-bottom))]
     max-md:w-14 max-md:h-14 max-md:text-[1.8rem]
   ">
-    <i class="bi bi-arrow-up"></i>
-  </button>
-  <link rel="stylesheet" href="./utils/katex/katex.min.css">
-  <script defer src="./utils/katex/katex.min.js"></script>
-  <script defer src="./utils/katex/auto-render.min.js"></script>
-  <script src="./utils/cropper/cropper.min.js"></script>
-  <script src="./utils/persian-inputs.js"></script>
-  <script src="./utils/alert.js"></script>
-  <script src="./utils/confirm.js"></script>
-  <script src="./utils/ai-prompt.js"></script>
-  <script src="./app.js"></script>
+      <i class="bi bi-arrow-up"></i>
+    </button>
+    <link rel="stylesheet" href="./utils/katex/katex.min.css">
+    <script defer src="./utils/katex/katex.min.js"></script>
+    <script defer src="./utils/katex/auto-render.min.js"></script>
+    <script src="./utils/cropper/cropper.min.js"></script>
+    <script src="./utils/persian-inputs.js"></script>
+    <script src="./utils/alert.js"></script>
+    <script src="./utils/confirm.js"></script>
+    <script src="./utils/ai-prompt.js"></script>
+    <script src="./app.js"></script>
 </body>
 
 </html>
