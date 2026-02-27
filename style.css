@@ -441,6 +441,11 @@ input[type="range"]::-moz-range-track {
     padding: 8px;
   }
 
+  .toolbar-btn.active {
+    background-color: var(--primary-light);
+    color: white;
+  }
+
   .modal-preview-cell img {
     max-width: 100%;
     height: auto;

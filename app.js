@@ -1309,7 +1309,7 @@ function setupModal(modalElement, options = {}) {
 // ========== Edit modal ==========
 const modalEdit = document.querySelector(".modal-edit");
 const modalEditPreviewCell = modalEdit.querySelector(".modal-preview-cell");
-const modalTextEditor = document.getElementById("modal-text-editor");
+let modalTextEditor = document.getElementById("modal-text-editor");
 const modalShowText = document.getElementById("modal-show-text");
 const modalImageUpload = document.getElementById("modalImageUpload");
 const modalImageUploadContainer = document.getElementById(
@@ -1521,27 +1521,6 @@ function closeEditModal() {
   _updatingEditorFromCode = false;
   _userModified = false;
 }
-
-modalTextEditor.addEventListener("focus", function () {
-  const temp = appState.modal.tempItem;
-  if (!temp) return;
-
-  if (!temp.showText) {
-    modalShowText.checked = true;
-    temp.showText = true;
-  }
-
-  if (!temp.text) {
-    temp.text = {
-      html: "",
-      align: ITEM_DEFAULTS.text.align,
-    };
-    modalTextEditor.innerHTML = "";
-    modalTextEditor.style.textAlign = "right";
-  }
-
-  updateModalPreviewFromTemp();
-});
 
 modalShowText.addEventListener("change", function (e) {
   const temp = appState.modal.tempItem;
@@ -1994,33 +1973,6 @@ function renderGeneratedPreview(items, containerId, emptyId) {
   renderMathInContainer(container);
 }
 
-function initWizardRichTextEditor() {
-  const editor = document.getElementById("wizard-text-editor");
-  const toolbar = document.getElementById("wizard-toolbar");
-  if (!editor || !toolbar) return;
-
-  toolbar.querySelectorAll("[data-command]").forEach((btn) => {
-    btn.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      document.execCommand(btn.dataset.command, false, null);
-      editor.focus();
-      updateWizardPreviewFromEditor();
-    });
-  });
-
-  toolbar
-    .querySelectorAll("[data-action='undo'],[data-action='redo']")
-    .forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document.execCommand(btn.dataset.action === "undo" ? "undo" : "redo");
-        updateWizardPreviewFromEditor();
-      });
-    });
-
-  editor.addEventListener("input", updateWizardPreviewFromEditor);
-  editor.addEventListener("blur", updateWizardPreviewFromEditor);
-}
-
 function updateWizardPreviewFromEditor() {
   if (!wizardState.extractedItem) return;
   const editor = document.getElementById("wizard-text-editor");
@@ -2071,7 +2023,6 @@ function initWizardEvents() {
   document
     .querySelectorAll(".modal-ai .modal-close-btn")
     .forEach((btn) => btn.addEventListener("click", closeWizard));
-  initWizardRichTextEditor();
 }
 
 function setupAiRangeButton(rangeElement, rangeId) {
@@ -2429,104 +2380,6 @@ moveToTopBtn.addEventListener("click", () => {
 let _updatingEditorFromCode = false;
 let _userModified = false;
 
-function initRichTextEditor() {
-  const toolbar = document.getElementById("modal-toolbar");
-  if (!toolbar) return;
-
-  setupToolbarCommands(toolbar);
-  setupColorPicker(toolbar);
-  setupFontSizeSelector(toolbar);
-  setupUndoRedo(toolbar);
-  setupToolbarState(toolbar);
-
-  modalTextEditor.addEventListener("input", updateTempItemFromTextEditor);
-  modalTextEditor.addEventListener("blur", updateTempItemFromTextEditor);
-}
-
-function setupToolbarCommands(toolbar) {
-  const commandButtons = toolbar.querySelectorAll("[data-command]");
-  commandButtons.forEach((btn) => {
-    btn.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      document.execCommand(btn.dataset.command, false, null);
-      modalTextEditor.focus();
-      updateTempItemFromTextEditor();
-    });
-  });
-}
-
-function setupColorPicker(toolbar) {
-  const colorInput = toolbar.querySelector("#modal-text-color");
-  if (!colorInput) return;
-
-  colorInput.addEventListener("input", (e) => {
-    document.execCommand("foreColor", false, e.target.value);
-    modalTextEditor.focus();
-    updateTempItemFromTextEditor();
-  });
-}
-
-function setupFontSizeSelector(toolbar) {
-  const fontSizeSelect = toolbar.querySelector("#modal-font-size");
-  if (!fontSizeSelect) return;
-
-  fontSizeSelect.addEventListener("change", (e) => {
-    const size = e.target.value;
-    try {
-      document.execCommand("fontSize", false, "7");
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const span = document.createElement("span");
-        span.style.fontSize = size + "px";
-        span.appendChild(range.extractContents());
-        range.insertNode(span);
-        selection.removeAllRanges();
-        const newRange = document.createRange();
-        newRange.selectNodeContents(span);
-        selection.addRange(newRange);
-      }
-    } catch (err) {
-      console.warn("Font size change error:", err);
-    }
-    modalTextEditor.focus();
-    updateTempItemFromTextEditor();
-  });
-}
-
-function setupUndoRedo(toolbar) {
-  const undoBtns = toolbar.querySelectorAll('[data-action="undo"]');
-  const redoBtns = toolbar.querySelectorAll('[data-action="redo"]');
-
-  undoBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.execCommand("undo");
-      updateTempItemFromTextEditor();
-    });
-  });
-
-  redoBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.execCommand("redo");
-      updateTempItemFromTextEditor();
-    });
-  });
-}
-
-function setupToolbarState(toolbar) {
-  const updateState = () => {
-    toolbar.querySelectorAll("[data-command]").forEach((btn) => {
-      try {
-        const active = document.queryCommandState(btn.dataset.command);
-        btn.classList.toggle("active", active);
-      } catch (err) {}
-    });
-  };
-
-  modalTextEditor.addEventListener("mouseup", updateState);
-  modalTextEditor.addEventListener("keyup", updateState);
-}
-
 // ========== Preview Image Toolbar ==========
 let selectedPreviewImage = null;
 let cropper = null;
@@ -2804,23 +2657,17 @@ function setupInputScrollOnFocus() {
 // ========== Initialization ==========
 document.addEventListener("DOMContentLoaded", function () {
   document.body.style.fontFamily = appState.font;
-
   namesUI = createNamesUI();
   placeNamesUI();
-
   initializeDesktopButtons();
   initializeMobileButtons();
   initializeMobileFileUpload();
   initializeDesktopFileUpload();
   initializeHamburgerMenu();
-
   checkAndRestoreFromDB();
-
-  initRichTextEditor();
   initPreviewImageToolbar();
 
   setupModal(modalEdit);
-
   if (isMobile()) {
     setupMobileSwipeToClose(modalEdit);
   }
@@ -2828,6 +2675,79 @@ document.addEventListener("DOMContentLoaded", function () {
   initWizardEvents();
   setupInputScrollOnFocus();
   setupCropModalEvents();
+
+  const modalPlaceholder = document.getElementById(
+    "modal-rich-editor-placeholder",
+  );
+  if (modalPlaceholder) {
+    createRichTextEditor(modalPlaceholder, {
+      features: [
+        "bold",
+        "italic",
+        "underline",
+        "strike",
+        "align-left",
+        "align-center",
+        "align-right",
+        "align-justify",
+        "color",
+        "fontSize",
+        "undo",
+        "redo",
+      ],
+      placeholder: "متن سوال را بنویسید...",
+      contentId: "modal-text-editor",
+      toolbarId: "modal-toolbar",
+      onContentChange: updateTempItemFromTextEditor,
+    });
+
+    modalTextEditor = document.getElementById("modal-text-editor");
+
+    modalTextEditor.addEventListener("focus", function () {
+      const temp = appState.modal.tempItem;
+      if (!temp) return;
+
+      if (!temp.showText) {
+        modalShowText.checked = true;
+        temp.showText = true;
+      }
+
+      if (!temp.text) {
+        temp.text = {
+          html: "",
+          align: ITEM_DEFAULTS.text.align,
+        };
+        modalTextEditor.innerHTML = "";
+        modalTextEditor.style.textAlign = "right";
+      }
+
+      updateModalPreviewFromTemp();
+    });
+  }
+
+  const wizardPlaceholder = document.getElementById(
+    "wizard-rich-editor-placeholder",
+  );
+  if (wizardPlaceholder) {
+    createRichTextEditor(wizardPlaceholder, {
+      features: [
+        "bold",
+        "italic",
+        "underline",
+        "strike",
+        "align-left",
+        "align-center",
+        "align-right",
+        "align-justify",
+        "undo",
+        "redo",
+      ],
+      placeholder: "متن سوال را ویرایش کنید...",
+      contentId: "wizard-text-editor",
+      toolbarId: "wizard-toolbar",
+      onContentChange: updateWizardPreviewFromEditor,
+    });
+  }
 
   window.addEventListener("resize", () => {
     const isNowMobile = window.innerWidth <= 768;

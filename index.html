@@ -114,83 +114,7 @@
         </label>
       </div>
 
-      <!-- ========== ویرایشگر متن پیشرفته (Rich Text) با تولبار یکپارچه ========== -->
-      <div class="rich-editor-wrapper relative w-full bg-surface border border-border-light mb-4" dir="rtl">
-        <!-- تولبار واکنش‌گرا -->
-        <div
-          class="rich-editor-toolbar bg-surface-dark border-b border-border-light p-2 z-20 w-full overflow-x-auto whitespace-nowrap md:overflow-visible md:whitespace-normal md:flex md:flex-wrap md:items-center md:gap-2"
-          id="modal-toolbar">
-          <div class="toolbar-scroll inline-flex items-center gap-1 md:contents">
-            <!-- گروه دکمه‌های استایل -->
-            <div
-              class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light last:border-l-0">
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-command="bold" title="پررنگ"><i class="bi bi-type-bold"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-command="italic" title="ایتالیک"><i class="bi bi-type-italic"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-command="underline" title="زیرخط"><i class="bi bi-type-underline"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-command="strikeThrough" title="خط خورده"><i class="bi bi-type-strikethrough"></i></button>
-            </div>
-            <!-- گروه چینش -->
-            <div
-              class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light last:border-l-0">
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-command="justifyRight" title="راست چین"><i class="bi bi-justify-right"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-command="justifyCenter" title="وسط چین"><i class="bi bi-text-center"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-command="justifyLeft" title="چپ چین"><i class="bi bi-justify-left"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-command="justifyFull" title="هم‌تراز"><i class="bi bi-justify"></i></button>
-            </div>
-            <!-- رنگ و اندازه فونت -->
-            <div
-              class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light last:border-l-0">
-              <div class="toolbar-color-picker relative inline-flex items-center">
-                <input type="color" id="modal-text-color" class="absolute opacity-0 w-0 h-0" value="#333333">
-                <label for="modal-text-color"
-                  class="color-label inline-flex items-center gap-1 px-3 h-9 rounded-circle bg-transparent text-secondary hover:bg-surface-darker cursor-pointer"><i
-                    class="bi bi-palette"></i> رنگ</label>
-              </div>
-              <select id="modal-font-size"
-                class="font-size-select h-9 px-3 border border-border-light bg-surface text-secondary text-sm cursor-pointer outline-none focus:border-primary"
-                title="اندازه فونت">
-                <option value="12">۱۲</option>
-                <option value="14">۱۴</option>
-                <option value="16" selected>۱۶</option>
-                <option value="18">۱۸</option>
-                <option value="20">۲۰</option>
-                <option value="24">۲۴</option>
-                <option value="28">۲۸</option>
-                <option value="32">۳۲</option>
-              </select>
-            </div>
-            <!-- undo/redo -->
-            <div class="toolbar-group inline-flex items-center gap-0.5 px-1 last:border-l-0">
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-action="undo" title="بازگشت"><i class="bi bi-arrow-counterclockwise"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                data-action="redo" title="انجام دوباره"><i class="bi bi-arrow-clockwise"></i></button>
-            </div>
-          </div>
-        </div>
-
-        <!-- باکس ویرایش متن -->
-        <div class="rich-editor-content h-[100px] overflow-y-auto p-4 leading-relaxed outline-none bg-surface"
-          id="modal-text-editor" contenteditable="true" data-placeholder="متن سوال را بنویسید..."></div>
-      </div>
+      <div id="modal-rich-editor-placeholder" class="rich-editor-placeholder"></div>
 
       <!-- نوار ابزار تنظیمات تصویر -->
       <div id="previewImageToolbar" dir="rtl"
@@ -385,44 +309,7 @@
         <!-- مرحله ۳: ویرایش سوال (بدون ابزار تصویر) -->
         <div class="step step-3 hidden transition-all duration-300 ease-in-out" data-step="3">
           <!-- ویرایشگر متن ساده (ریچ تکست) -->
-          <div class="rich-editor-wrapper relative w-full bg-surface border border-border-light mb-4" dir="rtl">
-            <div
-              class="rich-editor-toolbar bg-surface-dark border-b border-border-light p-2 flex flex-wrap items-center gap-1"
-              id="wizard-toolbar">
-              <!-- دکمه‌های استایل، چینش و undo/redo -->
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-command="bold" title="پررنگ"><i class="bi bi-type-bold"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-command="italic" title="ایتالیک"><i class="bi bi-type-italic"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-command="underline" title="زیرخط"><i class="bi bi-type-underline"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-command="strikeThrough" title="خط خورده"><i class="bi bi-type-strikethrough"></i></button>
-              <span class="border-l border-border-light h-6 mx-1"></span>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-command="justifyRight" title="راست چین"><i class="bi bi-justify-right"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-command="justifyCenter" title="وسط چین"><i class="bi bi-text-center"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-command="justifyLeft" title="چپ چین"><i class="bi bi-justify-left"></i></button>
-              <span class="border-l border-border-light h-6 mx-1"></span>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-action="undo" title="بازگشت"><i class="bi bi-arrow-counterclockwise"></i></button>
-              <button type="button"
-                class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker"
-                data-action="redo" title="انجام دوباره"><i class="bi bi-arrow-clockwise"></i></button>
-            </div>
-            <div class="rich-editor-content h-[120px] overflow-y-auto p-4 leading-relaxed outline-none bg-surface"
-              id="wizard-text-editor" contenteditable="true" data-placeholder="متن سوال را ویرایش کنید..."></div>
-          </div>
+          <div id="wizard-rich-editor-placeholder" class="rich-editor-placeholder"></div>
 
           <!-- پیش‌نمایش سوال + تعداد سوالات مشابه -->
           <div class="mb-4">
@@ -521,6 +408,8 @@
     <script src="./utils/persian-inputs.js"></script>
     <script src="./utils/alert.js"></script>
     <script src="./utils/confirm.js"></script>
+    <script src="./utils/rich-text-editor.js"></script>
+
     <script src="./utils/ai-prompt.js"></script>
     <script src="./app.js"></script>
 </body>
