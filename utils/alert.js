@@ -2,11 +2,6 @@
 (function () {
   const style = document.createElement("style");
   style.textContent = `
-          :root {
-            --toast-primary: #4a90e2;
-            --toast-light: #f9f9f9;
-            --toast-border: #ddd;
-          }
           /* Container توست در وسط بالا */
           .toast-alert-container {
             position: fixed;
@@ -23,14 +18,12 @@
           }
           /* سبک باکس پیام */
           .toast-alert {
-            background-color: var(--toast-light);
             padding: 14px 20px;
             border-radius: var(--radius);
             font-size: 16px;
             width:100%;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-            color: var(--toast-light);
-            background-color: var(--toast-primary);
+            box-shadow: var(--shadow);
+            color: var(--text-inverse);
             text-align: center;
             animation: slideDown 0.4s ease, fadeOut 0.5s ease forwards;
             animation-delay: 0s, 4s;
@@ -38,11 +31,11 @@
           }
           
         .toast-alert.success {
-            background: linear-gradient(to right, #00c6ff, #0072ff);
+            background-color: var(--success);
         }
 
         .toast-alert.error {
-            background: linear-gradient(to right, #f85032, #e73827);
+            background-color: var(--error);
         }
 
           @keyframes slideDown {

@@ -82,7 +82,7 @@ function handleFileUpload({ target, onChange, readAs }) {
   });
 }
 
-function exportDataObject(data, filename = "data.json") {
+function exportDataObject(data, filename) {
   const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -2323,19 +2323,35 @@ function processImportedFile(fileContent) {
 }
 
 function exportData() {
-  exportDataObject({
-    names: appState.names,
-    namesCount: appState.namesCount,
-    ranges: appState.ranges.map((r) => ({
-      rangeName: r.rangeName,
-      count: r.count,
-      score: r.score,
-      desc: r.desc,
-      items: r.items.map((item) => ({
-        ...item,
-        showText: item.showText !== false,
-      })),
-    })),
+  const defaultFilename = "data.json";
+  showConfirm({
+    msg: "نام فایل را وارد کنید:",
+    on_confirm: (fileName) => {
+      const finalName =
+        fileName && fileName.trim() !== "" ? fileName.trim() : defaultFilename;
+      const data = {
+        names: appState.names,
+        namesCount: appState.namesCount,
+        ranges: appState.ranges.map((r) => ({
+          rangeName: r.rangeName,
+          count: r.count,
+          score: r.score,
+          desc: r.desc,
+          items: r.items.map((item) => ({
+            ...item,
+            showText: item.showText !== false,
+          })),
+        })),
+      };
+      exportDataObject(data, finalName);
+    },
+    input: {
+      placeholder: "مثال: آزمون ریاضی.json",
+      value: defaultFilename,
+      required: false,
+    },
+    confirmText: "ذخیره",
+    cancelText: "انصراف",
   });
 }
 

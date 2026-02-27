@@ -1,14 +1,10 @@
 (function () {
   const css = `
-      :root {
-      --confirm-light: #f9f9f9;
-      --border: #ddd;
-    }
     .confirm-overlay {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.4);
+      background: var(--overlay);
       display: none;
       align-items: flex-start;
       justify-content: center;
@@ -17,20 +13,41 @@
     }
 
     .confirm-box {
-      background: var(--confirm-light);
+      background: var(--surface);
       padding: 24px;
       margin-top:20px;
       border-radius: var(--radius);
       width: 320px;
       max-width: 90%;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      box-shadow: var(--shadow-lg);
       text-align: center;
       animation: slideDown 0.2s ease;
     }
 
     .confirm-box h3 {
       margin: 0 0 12px;
-      color: var(--primary-dark);
+      color: var(--text-primary);
+    }
+
+    .confirm-input-container {
+      margin-bottom: 16px;
+      text-align: right;
+    }
+
+    .confirm-input-container input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      background: var(--surface);
+      color: var(--text-primary);
+      box-sizing: border-box;
+    }
+
+    .confirm-input-container input:focus {
+      outline: none;
+      border-color: var(--primary);
     }
 
     .confirm-buttons {
@@ -43,7 +60,7 @@
       flex: 1;
       padding: 10px;
       border: none;
-      border-radius: var(--radius) ;
+      border-radius: var(--radius);
       font-size: 14px;
       cursor: pointer;
       display: flex;
@@ -54,17 +71,17 @@
 
     .confirm-btn-confirm {
       background: var(--primary);
-      color: white;
+      color: var(--text-inverse);
     }
 
     .confirm-btn-cancel {
       background: var(--border);
-      color: #333;
+      color: var(--text-primary);
     }
 
     @keyframes fadeIn {
       from { background: rgba(0, 0, 0, 0); }
-      to { background: rgba(0, 0, 0, 0.4); }
+      to { background: var(--overlay); }
     }
 
     @keyframes slideDown {
@@ -75,17 +92,6 @@
       to {
         opacity: 1;
         transform: translateY(0);
-      }
-    }
-
-    @keyframes popupIn {
-      from {
-        transform: scale(0.8);
-        opacity: 0;
-      }
-      to {
-        transform: scale(1);
-        opacity: 1;
       }
     }
   `;
@@ -100,6 +106,9 @@
   overlay.innerHTML = `
     <div class="confirm-box">
       <h3 id="confirm-text">آیا اطمینان دارید؟</h3>
+      <div class="confirm-input-container" id="confirm-input-container" style="display: none;">
+        <input type="text" id="confirm-input" placeholder="..." />
+      </div>
       <div class="confirm-buttons">
         <button class="confirm-btn confirm-btn-cancel" id="cancelBtn">
           <i class="bi bi-x-lg"></i>
@@ -121,8 +130,12 @@
   const confirmIcon = confirmBtn.querySelector("i");
   const cancelIcon = cancelBtn.querySelector("i");
 
+  const inputContainer = overlay.querySelector("#confirm-input-container");
+  const inputField = overlay.querySelector("#confirm-input");
+
   let onConfirm = null;
   let onCancel = null;
+  let inputConfig = null;
 
   function showConfirm({
     msg,
@@ -132,16 +145,17 @@
     cancelText: customCancelText = "لغو",
     confirmIcon: customConfirmIcon = "bi-check-lg",
     cancelIcon: customCancelIcon = "bi-x-lg",
+    input, // { placeholder, value, required, label }
   }) {
     onConfirm = on_confirm;
     onCancel = on_cancel;
+    inputConfig = input;
 
-    // Update text and icons
     overlay.querySelector("#confirm-text").innerHTML = msg;
+
     confirmText.textContent = customConfirmText;
     cancelText.textContent = customCancelText;
 
-    // Update icons if provided
     if (customConfirmIcon) {
       confirmIcon.className = `bi ${customConfirmIcon}`;
     }
@@ -149,11 +163,24 @@
       cancelIcon.className = `bi ${customCancelIcon}`;
     }
 
+    if (input) {
+      const placeholder = input.placeholder || "...";
+      const initialValue = input.value || "";
+      inputField.placeholder = placeholder;
+      inputField.value = initialValue;
+
+      inputContainer.style.display = "block";
+    } else {
+      inputContainer.style.display = "none";
+      inputField.value = "";
+    }
+
     overlay.style.display = "flex";
   }
 
   function hideConfirm() {
     overlay.style.display = "none";
+    inputField.value = "";
   }
 
   cancelBtn.onclick = function () {
@@ -162,11 +189,25 @@
   };
 
   confirmBtn.onclick = function () {
+    let result = null;
+    if (inputConfig) {
+      result = inputField.value;
+      if (inputConfig.required && !result.trim()) {
+        if (typeof showToast === "function") {
+          showToast("این فیلد نمی‌تواند خالی باشد", "error");
+        } else {
+          alert("این فیلد نمی‌تواند خالی باشد");
+        }
+        return;
+      }
+    }
+
     hideConfirm();
-    if (typeof onConfirm === "function") onConfirm();
+    if (typeof onConfirm === "function") {
+      onConfirm(result);
+    }
   };
 
-  // Optional: click outside to close
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
       hideConfirm();
