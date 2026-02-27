@@ -2453,96 +2453,6 @@ function exportData() {
   });
 }
 
-// ========== Share Helpers ==========
-function buildShareData() {
-  return {
-    names: appState.names,
-    namesCount: appState.namesCount,
-    ranges: appState.ranges.map((r) => ({
-      rangeName: r.rangeName,
-      count: r.count,
-      score: r.score,
-      desc: r.desc,
-      items: r.items.map((item) => ({
-        ...item,
-        showText: item.showText !== false,
-      })),
-    })),
-  };
-}
-
-async function shareText(text) {
-  try {
-    await navigator.share({ title: "آزمون", text });
-    return true;
-  } catch (err) {
-    if (err.name !== "AbortError") {
-      console.warn("خطا در اشتراک متن:", err);
-    }
-    return false;
-  }
-}
-
-async function shareFile(file) {
-  if (!navigator.canShare || !navigator.canShare({ files: [file] }))
-    return false;
-  try {
-    await navigator.share({
-      files: [file],
-      title: "آزمون",
-      text: "فایل JSON آزمون",
-    });
-    return true;
-  } catch (err) {
-    if (err.name !== "AbortError") {
-      console.warn("خطا در اشتراک فایل:", err);
-    }
-    return false;
-  }
-}
-
-function downloadJSON(data, fileName = "quiz-data.json") {
-  exportDataObject(data, fileName);
-  showToast("فایل ذخیره شد");
-}
-
-// ========== Main Share Function ==========
-async function shareJSON() {
-  const data = buildShareData();
-  const jsonStr = JSON.stringify(data, null, 2);
-
-  if (await shareText(jsonStr)) {
-    showToast("با موفقیت به اشتراک گذاشته شد");
-    return;
-  }
-
-  const blob = new Blob([jsonStr], { type: "application/json" });
-  const file = new File([blob], "quiz-data.json", { type: "application/json" });
-  if (await shareFile(file)) {
-    showToast("با موفقیت به اشتراک گذاشته شد");
-    return;
-  }
-
-  downloadJSON(data);
-}
-
-// ========== Export Handler ==========
-function handleExportClick() {
-  if (typeof navigator.share !== "undefined") {
-    showConfirm({
-      msg: "نحوه ذخیره را انتخاب کنید:",
-      on_confirm: () => exportData(),
-      on_cancel: () => shareJSON(),
-      confirmText: "دانلود",
-      cancelText: "اشتراک گذاری",
-      confirmIcon: "bi-download",
-      cancelIcon: "bi-share",
-    });
-  } else {
-    exportData();
-  }
-}
-
 // ========== UI Helpers (Sticky, To Top) ==========
 const moveToTopBtn = document.getElementById("toTop");
 const sticky = document.getElementById("sticky");
@@ -2815,8 +2725,7 @@ function initializeMobileButtons() {
   if (newMobileBtn) newMobileBtn.addEventListener("click", handleNewAttempt);
   if (saveMobileBtn)
     saveMobileBtn.addEventListener("click", saveStateToIndexedDB);
-  if (exportMobileBtn)
-    exportMobileBtn.addEventListener("click", handleExportClick);
+  if (exportMobileBtn) exportMobileBtn.addEventListener("click", exportData);
 }
 
 function initializeMobileFileUpload() {
