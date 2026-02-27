@@ -77,6 +77,11 @@
 .bg-success-light {
   background-color: var(--success-light);
 }
+
+.bg-success {
+  background-color: var(--success);
+}
+
 .bg-overlay {
   background-color: var(--overlay);
 }
