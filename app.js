@@ -1672,7 +1672,8 @@ function renderMathInContainer(container) {
   }
 }
 
-// ========== AI Wizard (Unified Multi-step Modal) ==========
+// ========== AI Wizard ==========
+
 const wizardState = {
   isOpen: false,
   mode: "extract",
@@ -1684,7 +1685,6 @@ const wizardState = {
   count: 5,
 };
 
-// ========== Wizard UI Helpers ==========
 function showWizardStep(step) {
   if (wizardState.transitioning) return;
   wizardState.transitioning = true;
@@ -1697,9 +1697,7 @@ function showWizardStep(step) {
 
   if (currentStepEl && currentStepEl !== nextStepEl) {
     currentStepEl.classList.add("opacity-0", "scale-95", "pointer-events-none");
-    setTimeout(() => {
-      currentStepEl.classList.add("hidden");
-    }, 200);
+    setTimeout(() => currentStepEl.classList.add("hidden"), 200);
   }
 
   nextStepEl.classList.remove("hidden");
@@ -1714,63 +1712,86 @@ function showWizardStep(step) {
   }, 250);
 }
 
-function nextStep() {
-  let next = wizardState.step + 1;
-  const maxStep = 5;
+function validateStep2() {
+  const raw = document.getElementById("extractResponseInput").value.trim();
+  if (!raw) {
+    showToast("لطفاً پاسخ را وارد کنید", "error");
+    return false;
+  }
+  try {
+    const data = extractJSON(raw);
+    if (!data.items?.length) throw new Error("آیتمی یافت نشد");
+    wizardState.extractedItem = {
+      id: createRandomId("item"),
+      text: { ...data.items[0].text },
+      image: null,
+      showText: true,
+    };
+    return true;
+  } catch (err) {
+    showToast(err.message, "error");
+    return false;
+  }
+}
 
-  // انتقال از مرحله ۳ به ۴ در حالت extract
-  if (wizardState.mode === "extract" && wizardState.step === 3 && next === 4) {
-    const editor = document.getElementById("wizard-text-editor");
-    const html = editor.innerHTML.trim();
-    if (!html) {
-      showToast("لطفاً ابتدا متن سوال را وارد کنید", "error");
-      return;
-    }
-    if (!wizardState.extractedItem) {
-      wizardState.extractedItem = {
-        id: createRandomId("item"),
-        text: null,
-        image: null,
-        showText: true,
-      };
-    }
-    if (!wizardState.extractedItem.text) {
-      wizardState.extractedItem.text = { html, align: "RIGHT" };
-    } else {
-      wizardState.extractedItem.text.html = html;
-      const align = editor.style.textAlign;
-      if (align) wizardState.extractedItem.text.align = align.toUpperCase();
-    }
-    const countInput = document.getElementById("wizard-similar-count");
-    wizardState.count = parseInt(countInput.value) || 5;
-    wizardState.mode = "generate";
-    wizardState.sourceItem = wizardState.extractedItem;
-    showWizardStep(4);
+function validateStep3() {
+  const editor = document.getElementById("wizard-text-editor");
+  const html = editor.innerHTML.trim();
+  if (!html) {
+    showToast("لطفاً متن سوال را وارد کنید", "error");
+    return false;
+  }
+  if (!wizardState.extractedItem) {
+    wizardState.extractedItem = {
+      id: createRandomId("item"),
+      text: null,
+      image: null,
+      showText: true,
+    };
+  }
+  if (!wizardState.extractedItem.text) {
+    wizardState.extractedItem.text = { html, align: "RIGHT" };
+  } else {
+    wizardState.extractedItem.text.html = html;
+    const align = editor.style.textAlign;
+    if (align) wizardState.extractedItem.text.align = align.toUpperCase();
+  }
+
+  // استفاده از appState.namesCount به جای wizard-similar-count
+  wizardState.count = appState.namesCount || 5;
+  wizardState.mode = "generate";
+  wizardState.sourceItem = wizardState.extractedItem;
+  return true;
+}
+
+function nextStep() {
+  if (wizardState.transitioning) return;
+
+  if (wizardState.step === 2 && !validateStep2()) return;
+  if (wizardState.step === 3 && !validateStep3()) return;
+
+  if (wizardState.step === 5) {
+    closeWizard();
     return;
   }
 
-  if (next > maxStep) return;
+  const next = wizardState.step + 1;
+  if (next > 5) return;
   showWizardStep(next);
 }
 
 function prevStep() {
-  let prev = wizardState.step - 1;
+  const prev = wizardState.step - 1;
   if (prev < 1) return;
-
-  if (wizardState.step === 4 && prev === 3) {
-    if (wizardState.extractedItem) {
-      wizardState.mode = "extract";
-      showWizardStep(3);
-      return;
-    } else {
-      return;
-    }
+  if (wizardState.step === 4 && prev === 3 && wizardState.extractedItem) {
+    wizardState.mode = "extract";
+    showWizardStep(3);
+    return;
   }
-
   showWizardStep(prev);
 }
 
-function updateWizardUI() {
+function updateStepIndicators() {
   document.querySelectorAll(".modal-ai .step-item").forEach((item, idx) => {
     const stepNum = idx + 1;
     const circle = item.querySelector(".step-circle");
@@ -1793,31 +1814,32 @@ function updateWizardUI() {
       circle.classList.remove("bg-primary", "bg-success", "text-white");
     }
   });
+}
 
+function updateNavigationButtons() {
   const prevBtn = document.getElementById("wizardPrevBtn");
   const nextBtn = document.getElementById("wizardNextBtn");
-  if (!prevBtn || !nextBtn) return;
-
-  prevBtn.disabled = wizardState.step === 1;
-  if (wizardState.mode === "generate" && wizardState.step === 4) {
-    prevBtn.disabled = true;
-  }
-
-  if (wizardState.step === 5) {
-    nextBtn.disabled = true;
-    nextBtn.textContent = "پایان";
-  } else {
-    nextBtn.disabled = false;
-    nextBtn.textContent = "بعدی";
-  }
 
   if (wizardState.step === 1) {
-    const prompt = getAIPrompt({ task: "extract" });
-    document.getElementById("extractPromptDisplay").textContent = prompt;
+    prevBtn.classList.add("hidden");
+  } else {
+    prevBtn.classList.remove("hidden");
+  }
+  prevBtn.disabled = false;
+
+  nextBtn.disabled = false;
+  nextBtn.textContent = wizardState.step === 5 ? "پایان" : "بعدی";
+}
+
+function updateStepContent() {
+  if (wizardState.step === 1) {
+    document.getElementById("extractPromptDisplay").textContent = getAIPrompt({
+      task: "extract",
+    });
   } else if (wizardState.step === 3) {
     const item = wizardState.extractedItem;
     const editor = document.getElementById("wizard-text-editor");
-    if (item && item.text) {
+    if (item?.text) {
       editor.innerHTML = item.text.html;
       editor.style.textAlign = item.text.align.toLowerCase();
     } else {
@@ -1825,8 +1847,6 @@ function updateWizardUI() {
       editor.style.textAlign = "right";
     }
     updateWizardPreview();
-    const countInput = document.getElementById("wizard-similar-count");
-    countInput.value = wizardState.count || appState.namesCount || 5;
   } else if (wizardState.step === 4) {
     updateGeneratePrompt();
   } else if (wizardState.step === 5) {
@@ -1837,29 +1857,29 @@ function updateWizardUI() {
   }
 }
 
+function updateWizardUI() {
+  updateStepIndicators();
+  updateNavigationButtons();
+  updateStepContent();
+}
+
 function updateWizardPreview() {
   const tempItem = wizardState.extractedItem;
   if (!tempItem) return;
   const range = appState.ranges.find((r) => r.id === wizardState.rangeId);
   const previewCell = document.getElementById("wizard-preview-cell");
   const scoreCell = document.getElementById("wizard-preview-score");
-  if (range) {
-    const score =
-      +range.score > 0 ? `(${toPersianDigits(range.score)} نمره)` : "";
-    scoreCell.innerHTML = `${toPersianDigits(1)} <span class="font-normal text-xs">${score}</span>`;
-  } else {
-    scoreCell.innerHTML = toPersianDigits(1);
-  }
+  const score =
+    range?.score > 0 ? `(${toPersianDigits(range.score)} نمره)` : "";
+  scoreCell.innerHTML = `${toPersianDigits(1)} <span class="font-normal text-xs">${score}</span>`;
   previewCell.innerHTML = renderItemContent(tempItem, {
     rangeDesc: range?.desc || "",
   });
-  console.log(previewCell);
-
   renderMathInContainer(previewCell);
 }
 
 function updateGeneratePrompt() {
-  if (!wizardState.sourceItem || !wizardState.sourceItem.text) return;
+  if (!wizardState.sourceItem?.text) return;
   const count = wizardState.count;
   const type = detectQuestionType(wizardState.sourceItem.text.html);
   const prompt = getAIPrompt({
@@ -1871,27 +1891,18 @@ function updateGeneratePrompt() {
   document.getElementById("generatePromptDisplay").textContent = prompt;
 }
 
-// ========== Wizard Open / Close ==========
 function openWizard(mode, rangeId, sourceItem = null) {
   wizardState.mode = mode;
   wizardState.rangeId = rangeId;
   wizardState.generatedItems = [];
   wizardState.extractedItem = null;
   wizardState.sourceItem = sourceItem;
-
-  if (mode === "extract") {
-    wizardState.step = 1;
-  } else {
-    wizardState.step = 4;
-    wizardState.sourceItem = sourceItem;
-  }
-
+  wizardState.step = mode === "extract" ? 1 : 4;
   wizardState.count = appState.namesCount || 5;
 
   const modal = document.querySelector(".modal-ai");
   openModalElement(modal);
 
-  // Hide all steps, then show the starting one
   document.querySelectorAll(".modal-ai .step").forEach((el) => {
     el.classList.add("hidden", "opacity-0", "scale-95");
   });
@@ -1899,17 +1910,13 @@ function openWizard(mode, rangeId, sourceItem = null) {
     `.modal-ai .step-${wizardState.step}`,
   );
   startStep.classList.remove("hidden");
-  setTimeout(() => {
-    startStep.classList.remove("opacity-0", "scale-95");
-  }, 50);
+  setTimeout(() => startStep.classList.remove("opacity-0", "scale-95"), 50);
 
   updateWizardUI();
 }
 
 function closeWizard() {
-  const modal = document.querySelector(".modal-ai");
-  closeModalElement(modal);
-
+  closeModalElement(document.querySelector(".modal-ai"));
   wizardState.isOpen = false;
   wizardState.mode = "extract";
   wizardState.step = 1;
@@ -1918,167 +1925,77 @@ function closeWizard() {
   wizardState.sourceItem = null;
   wizardState.generatedItems = [];
   wizardState.count = 5;
-
   document.getElementById("extractResponseInput").value = "";
   document.getElementById("generateResponseInput").value = "";
   document.getElementById("generatePreviewContainer").classList.add("hidden");
 }
 
 function detectQuestionType(text) {
-  if (text.includes("؟") && text.includes("1.") && text.includes("2.")) {
+  if (text.includes("؟") && text.includes("1.") && text.includes("2."))
     return "multiple_choice";
-  }
-  if (text.includes("صحیح") || text.includes("غلط")) {
-    return "true_false";
-  }
-  if (text.includes("........")) {
-    return "fill_blank";
-  }
+  if (text.includes("صحیح") || text.includes("غلط")) return "true_false";
+  if (text.includes("........")) return "fill_blank";
   return "descriptive";
 }
 
-// ========== Step Event Handlers ==========
-function initWizardEvents() {
-  document
-    .getElementById("copyExtractPromptBtn")
-    ?.addEventListener("click", () => {
-      copyToClipboard(
-        document.getElementById("extractPromptDisplay").textContent,
-      );
-    });
-  document
-    .getElementById("copyGeneratePromptBtn")
-    ?.addEventListener("click", () => {
-      copyToClipboard(
-        document.getElementById("generatePromptDisplay").textContent,
-      );
-    });
+function pasteToExtractResponse() {
+  navigator.clipboard
+    .readText()
+    .then((text) => {
+      document.getElementById("extractResponseInput").value = text;
+      showToast("متن با موفقیت چسبانده شد");
+    })
+    .catch(() => showToast("خطا در خواندن کلیپ‌بورد", "error"));
+}
 
-  document
-    .getElementById("processExtractBtn")
-    ?.addEventListener("click", () => {
-      const raw = document.getElementById("extractResponseInput").value.trim();
-      if (!raw) {
-        showToast("لطفاً پاسخ را وارد کنید", "error");
-        return;
-      }
-      try {
-        const data = extractJSON(raw);
-        if (!data.items || data.items.length === 0)
-          throw new Error("آیتمی یافت نشد");
-        const firstItem = data.items[0];
-        const newItem = {
-          id: createRandomId("item"),
-          text: { ...firstItem.text },
-          image: null,
-          showText: true,
-        };
-        wizardState.extractedItem = newItem;
-        showWizardStep(3);
-      } catch (err) {
-        showToast(err.message, "error");
-      }
-    });
+function pasteToGenerateResponse() {
+  navigator.clipboard
+    .readText()
+    .then((text) => {
+      document.getElementById("generateResponseInput").value = text;
+      showToast("متن با موفقیت چسبانده شد");
+    })
+    .catch(() => showToast("خطا در خواندن کلیپ‌بورد", "error"));
+}
 
-  document
-    .getElementById("wizard-go-to-generate")
-    ?.addEventListener("click", () => {
-      const editor = document.getElementById("wizard-text-editor");
-      const html = editor.innerHTML.trim();
-      if (!html) {
-        showToast("لطفاً ابتدا متن سوال را وارد کنید", "error");
-        return;
-      }
-      if (!wizardState.extractedItem) {
-        wizardState.extractedItem = {
-          id: createRandomId("item"),
-          text: null,
-          image: null,
-          showText: true,
-        };
-      }
-      if (!wizardState.extractedItem.text) {
-        wizardState.extractedItem.text = { html, align: "RIGHT" };
-      } else {
-        wizardState.extractedItem.text.html = html;
-        const align = editor.style.textAlign;
-        if (align) wizardState.extractedItem.text.align = align.toUpperCase();
-      }
-      const countInput = document.getElementById("wizard-similar-count");
-      wizardState.count = parseInt(countInput.value) || 5;
-      wizardState.mode = "generate";
-      wizardState.sourceItem = wizardState.extractedItem;
-      showWizardStep(4);
-    });
-
-  // Paste generate response (step 5)
-  document
-    .getElementById("pasteGenerateBtn")
-    ?.addEventListener("click", async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        document.getElementById("generateResponseInput").value = text;
-        showToast("متن با موفقیت چسبانده شد");
-      } catch (err) {
-        showToast("خطا در خواندن کلیپ‌بورد", "error");
-      }
-    });
-
-  // Preview generated items (step 5)
-  document
-    .getElementById("previewGenerateBtn")
-    ?.addEventListener("click", () => {
-      const raw = document.getElementById("generateResponseInput").value.trim();
-      if (!raw) {
-        showToast("لطفاً پاسخ را وارد کنید", "error");
-        return;
-      }
-      try {
-        const data = extractJSON(raw);
-        const items = data.items.map((item) => ({
-          id: createRandomId("item"),
-          text: { ...item.text },
-          image: null,
-          showText: true,
-        }));
-        wizardState.generatedItems = items;
-        renderGeneratedPreview(
-          items,
-          "generateItemsPreview",
-          "generateEmptyPreview",
-        );
-        document
-          .getElementById("generatePreviewContainer")
-          .classList.remove("hidden");
-        document.getElementById("addGeneratedBtn").disabled = false;
-      } catch (err) {
-        showToast(err.message, "error");
-      }
-    });
-
-  // Add generated items to range
-  document.getElementById("addGeneratedBtn")?.addEventListener("click", () => {
-    if (wizardState.generatedItems.length === 0) return;
-    wizardState.generatedItems.forEach((item) =>
-      addItemToRange(wizardState.rangeId, item),
+function previewGeneratedItems() {
+  const raw = document.getElementById("generateResponseInput").value.trim();
+  if (!raw) {
+    showToast("لطفاً پاسخ را وارد کنید", "error");
+    return;
+  }
+  try {
+    const data = extractJSON(raw);
+    const items = data.items.map((item) => ({
+      id: createRandomId("item"),
+      text: { ...item.text },
+      image: null,
+      showText: true,
+    }));
+    wizardState.generatedItems = items;
+    renderGeneratedPreview(
+      items,
+      "generateItemsPreview",
+      "generateEmptyPreview",
     );
-    showToast(
-      `${toPersianDigits(wizardState.generatedItems.length)} آیتم به مبحث اضافه شد`,
-    );
-    closeWizard();
-  });
+    document
+      .getElementById("generatePreviewContainer")
+      .classList.remove("hidden");
+    document.getElementById("addGeneratedBtn").disabled = false;
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
 
-  // Navigation buttons
-  document.getElementById("wizardPrevBtn")?.addEventListener("click", prevStep);
-  document.getElementById("wizardNextBtn")?.addEventListener("click", nextStep);
-
-  // Close modal buttons
-  document.querySelectorAll(".modal-ai .modal-close-btn").forEach((btn) => {
-    btn.addEventListener("click", closeWizard);
-  });
-
-  // Initialize rich text editor for step 3
-  initWizardRichTextEditor();
+function addGeneratedItemsToRange() {
+  if (!wizardState.generatedItems.length) return;
+  wizardState.generatedItems.forEach((item) =>
+    addItemToRange(wizardState.rangeId, item),
+  );
+  showToast(
+    `${toPersianDigits(wizardState.generatedItems.length)} آیتم به مبحث اضافه شد`,
+  );
+  closeWizard();
 }
 
 function removeGeneratedItem(index) {
@@ -2131,7 +2048,6 @@ function renderGeneratedPreview(items, containerId, emptyId) {
   renderMathInContainer(container);
 }
 
-// ========== Rich Text Editor for Wizard (simplified, no image tools) ==========
 function initWizardRichTextEditor() {
   const editor = document.getElementById("wizard-text-editor");
   const toolbar = document.getElementById("wizard-toolbar");
@@ -2146,18 +2062,14 @@ function initWizardRichTextEditor() {
     });
   });
 
-  toolbar.querySelectorAll("[data-action='undo']").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.execCommand("undo");
-      updateWizardPreviewFromEditor();
+  toolbar
+    .querySelectorAll("[data-action='undo'],[data-action='redo']")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.execCommand(btn.dataset.action === "undo" ? "undo" : "redo");
+        updateWizardPreviewFromEditor();
+      });
     });
-  });
-  toolbar.querySelectorAll("[data-action='redo']").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.execCommand("redo");
-      updateWizardPreviewFromEditor();
-    });
-  });
 
   editor.addEventListener("input", updateWizardPreviewFromEditor);
   editor.addEventListener("blur", updateWizardPreviewFromEditor);
@@ -2175,6 +2087,41 @@ function updateWizardPreviewFromEditor() {
     if (align) wizardState.extractedItem.text.align = align.toUpperCase();
   }
   updateWizardPreview();
+}
+
+function initWizardEvents() {
+  document
+    .getElementById("copyExtractPromptBtn")
+    ?.addEventListener("click", () => {
+      copyToClipboard(
+        document.getElementById("extractPromptDisplay").textContent,
+      );
+    });
+  document
+    .getElementById("copyGeneratePromptBtn")
+    ?.addEventListener("click", () => {
+      copyToClipboard(
+        document.getElementById("generatePromptDisplay").textContent,
+      );
+    });
+  document
+    .getElementById("processExtractBtn")
+    ?.addEventListener("click", pasteToExtractResponse);
+  document
+    .getElementById("pasteGenerateBtn")
+    ?.addEventListener("click", pasteToGenerateResponse);
+  document
+    .getElementById("previewGenerateBtn")
+    ?.addEventListener("click", previewGeneratedItems);
+  document
+    .getElementById("addGeneratedBtn")
+    ?.addEventListener("click", addGeneratedItemsToRange);
+  document.getElementById("wizardPrevBtn")?.addEventListener("click", prevStep);
+  document.getElementById("wizardNextBtn")?.addEventListener("click", nextStep);
+  document
+    .querySelectorAll(".modal-ai .modal-close-btn")
+    .forEach((btn) => btn.addEventListener("click", closeWizard));
+  initWizardRichTextEditor();
 }
 
 function setupAiRangeButton(rangeElement, rangeId) {

@@ -380,7 +380,7 @@
             <div class="flex items-center justify-between mb-2">
               <label class="font-medium text-secondary">پاسخ AI (JSON)</label>
               <button id="processExtractBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1">
-                <i class="bi bi-clipboard-pulse"></i> پردازش
+                <i class="bi bi-clipboard"></i> چسباندن
               </button>
             </div>
             <textarea id="extractResponseInput" rows="5"
@@ -451,9 +451,6 @@
               <input type="number" id="wizard-similar-count"
                 class="w-20 border border-border-light rounded-custom p-2 text-center" min="1" max="20" value="5">
             </div>
-            <button id="wizard-go-to-generate" class="btn btn-outline px-4 py-2 flex items-center gap-2">
-              <i class="bi bi-magic"></i> ساخت سوالات مشابه
-            </button>
           </div>
         </div>
 
@@ -505,9 +502,9 @@
       </div>
 
       <!-- دکمه‌های ناوبری -->
-      <div class="flex justify-between mt-6 pt-4 border-t border-border-light">
+      <div class="flex mt-6 pt-4 border-t border-border-light">
         <button id="wizardPrevBtn" class="btn btn-secondary px-6" disabled>قبلی</button>
-        <button id="wizardNextBtn" class="btn btn-primary px-6">بعدی</button>
+        <button id="wizardNextBtn" class="btn mr-auto btn-primary px-6">بعدی</button>
       </div>
     </div>
   </div>
