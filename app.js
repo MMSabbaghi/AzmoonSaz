@@ -167,7 +167,6 @@ function addItemsFromJSONToRange(rangeId, jsonString) {
     showToast(`${toPersianDigits(itemsToAdd.length)} آیتم با موفقیت اضافه شد.`);
   } catch (err) {
     console.error("Invalid JSON:", err);
-    showToast("داده‌ها معتبر نیستند.", "error");
   }
 }
 
@@ -180,7 +179,7 @@ function createItemFromData(dataItem) {
         src: dataItem.src,
         height: dataItem.height || ITEM_DEFAULTS.image.height,
         align: dataItem.align || ITEM_DEFAULTS.image.align,
-        imageId: dataItem.imageId || createRandomId("img"),
+        imageId: createRandomId("img"),
       },
       showText: dataItem.showCaption !== false,
     };
@@ -205,7 +204,6 @@ async function tryPasteJSONToRange(rangeId) {
     addItemsFromJSONToRange(rangeId, text);
   } catch (err) {
     console.error("Failed to read clipboard text:", err);
-    showToast("محتوای کلیپ‌بورد معتبر نیست.", "error");
   }
 }
 
@@ -431,7 +429,7 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
 
   container.innerHTML =
     renderItemContent(item, { rangeDesc }) +
-    `<button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-error-light text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>`;
+    `<button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-error text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>`;
 
   const removeBtn = container.querySelector(".remove-item");
   removeBtn.onclick = (e) => {
@@ -1040,11 +1038,8 @@ function adjustMobilePadding() {
 // ========== Paste Handlers ==========
 async function handlePasteInModal(items) {
   if (cropper) destroyCropper();
-
   const imageProcessed = await tryProcessImagePasteInModal(items);
-  if (!imageProcessed) {
-    await tryProcessTextPasteInModal(items);
-  }
+  return imageProcessed;
 }
 
 async function tryProcessImagePasteInModal(items) {
@@ -1055,16 +1050,7 @@ async function tryProcessImagePasteInModal(items) {
       reader.onload = (ev) => {
         const src = ev.target.result;
         const temp = appState.modal.tempItem;
-        if (!temp.image) {
-          temp.image = {
-            src,
-            height: ITEM_DEFAULTS.image.height,
-            align: ITEM_DEFAULTS.image.align,
-            imageId: createRandomId("img"),
-          };
-          temp.showText = modalShowText.checked;
-          updateModalPreviewFromTemp();
-        } else {
+        if (temp.image) {
           showConfirm({
             msg: "آیا تصویر فعلی جایگزین شود؟",
             on_confirm: () => {
@@ -1083,27 +1069,8 @@ async function tryProcessImagePasteInModal(items) {
   return false;
 }
 
-async function tryProcessTextPasteInModal(items) {
-  let html = null;
-  let text = null;
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type === "text/html") {
-      html = await new Promise((resolve) => items[i].getAsString(resolve));
-      break;
-    } else if (items[i].type === "text/plain") {
-      text = await new Promise((resolve) => items[i].getAsString(resolve));
-    }
-  }
-  modalTextEditor.focus();
-  if (html) {
-    document.execCommand("insertHTML", false, html);
-  } else if (text) {
-    document.execCommand("insertText", false, text);
-  }
-  updateTempItemFromTextEditor();
-}
-
 async function handlePasteOutsideModal(items) {
+  if (!activeRangeId) return;
   let hasImage = false;
 
   for (let i = 0; i < items.length; i++) {
@@ -1120,15 +1087,14 @@ async function handlePasteOutsideModal(items) {
 }
 
 document.addEventListener("paste", async (e) => {
-  if (!activeRangeId && !appState.modal.tempItem) return;
-
   const items = e.clipboardData?.items;
   if (!items) return;
 
-  e.preventDefault();
-
-  if (appState.modal.tempItem) await handlePasteInModal(items);
-  else if (wizardState.isOpen) return;
+  if (appState.modal.isOpen) {
+    const imageProcessed = await handlePasteInModal(items);
+    if (imageProcessed) e.preventDefault();
+    return;
+  } else if (wizardState.isOpen) return;
   else await handlePasteOutsideModal(items);
 });
 
@@ -1378,6 +1344,7 @@ function updateTempItemFromTextEditor() {
 function openModalForNewItem(rangeId, newItem) {
   appState.modal.rangeId = rangeId;
   appState.modal.itemId = null;
+  appState.modal.isOpen = true;
   appState.modal.tempItem = JSON.parse(JSON.stringify(newItem));
   openModalWithTempItem();
 }
@@ -1388,6 +1355,7 @@ function openItemModal(rangeId, itemId) {
   if (!item) return;
 
   appState.modal.rangeId = rangeId;
+  appState.modal.isOpen = true;
   appState.modal.itemId = itemId;
   appState.modal.tempItem = JSON.parse(JSON.stringify(item));
   openModalWithTempItem();
@@ -1511,6 +1479,7 @@ function closeEditModal() {
   appState.modal.rangeId = null;
   appState.modal.itemId = null;
   appState.modal.tempItem = null;
+  appState.modal.isOpen = false;
 
   closeModalElement(modalEdit);
 
