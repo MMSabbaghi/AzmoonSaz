@@ -193,6 +193,10 @@ async function tryPasteJSONToRange(rangeId) {
   }
 }
 
+function getPrintArea() {
+  return document.getElementById("printable");
+}
+
 // ========== Global State Management ==========
 
 let _autoSave = null;
@@ -201,7 +205,7 @@ const rawState = {
   ranges: [],
   names: [],
   namesCount: 1,
-  font: "'Vazirmatn', sans-serif",
+  font: "'BNazanin', sans-serif",
   modal: {
     isOpen: false,
     rangeId: null,
@@ -914,7 +918,7 @@ function createNamesUI() {
 
   fontSelect.addEventListener("change", (e) => {
     appState.font = e.target.value;
-    document.body.style.fontFamily = appState.font;
+    getPrintArea().style.fontFamily = appState.font;
     document.querySelectorAll(".font-selector").forEach((other) => {
       if (other !== e.target) other.value = appState.font;
     });
@@ -1086,6 +1090,9 @@ document.addEventListener("paste", async (e) => {
 });
 
 // ========== Quiz Generation ==========
+
+const printArea = getPrintArea();
+
 function buildQuizData(names, ranges) {
   const finalData = Object.fromEntries(names.map((n) => [n, []]));
   ranges.forEach((r) => {
@@ -1190,7 +1197,7 @@ function generateQuizHtml() {
   if (!validRanges) return false;
 
   const html = buildQuizHtml(validRanges);
-  document.getElementById("printable").innerHTML = `
+  printArea.innerHTML = `
     <table class="w-full">
       <tbody>${html}</tbody>
     </table>`;
@@ -1201,7 +1208,7 @@ function handleGenerateClick(e) {
   const isGenerated = generateQuizHtml();
   if (isGenerated) {
     e.target.scrollIntoView({ behavior: "smooth" });
-    renderMathInContainer(document.getElementById("printable"));
+    renderMathInContainer(printArea);
   }
 }
 
@@ -2628,7 +2635,7 @@ function setupInputScrollOnFocus() {
 
 // ========== Initialization ==========
 document.addEventListener("DOMContentLoaded", function () {
-  document.body.style.fontFamily = appState.font;
+  getPrintArea().style.fontFamily = appState.font;
   namesUI = createNamesUI();
   placeNamesUI();
   initializeDesktopButtons();
