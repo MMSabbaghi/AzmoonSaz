@@ -171,27 +171,13 @@ function addItemsFromJSONToRange(rangeId, jsonString) {
 }
 
 function createItemFromData(dataItem) {
-  if (dataItem.src) {
-    return {
-      id: createRandomId("item"),
-      text: null,
-      image: {
-        src: dataItem.src,
-        height: dataItem.height || ITEM_DEFAULTS.image.height,
-        align: dataItem.align || ITEM_DEFAULTS.image.align,
-        imageId: createRandomId("img"),
-      },
-      showText: dataItem.showCaption !== false,
-    };
-  }
-
   return {
-    id: dataItem.id || createRandomId("item"),
+    id: createRandomId("item"),
     text: dataItem.text ? { ...dataItem.text } : null,
     image: dataItem.image
       ? {
           ...dataItem.image,
-          imageId: dataItem.image.imageId || createRandomId("img"),
+          imageId: createRandomId("img"),
         }
       : null,
     showText: dataItem.showText !== false,
@@ -1078,6 +1064,7 @@ async function handlePasteOutsideModal(items) {
       hasImage = true;
       const blob = items[i].getAsFile();
       addImageFromBlobToRange(activeRangeId, blob);
+      showToast("یک تصویر اضافه شد.");
     }
   }
 
