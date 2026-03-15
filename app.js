@@ -58,15 +58,26 @@ function setElementState({ target, stateClasses, isActive }) {
   target.classList.add(...stateClasses[isActive ? "on" : "off"]);
 }
 
-function handleSwitchElement({ container, onChange }) {
+function handleSwitchElement({
+  container,
+  onChange,
+  activeBgColor = "bg-surface",
+  initialState = false,
+}) {
   const sw = container.querySelector("#switch");
   const knob = container.querySelector("#knob");
-  let on = false;
+  let on = initialState;
+
+  function setState(isActive) {
+    const func = isActive ? "add" : "remove";
+    sw.classList[func](activeBgColor);
+    knob.classList[func]("translate-x-4", "scale-105");
+  }
+
+  setState(on);
   sw.addEventListener("click", () => {
     on = !on;
-    const func = on ? "add" : "remove";
-    sw.classList[func]("bg-surface");
-    knob.classList[func]("translate-x-4", "scale-105");
+    setState(on);
     onChange(on);
   });
 }
@@ -357,10 +368,11 @@ function renderItemContent(item, options = {}) {
 
   if (item.showText) {
     let textContent = item.text ? item.text.html : rangeDesc;
+    const textPos = item.image?.float ? "position: absolute;" : "";
     textContent = String(textContent);
     if (textContent && textContent.trim() !== "") {
       const align = item.text ? item.text.align.toLowerCase() : "right";
-      html += `<div class="${textClass}" style="text-align: ${align};">${textContent}</div>`;
+      html += `<div class="${textClass}" style="${textPos} text-align: ${align};">${textContent}</div>`;
     }
   }
 
@@ -1284,6 +1296,7 @@ const previewImgHeightValue = document.getElementById("previewImgHeightValue");
 const previewImgBrightness = document.getElementById("previewImgBrightness");
 const previewImgContrast = document.getElementById("previewImgContrast");
 const previewCropBtn = document.getElementById("previewCropBtn");
+const previewImgFloat = document.getElementById("previewImgFloat");
 
 function updateTempItemFromTextEditor() {
   if (_updatingEditorFromCode) return;
@@ -1408,9 +1421,11 @@ function updateModalImageUI() {
 
 function syncImageToolbarWithCurrentImage() {
   const img = modalEditPreviewCell.querySelector("img");
+  const txtContainer = modalEditPreviewCell.querySelector("div");
   if (!img) return;
-  const height =
-    parseInt(img.style.height) || appState.modal.tempItem.image.height || 300;
+  const tempItemImg = appState.modal.tempItem.image;
+
+  const height = parseInt(img.style.height) || tempItemImg.height || 300;
   previewImgHeight.value = height;
   previewImgHeightValue.textContent = height + "px";
 
@@ -1421,6 +1436,19 @@ function syncImageToolbarWithCurrentImage() {
     ? parseInt(brightnessMatch[1])
     : 100;
   previewImgContrast.value = contrastMatch ? parseInt(contrastMatch[1]) : 100;
+  txtContainer.style.position = tempItemImg.float ? "absolute" : "initial";
+
+  handleSwitchElement({
+    container: previewImgFloat,
+    activeBgColor: "bg-primary",
+    initialState: !!tempItemImg.float,
+    onChange: (isActive) => {
+      const txtContainer = modalEditPreviewCell.querySelector("div");
+      if (!txtContainer) return;
+      txtContainer.style.position = isActive ? "absolute" : "initial";
+      appState.modal.tempItem.image.float = isActive;
+    },
+  });
 }
 
 function updateModalPreviewFromTemp() {
