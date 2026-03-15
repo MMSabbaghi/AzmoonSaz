@@ -429,11 +429,15 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
   const range = appState.ranges.find((r) => r.id === rangeId);
   const rangeDesc = range ? range.desc : "";
 
-  container.innerHTML =
-    renderItemContent(item, { rangeDesc }) +
-    `<button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-error text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>`;
+  container.innerHTML = `
+  ${renderItemContent(item, { rangeDesc })}
+  <button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-error text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>
+  <button class="copy-item absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5"> <i class="bi bi-copy"></i></button>
+  `;
 
   const removeBtn = container.querySelector(".remove-item");
+  const copyItemBtn = container.querySelector(".copy-item");
+
   removeBtn.onclick = (e) => {
     e.stopPropagation();
     showConfirm({
@@ -445,6 +449,11 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
         });
       },
     });
+  };
+
+  copyItemBtn.onclick = (e) => {
+    e.stopPropagation();
+    copyToClipboard(JSON.stringify([item]));
   };
 
   container.addEventListener("click", (e) => openItemModal(rangeId, item.id));
