@@ -61,7 +61,7 @@ function setElementState({ target, stateClasses, isActive }) {
 function handleSwitchElement({
   container,
   onChange,
-  activeBgColor = "bg-surface",
+  activeBgColor = "bg-primary",
   initialState = false,
 }) {
   const sw = container.querySelector("#switch");
@@ -901,7 +901,7 @@ function createNamesUI() {
       </div>
       <div class="names-switch flex gap-1">
         <label class="text-secondary">نمایش نام:</label>
-        <div id="switch" class="relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
+        <div id="switch" class="relative w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
           <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
         </div>
       </div>
@@ -1440,7 +1440,6 @@ function syncImageToolbarWithCurrentImage() {
 
   handleSwitchElement({
     container: previewImgFloat,
-    activeBgColor: "bg-primary",
     initialState: !!tempItemImg.float,
     onChange: (isActive) => {
       const txtContainer = modalEditPreviewCell.querySelector("div");
