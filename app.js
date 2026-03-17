@@ -1258,18 +1258,22 @@ function closeModalElement(modalElement) {
 }
 
 function setupModal(modalElement, options = {}) {
-  const { closeOnEscape = true, closeOnOverlayClick = true } = options;
+  const {
+    closeOnEscape = true,
+    closeOnOverlayClick = true,
+    onClose = () => {},
+  } = options;
 
   const overlaySelector = ".modal-overlay";
   const closeButtonSelector = ".modal-close-btn";
 
-  // کلیک روی overlay
   if (closeOnOverlayClick) {
     const overlay = modalElement.querySelector(overlaySelector);
     if (overlay) {
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay) {
           closeModalElement(modalElement);
+          onClose();
         }
       });
     }
@@ -1278,7 +1282,10 @@ function setupModal(modalElement, options = {}) {
   if (closeButtonSelector) {
     const closeBtn = modalElement.querySelector(closeButtonSelector);
     if (closeBtn) {
-      closeBtn.addEventListener("click", () => closeModalElement(modalElement));
+      closeBtn.addEventListener("click", () => {
+        closeModalElement(modalElement);
+        onClose();
+      });
     }
   }
 
@@ -1289,6 +1296,7 @@ function setupModal(modalElement, options = {}) {
         modalElement.classList.contains("modal--visible")
       ) {
         closeModalElement(modalElement);
+        onClose();
       }
     };
     document.addEventListener("keydown", escapeHandler);
@@ -1511,7 +1519,7 @@ function saveModalChanges() {
   closeEditModal();
 }
 
-function closeEditModal() {
+function destroyEditModal() {
   if (cropper) {
     cropper.destroy();
     cropper = null;
@@ -1522,14 +1530,17 @@ function closeEditModal() {
   appState.modal.tempItem = null;
   appState.modal.isOpen = false;
 
-  closeModalElement(modalEdit);
-
   setTimeout(() => {
     modalTextEditor.innerHTML = "";
   }, 300);
 
   _updatingEditorFromCode = false;
   _userModified = false;
+}
+
+function closeEditModal() {
+  closeModalElement(modalEdit);
+  destroyEditModal();
 }
 
 modalShowText.addEventListener("change", function (e) {
@@ -2695,7 +2706,7 @@ document.addEventListener("DOMContentLoaded", function () {
   checkAndRestoreFromDB();
   initPreviewImageToolbar();
 
-  setupModal(modalEdit);
+  setupModal(modalEdit, { onClose: destroyEditModal });
   if (isMobile()) {
     setupMobileSwipeToClose(modalEdit);
   }
