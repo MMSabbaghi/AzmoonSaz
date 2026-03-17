@@ -789,6 +789,13 @@ function setupDropdownMenu(rangeElement) {
   document.addEventListener("click", closeDropdownOnOutsideClick);
 }
 
+function setActiveRangeStyle(rangeId) {
+  document
+    .querySelectorAll(".range-item")
+    .forEach((item) => item.classList.remove("shadow-default"));
+  document.getElementById(rangeId).classList.add("shadow-default");
+}
+
 function attachRangeEvents(rangeElement, rangeId) {
   rangeElement.addEventListener("click", (e) => {
     if (rangeElement.dataset.swiping === "true") {
@@ -798,6 +805,7 @@ function attachRangeEvents(rangeElement, rangeId) {
     }
     if (!e.target.closest("button")) {
       activeRangeId = rangeId;
+      setActiveRangeStyle(rangeId);
     }
   });
 
@@ -818,7 +826,7 @@ function buildRangeDOM(rangeData) {
   div.id = rangeData.id;
   div.draggable = !isMobile();
   div.className =
-    "range-item transition-transform duration-200 ease-out overflow-auto";
+    "range-item transition-transform duration-200 ease-out overflow-auto rounded-custom";
   div.innerHTML = getRangeHTML(rangeData);
   return div;
 }
