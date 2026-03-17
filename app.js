@@ -1436,9 +1436,14 @@ function updateModalImageUI() {
   }
 }
 
+function setTextFloat(isFloat) {
+  const txtContainer = modalEditPreviewCell.querySelector("div");
+  if (txtContainer)
+    txtContainer.style.position = isFloat ? "absolute" : "initial";
+}
+
 function syncImageToolbarWithCurrentImage() {
   const img = modalEditPreviewCell.querySelector("img");
-  const txtContainer = modalEditPreviewCell.querySelector("div");
   if (!img) return;
   const tempItemImg = appState.modal.tempItem.image;
 
@@ -1453,15 +1458,13 @@ function syncImageToolbarWithCurrentImage() {
     ? parseInt(brightnessMatch[1])
     : 100;
   previewImgContrast.value = contrastMatch ? parseInt(contrastMatch[1]) : 100;
-  txtContainer.style.position = tempItemImg.float ? "absolute" : "initial";
+  setTextFloat(tempItemImg.float);
 
   handleSwitchElement({
     container: previewImgFloat,
     initialState: !!tempItemImg.float,
     onChange: (isActive) => {
-      const txtContainer = modalEditPreviewCell.querySelector("div");
-      if (!txtContainer) return;
-      txtContainer.style.position = isActive ? "absolute" : "initial";
+      setTextFloat(tempItemImg.float);
       appState.modal.tempItem.image.float = isActive;
     },
   });
