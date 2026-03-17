@@ -2729,8 +2729,6 @@ document.addEventListener("DOMContentLoaded", function () {
         "align-center",
         "align-right",
         "align-justify",
-        "color",
-        "fontSize",
         "undo",
         "redo",
       ],
