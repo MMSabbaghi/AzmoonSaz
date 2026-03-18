@@ -687,9 +687,9 @@ function setupCopyRangeButton(rangeElement, rangeId) {
 
 function setupPasteRangeButton(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".paste-range").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
+    btn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      tryPasteJSONToRange(rangeId);
+      await handlePasteInsideRange(rangeId);
     });
   });
 }
@@ -1088,21 +1088,25 @@ async function tryProcessImagePasteInModal(items) {
   return false;
 }
 
-async function handlePasteOutsideModal(items) {
-  if (!activeRangeId) return;
-  let hasImage = false;
+async function handlePasteInsideRange(rangeId) {
+  try {
+    const clipboardItems = await navigator.clipboard.read();
+    const clipboardItem = clipboardItems[0];
+    const type = clipboardItem.types[0];
 
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf("image") !== -1) {
-      hasImage = true;
-      const blob = items[i].getAsFile();
-      addImageFromBlobToRange(activeRangeId, blob);
-      showToast("یک تصویر اضافه شد.");
-    }
-  }
-
-  if (!hasImage) {
-    await tryPasteJSONToRange(activeRangeId);
+    if (type && type.startsWith("image/")) {
+      const blobItems = await clipboardItem.getType(type);
+      const newItem = createImageItem(
+        URL.createObjectURL(blobItems),
+        createRandomId("img"),
+        ITEM_DEFAULTS.image.height,
+        ITEM_DEFAULTS.image.align,
+        ITEM_DEFAULTS.showText,
+      );
+      addItemToRange(rangeId, newItem);
+    } else await tryPasteJSONToRange(rangeId);
+  } catch (err) {
+    console.error("clipboard error:", err);
   }
 }
 
@@ -1115,7 +1119,7 @@ document.addEventListener("paste", async (e) => {
     if (imageProcessed) e.preventDefault();
     return;
   } else if (wizardState.isOpen) return;
-  else await handlePasteOutsideModal(items);
+  else if (activeRangeId) await handlePasteInsideRange(activeRangeId);
 });
 
 // ========== Quiz Generation ==========
