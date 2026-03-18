@@ -1310,6 +1310,7 @@ const modalEditPreviewCell = modalEdit.querySelector(".modal-preview-cell");
 let modalTextEditor = document.getElementById("modal-text-editor");
 const modalShowText = document.getElementById("modal-show-text");
 const modalImageUpload = document.getElementById("modalImageUpload");
+const modalPasteImageBtn = document.getElementById("modalPasteImageBtn");
 const modalReplaceImageUpload = document.getElementById(
   "modalReplaceImageUpload",
 );
@@ -1577,26 +1578,28 @@ saveModalBtn.addEventListener("click", () => {
   });
 });
 
+function handleModalImageChange(src) {
+  const temp = appState.modal.tempItem;
+  if (!temp.image) {
+    temp.image = {
+      src,
+      height: ITEM_DEFAULTS.image.height,
+      align: ITEM_DEFAULTS.image.align,
+      imageId: createRandomId("img"),
+    };
+  } else {
+    temp.image.src = src;
+    temp.image.imageId = createRandomId("img");
+  }
+  updateModalPreviewFromTemp();
+  updateModalImageUI();
+}
+
 function handleModalImageUpload(e) {
   const file = e.target.files[0];
   if (file && appState.modal.tempItem) {
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const temp = appState.modal.tempItem;
-      if (!temp.image) {
-        temp.image = {
-          src: ev.target.result,
-          height: ITEM_DEFAULTS.image.height,
-          align: ITEM_DEFAULTS.image.align,
-          imageId: createRandomId("img"),
-        };
-      } else {
-        temp.image.src = ev.target.result;
-        temp.image.imageId = createRandomId("img");
-      }
-      updateModalPreviewFromTemp();
-      updateModalImageUI();
-    };
+    reader.onload = (ev) => handleModalImageChange(ev.target.result);
     reader.readAsDataURL(file);
   }
   e.target.value = "";
@@ -1604,6 +1607,15 @@ function handleModalImageUpload(e) {
 
 modalImageUpload.addEventListener("change", handleModalImageUpload);
 modalReplaceImageUpload.addEventListener("change", handleModalImageUpload);
+modalPasteImageBtn.addEventListener("click", async () => {
+  const src = await getImageFromClipboard();
+  if (src) {
+    showConfirm({
+      msg: "آیا تصویر فعلی جایگزین شود؟",
+      on_confirm: () => handleModalImageChange(src),
+    });
+  }
+});
 
 removeImageBtn.addEventListener("click", () => {
   if (appState.modal.tempItem) {
