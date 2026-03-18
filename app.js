@@ -1313,6 +1313,9 @@ const modalEditPreviewCell = modalEdit.querySelector(".modal-preview-cell");
 let modalTextEditor = document.getElementById("modal-text-editor");
 const modalShowText = document.getElementById("modal-show-text");
 const modalImageUpload = document.getElementById("modalImageUpload");
+const modalReplaceImageUpload = document.getElementById(
+  "modalReplaceImageUpload",
+);
 const modalImageUploadContainer = document.getElementById(
   "modalImageUploadContainer",
 );
@@ -1450,7 +1453,7 @@ function updateModalImageUI() {
 
 function setTextFloat() {
   const txtContainer = modalEditPreviewCell.querySelector("div");
-  const isFloat = appState.modal.tempItem.image.float;
+  const isFloat = appState.modal.tempItem.image?.float;
 
   if (txtContainer) {
     previewImgFloat.classList.remove("hidden");
@@ -1577,7 +1580,7 @@ saveModalBtn.addEventListener("click", () => {
   });
 });
 
-modalImageUpload.addEventListener("change", function (e) {
+function handleModalImageUpload(e) {
   const file = e.target.files[0];
   if (file && appState.modal.tempItem) {
     const reader = new FileReader();
@@ -1600,7 +1603,10 @@ modalImageUpload.addEventListener("change", function (e) {
     reader.readAsDataURL(file);
   }
   e.target.value = "";
-});
+}
+
+modalImageUpload.addEventListener("change", handleModalImageUpload);
+modalReplaceImageUpload.addEventListener("change", handleModalImageUpload);
 
 removeImageBtn.addEventListener("click", () => {
   if (appState.modal.tempItem) {
