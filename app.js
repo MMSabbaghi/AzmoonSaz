@@ -1444,10 +1444,14 @@ function updateModalImageUI() {
   }
 }
 
-function setTextFloat(isFloat) {
+function setTextFloat() {
   const txtContainer = modalEditPreviewCell.querySelector("div");
-  if (txtContainer)
+  const isFloat = appState.modal.tempItem.image.float;
+
+  if (txtContainer) {
+    previewImgFloat.classList.remove("hidden");
     txtContainer.style.position = isFloat ? "absolute" : "initial";
+  } else previewImgFloat.classList.add("hidden");
 }
 
 function syncImageToolbarWithCurrentImage() {
@@ -1466,14 +1470,14 @@ function syncImageToolbarWithCurrentImage() {
     ? parseInt(brightnessMatch[1])
     : 100;
   previewImgContrast.value = contrastMatch ? parseInt(contrastMatch[1]) : 100;
-  setTextFloat(tempItemImg.float);
+  setTextFloat();
 
   handleSwitchElement({
     container: previewImgFloat,
     initialState: !!tempItemImg.float,
     onChange: (isActive) => {
-      setTextFloat(tempItemImg.float);
       appState.modal.tempItem.image.float = isActive;
+      setTextFloat();
     },
   });
 }
@@ -1496,6 +1500,7 @@ function updateModalPreviewFromTemp() {
     rangeDesc: range.desc,
   });
   renderMathInContainer(modalEditPreviewCell);
+  setTextFloat();
 }
 
 function saveModalChanges() {
