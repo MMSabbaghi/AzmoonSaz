@@ -156,13 +156,7 @@ async function pasteToTextarea(textareaId) {
 function addImageFromBlobToRange(rangeId, blob) {
   const reader = new FileReader();
   reader.onload = (ev) => {
-    const newItem = createImageItem(
-      ev.target.result,
-      createRandomId("img"),
-      ITEM_DEFAULTS.image.height,
-      ITEM_DEFAULTS.image.align,
-      ITEM_DEFAULTS.showText,
-    );
+    const newItem = createImageItem({ src: ev.target.result });
     addItemToRange(rangeId, newItem);
   };
   reader.readAsDataURL(blob);
@@ -201,6 +195,23 @@ async function tryPasteJSONToRange(rangeId) {
     addItemsFromJSONToRange(rangeId, text);
   } catch (err) {
     console.error("Failed to read clipboard text:", err);
+  }
+}
+
+async function getImageFromClipboard() {
+  try {
+    const clipboardItems = await navigator.clipboard.read();
+    const clipboardItem = clipboardItems[0];
+    const type = clipboardItem.types[0];
+
+    if (type && type.startsWith("image/")) {
+      const blobItems = await clipboardItem.getType(type);
+      const img = URL.createObjectURL(blobItems);
+      return img;
+    }
+  } catch (err) {
+    console.error("clipboard error:", err);
+    return null;
   }
 }
 
@@ -284,13 +295,13 @@ function createTextItem(
   };
 }
 
-function createImageItem(
+function createImageItem({
   src,
   imageId = createRandomId("img"),
   height = ITEM_DEFAULTS.image.height,
   align = ITEM_DEFAULTS.image.align,
   showText = ITEM_DEFAULTS.showText,
-) {
+}) {
   return {
     id: createRandomId("item"),
     text: null,
@@ -745,7 +756,7 @@ function setupFileUploadOnRange(rangeElement, rangeId) {
   handleFileUpload({
     target: rangeElement.querySelector(".range-images"),
     onChange: (src) => {
-      const newItem = createImageItem(src);
+      const newItem = createImageItem({ src });
       openModalForNewItem(rangeId, newItem);
     },
     readAs: "DataURL",
@@ -1089,25 +1100,11 @@ async function tryProcessImagePasteInModal(items) {
 }
 
 async function handlePasteInsideRange(rangeId) {
-  try {
-    const clipboardItems = await navigator.clipboard.read();
-    const clipboardItem = clipboardItems[0];
-    const type = clipboardItem.types[0];
-
-    if (type && type.startsWith("image/")) {
-      const blobItems = await clipboardItem.getType(type);
-      const newItem = createImageItem(
-        URL.createObjectURL(blobItems),
-        createRandomId("img"),
-        ITEM_DEFAULTS.image.height,
-        ITEM_DEFAULTS.image.align,
-        ITEM_DEFAULTS.showText,
-      );
-      addItemToRange(rangeId, newItem);
-    } else await tryPasteJSONToRange(rangeId);
-  } catch (err) {
-    console.error("clipboard error:", err);
-  }
+  const src = await getImageFromClipboard();
+  if (src) {
+    const newItem = createImageItem({ src });
+    addItemToRange(rangeId, newItem);
+  } else await tryPasteJSONToRange(rangeId);
 }
 
 document.addEventListener("paste", async (e) => {
