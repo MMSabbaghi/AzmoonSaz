@@ -1066,37 +1066,14 @@ function adjustMobilePadding() {
 }
 
 // ========== Paste Handlers ==========
-async function handlePasteInModal(items) {
+async function handlePasteImageInModal(msg = "آیا تصویر فعلی جایگزین شود؟") {
   if (cropper) destroyCropper();
-  const imageProcessed = await tryProcessImagePasteInModal(items);
-  return imageProcessed;
-}
-
-async function tryProcessImagePasteInModal(items) {
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf("image") !== -1) {
-      const blob = items[i].getAsFile();
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const src = ev.target.result;
-        const temp = appState.modal.tempItem;
-        if (temp.image) {
-          showConfirm({
-            msg: "آیا تصویر فعلی جایگزین شود؟",
-            on_confirm: () => {
-              if (cropper) destroyCropper();
-              temp.image.src = src;
-              temp.image.imageId = createRandomId("img");
-              updateModalPreviewFromTemp();
-            },
-          });
-        }
-      };
-      reader.readAsDataURL(blob);
-      return true;
-    }
-  }
-  return false;
+  const src = await getImageFromClipboard();
+  if (src)
+    showConfirm({
+      msg,
+      on_confirm: () => handleModalImageChange(src),
+    });
 }
 
 async function handlePasteInsideRange(rangeId) {
@@ -1107,15 +1084,9 @@ async function handlePasteInsideRange(rangeId) {
   } else await tryPasteJSONToRange(rangeId);
 }
 
-document.addEventListener("paste", async (e) => {
-  const items = e.clipboardData?.items;
-  if (!items) return;
-
-  if (appState.modal.isOpen) {
-    const imageProcessed = await handlePasteInModal(items);
-    if (imageProcessed) e.preventDefault();
-    return;
-  } else if (wizardState.isOpen) return;
+document.addEventListener("paste", async () => {
+  if (wizardState.isOpen) return;
+  else if (appState.modal.isOpen) await handlePasteImageInModal();
   else if (activeRangeId) await handlePasteInsideRange(activeRangeId);
 });
 
@@ -1311,6 +1282,9 @@ let modalTextEditor = document.getElementById("modal-text-editor");
 const modalShowText = document.getElementById("modal-show-text");
 const modalImageUpload = document.getElementById("modalImageUpload");
 const modalPasteImageBtn = document.getElementById("modalPasteImageBtn");
+const modalClipboardImageAddBtn = document.getElementById(
+  "modalClipboardImageAddBtn",
+);
 const modalReplaceImageUpload = document.getElementById(
   "modalReplaceImageUpload",
 );
@@ -1607,21 +1581,22 @@ function handleModalImageUpload(e) {
 
 modalImageUpload.addEventListener("change", handleModalImageUpload);
 modalReplaceImageUpload.addEventListener("change", handleModalImageUpload);
-modalPasteImageBtn.addEventListener("click", async () => {
-  const src = await getImageFromClipboard();
-  if (src)
-    showConfirm({
-      msg: "آیا تصویر فعلی جایگزین شود؟",
-      on_confirm: () => handleModalImageChange(src),
-    });
-});
+modalPasteImageBtn.addEventListener("click", handlePasteImageInModal);
+modalClipboardImageAddBtn.addEventListener("click", () =>
+  handlePasteImageInModal("آیا تصویر اضافه شود؟"),
+);
 
 removeImageBtn.addEventListener("click", () => {
-  if (appState.modal.tempItem) {
-    appState.modal.tempItem.image = null;
-    updateModalPreviewFromTemp();
-    updateModalImageUI();
-  }
+  showConfirm({
+    msg: "آیا از حذف تصویر اطمینان دارید؟",
+    on_confirm: () => {
+      if (appState.modal.tempItem) {
+        appState.modal.tempItem.image = null;
+        updateModalPreviewFromTemp();
+        updateModalImageUI();
+      }
+    },
+  });
 });
 
 // ========== Math Rendering ==========
