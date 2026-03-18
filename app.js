@@ -1609,12 +1609,11 @@ modalImageUpload.addEventListener("change", handleModalImageUpload);
 modalReplaceImageUpload.addEventListener("change", handleModalImageUpload);
 modalPasteImageBtn.addEventListener("click", async () => {
   const src = await getImageFromClipboard();
-  if (src) {
+  if (src)
     showConfirm({
       msg: "آیا تصویر فعلی جایگزین شود؟",
       on_confirm: () => handleModalImageChange(src),
     });
-  }
 });
 
 removeImageBtn.addEventListener("click", () => {
