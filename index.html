@@ -111,9 +111,10 @@
         <input type="file" id="modalImageUpload" accept="image/*" class="sr-only">
         <label for="modalImageUpload" class="btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
           <i class="bi bi-image"></i>
+          <span class="md:hidden">افزودن تصویر</span>
         </label>
         <button id="modalClipboardImageAddBtn"
-          class="btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
+          class="max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
           <i class="bi bi-clipboard-plus"></i>
         </button>
       </div>
@@ -188,7 +189,7 @@
         <div class="flex items-center gap-1 mr-auto">
           <!-- دکمه جایگزینی تصویر -->
           <button id="modalPasteImageBtn"
-            class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out text-lg">
+            class="max-md:hidden p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out text-lg">
             <i class="bi bi-clipboard-plus"></i>
           </button>
 
