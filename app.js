@@ -898,6 +898,7 @@ document.getElementById("addRange").onclick = () => {
 
 // ========== Names Section ==========
 let namesUI = null;
+let hasGeneratedTable = false;
 
 function createNamesUI() {
   const container = document.createElement("div");
@@ -986,9 +987,10 @@ function createNamesUI() {
   container
     .querySelector(".generate-btn")
     .addEventListener("click", handleGenerateClick);
-  container
-    .querySelector(".print-btn")
-    .addEventListener("click", () => window.print());
+  container.querySelector(".print-btn").addEventListener("click", () => {
+    if (hasGeneratedTable) window.print();
+    else showToast("برگه ای برای چاپ وجود ندارد!", "error");
+  });
 
   return container;
 }
@@ -1195,6 +1197,7 @@ function generateQuizHtml() {
 function handleGenerateClick(e) {
   const isGenerated = generateQuizHtml();
   if (isGenerated) {
+    hasGeneratedTable = true;
     e.target.scrollIntoView({ behavior: "smooth" });
     renderMathInContainer(printArea);
   }
