@@ -82,7 +82,7 @@ function handleSwitchElement({
   });
 }
 
-function handleFileUpload({ target, onChange, readAs }) {
+function handleFileUpload({ target, onChange, readAs = "DataURL" }) {
   target.addEventListener("change", (e) => {
     Array.from(e.target.files).forEach((file) => {
       const reader = new FileReader();
@@ -151,15 +151,6 @@ async function pasteToTextarea(textareaId) {
     console.error("خطا در خواندن کلیپ‌بورد:", err);
     showToast("خطا در خواندن کلیپ‌بورد", "error");
   }
-}
-
-function addImageFromBlobToRange(rangeId, blob) {
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const newItem = createImageItem({ src: ev.target.result });
-    addItemToRange(rangeId, newItem);
-  };
-  reader.readAsDataURL(blob);
 }
 
 function addItemsFromJSONToRange(rangeId, jsonString) {
@@ -759,7 +750,6 @@ function setupFileUploadOnRange(rangeElement, rangeId) {
       const newItem = createImageItem({ src });
       openModalForNewItem(rangeId, newItem);
     },
-    readAs: "DataURL",
   });
 }
 
@@ -1066,14 +1056,10 @@ function adjustMobilePadding() {
 }
 
 // ========== Paste Handlers ==========
-async function handlePasteImageInModal(msg = "آیا تصویر فعلی جایگزین شود؟") {
+async function handlePasteImageInModal() {
   if (cropper) destroyCropper();
   const src = await getImageFromClipboard();
-  if (src)
-    showConfirm({
-      msg,
-      on_confirm: () => handleModalImageChange(src),
-    });
+  if (src) handleModalImageChange(src);
 }
 
 async function handlePasteInsideRange(rangeId) {
@@ -1280,13 +1266,9 @@ const modalEdit = document.querySelector(".modal-edit");
 const modalEditPreviewCell = modalEdit.querySelector(".modal-preview-cell");
 let modalTextEditor = document.getElementById("modal-text-editor");
 const modalShowText = document.getElementById("modal-show-text");
-const modalImageUpload = document.getElementById("modalImageUpload");
 const modalPasteImageBtn = document.getElementById("modalPasteImageBtn");
 const modalClipboardImageAddBtn = document.getElementById(
   "modalClipboardImageAddBtn",
-);
-const modalReplaceImageUpload = document.getElementById(
-  "modalReplaceImageUpload",
 );
 const modalImageUploadContainer = document.getElementById(
   "modalImageUploadContainer",
@@ -1561,30 +1543,33 @@ function handleModalImageChange(src) {
       align: ITEM_DEFAULTS.image.align,
       imageId: createRandomId("img"),
     };
+    updateModalPreviewFromTemp();
+    updateModalImageUI();
   } else {
-    temp.image.src = src;
-    temp.image.imageId = createRandomId("img");
+    showConfirm({
+      msg: "آیا تصویر جایگزین شود؟",
+      on_confirm: () => {
+        temp.image.src = src;
+        temp.image.imageId = createRandomId("img");
+        updateModalPreviewFromTemp();
+        updateModalImageUI();
+      },
+    });
   }
-  updateModalPreviewFromTemp();
-  updateModalImageUI();
 }
 
-function handleModalImageUpload(e) {
-  const file = e.target.files[0];
-  if (file && appState.modal.tempItem) {
-    const reader = new FileReader();
-    reader.onload = (ev) => handleModalImageChange(ev.target.result);
-    reader.readAsDataURL(file);
-  }
-  e.target.value = "";
-}
+handleFileUpload({
+  target: document.getElementById("modalImageUpload"),
+  onChange: (src) => handleModalImageChange(src),
+});
 
-modalImageUpload.addEventListener("change", handleModalImageUpload);
-modalReplaceImageUpload.addEventListener("change", handleModalImageUpload);
+handleFileUpload({
+  target: document.getElementById("modalReplaceImageUpload"),
+  onChange: (src) => handleModalImageChange(src),
+});
+
 modalPasteImageBtn.addEventListener("click", handlePasteImageInModal);
-modalClipboardImageAddBtn.addEventListener("click", () =>
-  handlePasteImageInModal("آیا تصویر اضافه شود؟"),
-);
+modalClipboardImageAddBtn.addEventListener("click", handlePasteImageInModal);
 
 removeImageBtn.addEventListener("click", () => {
   showConfirm({
