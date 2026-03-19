@@ -2560,8 +2560,13 @@ function initializeFileUpload() {
       handleFileUpload({
         target: input,
         onChange: (file) => {
-          processImportedFile(file);
-          hideQuizHtml();
+          showConfirm({
+            msg: "آیا مطمئن هستید؟ همه داده‌های فعلی پاک می‌شوند.",
+            on_confirm: async () => {
+              processImportedFile(file);
+              hideQuizHtml();
+            },
+          });
         },
         readAs: "Text",
       });
