@@ -1060,6 +1060,7 @@ async function handlePasteImageInModal() {
   if (cropper) destroyCropper();
   const src = await getImageFromClipboard();
   if (src) handleModalImageChange(src);
+  else showToast("تصویری کپی نشده است!", "error");
 }
 
 async function handlePasteInsideRange(rangeId) {
