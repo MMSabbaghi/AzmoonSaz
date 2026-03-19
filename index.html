@@ -109,11 +109,12 @@
       <!-- دکمه آپلود تصویر (در صورت نبود تصویر) -->
       <div id="modalImageUploadContainer" class="mb-2">
         <input type="file" id="modalImageUpload" accept="image/*" class="sr-only">
-        <label for="modalImageUpload" class="btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
+        <label data-tooltip="افزودن تصویر" for="modalImageUpload"
+          class="btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
           <i class="bi bi-image"></i>
           <span class="md:hidden">افزودن تصویر</span>
         </label>
-        <button id="modalClipboardImageAddBtn"
+        <button id="modalClipboardImageAddBtn" data-tooltip="چسباندن تصویر"
           class="max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
           <i class="bi bi-clipboard-plus"></i>
         </button>
@@ -140,23 +141,23 @@
         <div class="flex-none flex items-center gap-1 rounded-custom">
           <button
             class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
-            data-align="right" title="تراز به راست">
+            data-align="right" data-tooltip="تراز به راست">
             <i class="bi bi-align-start"></i>
           </button>
           <button
             class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
-            data-align="center" title="تراز به وسط">
+            data-align="center" data-tooltip="تراز به وسط">
             <i class="bi bi-align-middle"></i>
           </button>
           <button
             class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
-            data-align="left" title="تراز به چپ">
+            data-align="left" data-tooltip="تراز به چپ">
             <i class="bi bi-align-end"></i>
           </button>
         </div>
 
         <!-- دکمه برش -->
-        <button id="previewCropBtn"
+        <button id="previewCropBtn" data-tooltip="برش تصویر"
           class="flex-none btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2">
           <i class="bi bi-crop"></i>
           <span class="hidden sm:inline">برش</span>
@@ -188,21 +189,21 @@
 
         <div class="flex items-center gap-1 mr-auto">
           <!-- دکمه جایگزینی تصویر -->
-          <button id="modalPasteImageBtn"
+          <button id="modalPasteImageBtn" data-tooltip="چسباندن تصویر"
             class="max-md:hidden p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out text-lg">
             <i class="bi bi-clipboard-plus"></i>
           </button>
 
           <div>
             <input type="file" id="modalReplaceImageUpload" accept="image/*" class="sr-only">
-            <label for="modalReplaceImageUpload"
+            <label for="modalReplaceImageUpload" data-tooltip="آپلود تصویر"
               class="cursor-pointer p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out text-lg">
               <i class="bi bi-image"></i>
             </label>
           </div>
 
           <!-- دکمه حذف -->
-          <button id="removeImageBtn"
+          <button id="removeImageBtn" data-tooltip="حذف تصویر"
             class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out text-lg">
             <i class="bi bi-trash"></i>
             <span class="hidden sm:inline">حذف</span>
