@@ -1194,10 +1194,18 @@ function generateQuizHtml() {
   return true;
 }
 
+function hideQuizHtml() {
+  hasGeneratedTable = false;
+  printArea.innerHTML = `
+  <div class="flex items-center justify-center">
+    <img src="images/no_data.jpg" alt="no_data" style="max-height: 380px;">
+  </div>
+  `;
+}
+
 function handleGenerateClick(e) {
-  const isGenerated = generateQuizHtml();
-  if (isGenerated) {
-    hasGeneratedTable = true;
+  hasGeneratedTable = generateQuizHtml();
+  if (hasGeneratedTable) {
     e.target.scrollIntoView({ behavior: "smooth" });
     renderMathInContainer(printArea);
   }
@@ -2279,6 +2287,7 @@ function handleNewAttempt() {
     on_confirm: async () => {
       await clearStateFromDB();
       clearAppState();
+      hideQuizHtml();
       showToast("داده‌ها پاک شدند.");
     },
   });
@@ -2542,26 +2551,22 @@ function initializeMobileButtons() {
   if (exportMobileBtn) exportMobileBtn.addEventListener("click", exportData);
 }
 
-function initializeMobileFileUpload() {
-  const importInput = document.getElementById("importJsonMobile");
-  if (importInput) {
-    handleFileUpload({
-      target: importInput,
-      onChange: processImportedFile,
-      readAs: "Text",
-    });
-  }
-}
+function initializeFileUpload() {
+  const MobileImportInput = document.getElementById("importJsonMobile");
+  const DesktopImportInput = document.getElementById("importJson");
 
-function initializeDesktopFileUpload() {
-  const importInput = document.getElementById("importJson");
-  if (importInput) {
-    handleFileUpload({
-      target: importInput,
-      onChange: processImportedFile,
-      readAs: "Text",
-    });
-  }
+  [MobileImportInput, DesktopImportInput].forEach((input) => {
+    if (input) {
+      handleFileUpload({
+        target: input,
+        onChange: (file) => {
+          processImportedFile(file);
+          hideQuizHtml();
+        },
+        readAs: "Text",
+      });
+    }
+  });
 }
 
 function initializeHamburgerMenu() {
@@ -2687,8 +2692,7 @@ document.addEventListener("DOMContentLoaded", function () {
   placeNamesUI();
   initializeDesktopButtons();
   initializeMobileButtons();
-  initializeMobileFileUpload();
-  initializeDesktopFileUpload();
+  initializeFileUpload();
   initializeHamburgerMenu();
   checkAndRestoreFromDB();
   initPreviewImageToolbar();
