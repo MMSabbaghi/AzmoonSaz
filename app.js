@@ -1143,11 +1143,11 @@ function adjustMobilePadding() {
 }
 
 // ========== Paste Handlers ==========
-async function handlePasteImageInModal() {
+async function handlePasteImageInModal(showError = true) {
   if (cropper) destroyCropper();
   const src = await getImageFromClipboard();
   if (src) handleModalImageChange(src);
-  else showToast("تصویری کپی نشده است!", "error");
+  else if (showError) showToast("تصویری کپی نشده است!", "error");
 }
 
 async function handlePasteInsideRange(rangeId) {
@@ -1160,7 +1160,7 @@ async function handlePasteInsideRange(rangeId) {
 
 document.addEventListener("paste", async () => {
   if (wizardState.isOpen) return;
-  else if (appState.modal.isOpen) await handlePasteImageInModal();
+  else if (appState.modal.isOpen) await handlePasteImageInModal(false);
   else if (activeRangeId) await handlePasteInsideRange(activeRangeId);
 });
 
