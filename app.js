@@ -114,31 +114,52 @@ function debounce(func, wait) {
   };
 }
 
-function createDeepProxy(target, callbacks) {
+function createDeepProxy(
+  target,
+  callbacks,
+  rootProp = null,
+  proxies = new WeakMap(),
+) {
+  if (typeof target !== "object" || target === null) {
+    return target;
+  }
+
+  if (proxies.has(target)) {
+    return proxies.get(target);
+  }
+
   const handler = {
     get(obj, prop) {
       const value = obj[prop];
       if (value && typeof value === "object") {
-        return new Proxy(value, handler);
+        return createDeepProxy(value, callbacks, rootProp || prop, proxies);
       }
       return value;
     },
     set(obj, prop, newValue) {
       obj[prop] = newValue;
       callbacks.forEach((cb) => {
-        if (cb) cb(prop);
+        if (cb) {
+          if (cb.length === 0) cb();
+          else cb(rootProp);
+        }
       });
       return true;
     },
     deleteProperty(obj, prop) {
       delete obj[prop];
       callbacks.forEach((cb) => {
-        if (cb) cb(prop);
+        if (cb) {
+          if (cb.length === 0) cb();
+          else cb(rootProp);
+        }
       });
       return true;
     },
   };
-  return new Proxy(target, handler);
+  const proxy = new Proxy(target, handler);
+  proxies.set(target, proxy);
+  return proxy;
 }
 
 async function pasteToTextarea(textareaId) {
@@ -226,7 +247,9 @@ const _autoSaveProxy = debounce(() => {
   saveStateToDB(appState).catch((err) => console.warn("Auto-save error:", err));
 }, 2000);
 
-const _totalScoreProxy = updateRangesTotalScoreUI;
+const _totalScoreProxy = (prop) => {
+  if (prop === "ranges") updateRangesTotalScoreUI();
+};
 
 // ========== Global State Management ==========
 const rawState = {
