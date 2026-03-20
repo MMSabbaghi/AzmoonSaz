@@ -114,7 +114,7 @@ function debounce(func, wait) {
   };
 }
 
-function createDeepProxy(target) {
+function createDeepProxy(target, callbacks) {
   const handler = {
     get(obj, prop) {
       const value = obj[prop];
@@ -125,12 +125,16 @@ function createDeepProxy(target) {
     },
     set(obj, prop, newValue) {
       obj[prop] = newValue;
-      if (_autoSave) _autoSave();
+      callbacks.forEach((cb) => {
+        if (cb) cb(prop);
+      });
       return true;
     },
     deleteProperty(obj, prop) {
       delete obj[prop];
-      if (_autoSave) _autoSave();
+      callbacks.forEach((cb) => {
+        if (cb) cb(prop);
+      });
       return true;
     },
   };
@@ -217,10 +221,14 @@ function calculateTotalScore() {
   }, 0);
 }
 
+// ========== Proxy ==========
+const _autoSaveProxy = debounce(() => {
+  saveStateToDB(appState).catch((err) => console.warn("Auto-save error:", err));
+}, 2000);
+
+const _totalScoreProxy = updateRangesTotalScoreUI;
+
 // ========== Global State Management ==========
-
-let _autoSave = null;
-
 const rawState = {
   ranges: [],
   names: [],
@@ -234,7 +242,7 @@ const rawState = {
   },
 };
 
-let appState = createDeepProxy(rawState);
+let appState = createDeepProxy(rawState, [_autoSaveProxy, _totalScoreProxy]);
 
 const ITEM_DEFAULTS = {
   text: { html: "", align: "RIGHT" },
@@ -2267,11 +2275,6 @@ document
   .addEventListener("click", saveStateToIndexedDB);
 
 // ========== Auto save and Restore data ==========
-_autoSave = debounce(() => {
-  updateRangesTotalScoreUI();
-  saveStateToDB(appState).catch((err) => console.warn("Auto-save error:", err));
-}, 2000);
-
 function clearAppState() {
   appState.ranges = [];
   appState.names = [];
