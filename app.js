@@ -210,6 +210,13 @@ function getPrintArea() {
   return document.getElementById("printable");
 }
 
+function calculateTotalScore() {
+  return appState.ranges.reduce((acc, { count, score, items }) => {
+    const isValidScore = score && count && items.length > 0;
+    return isValidScore ? acc + score * count : acc;
+  }, 0);
+}
+
 // ========== Global State Management ==========
 
 let _autoSave = null;
@@ -242,7 +249,12 @@ const MATH_RENDER_DELIMITERS = [
   { left: "\\[", right: "\\]", display: true },
 ];
 
-// ---------- State update helpers ----------
+// ---------- State helpers ----------
+
+function findRangeById(id) {
+  return appState.ranges.find((r) => r.id === id);
+}
+
 function updateRangeInState(rangeId, updates) {
   const index = appState.ranges.findIndex((r) => r.id === rangeId);
   if (index !== -1) {
@@ -251,7 +263,7 @@ function updateRangeInState(rangeId, updates) {
 }
 
 function updateItemInState(rangeId, itemId, updates) {
-  const range = appState.ranges.find((r) => r.id === rangeId);
+  const range = findRangeById(rangeId);
   if (!range) return;
   const itemIndex = range.items.findIndex((it) => it.id === itemId);
   if (itemIndex !== -1) {
@@ -260,16 +272,14 @@ function updateItemInState(rangeId, itemId, updates) {
 }
 
 function removeItemFromState(rangeId, itemId) {
-  const range = appState.ranges.find((r) => r.id === rangeId);
+  const range = findRangeById(rangeId);
   if (range) {
     range.items = range.items.filter((it) => it.id !== itemId);
   }
 }
 
 function reorderRangesInState(newOrderIds) {
-  appState.ranges = newOrderIds
-    .map((id) => appState.ranges.find((r) => r.id === id))
-    .filter(Boolean);
+  appState.ranges = newOrderIds.map((id) => findRangeById(id)).filter(Boolean);
 }
 
 // ========== Item Creation ==========
@@ -389,7 +399,7 @@ function renderItemContent(item, options = {}) {
 }
 
 function renderRangeItems(rangeElement, rangeId) {
-  const range = appState.ranges.find((r) => r.id === rangeId);
+  const range = findRangeById(rangeId);
   if (!range) return;
   const preview = rangeElement.querySelector(".items-preview");
   preview.innerHTML = "";
@@ -428,7 +438,7 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
     "item-thumbnail  h-[100px] text-xs overflow-hidden max-md:p-[8px] relative border border-[#ddd] rounded-[6px] p-1 bg-white transition-all duration-200 cursor-pointer hover:border-[#333] hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]";
   container.dataset.itemId = item.id;
 
-  const range = appState.ranges.find((r) => r.id === rangeId);
+  const range = findRangeById(rangeId);
   const rangeDesc = range ? range.desc : "";
 
   container.innerHTML = `
@@ -471,6 +481,8 @@ function updateRangeItemCountBadge(rangeDiv) {
 
 // ========== Range DOM Building ==========
 const rangesContainer = document.getElementById("ranges");
+const totalScoreEl = document.getElementById("total-ranges-score");
+
 let activeRangeId = null; // last clicked range (for paste)
 
 function getRangeHTML(rangeData) {
@@ -624,6 +636,12 @@ function getDesktopRangeHTML(rangeData) {
   `;
 }
 
+function updateRangesTotalScoreUI() {
+  const totalScore = calculateTotalScore();
+  totalScoreEl.classList.toggle("hidden", !!!totalScore);
+  totalScoreEl.innerHTML = `جمع بارم: ${toPersianDigits(totalScore || 0)} نمره`;
+}
+
 function setupRangeInputs(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".range-name").forEach((el) => {
     el.addEventListener("input", (e) => {
@@ -637,11 +655,13 @@ function setupRangeInputs(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".range-count").forEach((el) => {
     el.addEventListener("input", (e) => {
       updateRangeInState(rangeId, { count: parseInt(e.target.value) || 0 });
+      updateRangesTotalScoreUI();
     });
   });
   rangeElement.querySelectorAll(".range-score").forEach((el) => {
     el.addEventListener("input", (e) => {
       updateRangeInState(rangeId, { score: e.target.value });
+      updateRangesTotalScoreUI();
     });
   });
   rangeElement.querySelector(".range-desc")?.addEventListener("input", (e) => {
@@ -677,12 +697,9 @@ function setupRemoveRangeButton(rangeElement, rangeId) {
 function setupCopyRangeButton(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".copy-range").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const items = appState.ranges.find((r) => r.id === rangeId)?.items || [];
-      if (items.length) {
-        copyToClipboard(JSON.stringify(items));
-      } else {
-        showToast("آیتمی برای کپی وجود ندارد.", "error");
-      }
+      const items = findRangeById(rangeId)?.items || [];
+      if (items.length) copyToClipboard(JSON.stringify(items));
+      else showToast("آیتمی برای کپی وجود ندارد.", "error");
     });
   });
 }
@@ -725,19 +742,14 @@ function setupToggleItemsButton(rangeElement, rangeId) {
   if (toggleBtn) {
     toggleBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const range = appState.ranges.find((r) => r.id === rangeId);
+      const range = findRangeById(rangeId);
       if (range) {
         range.itemsCollapsed = !range.itemsCollapsed;
         const preview = rangeElement.querySelector(".items-preview");
-        if (range.itemsCollapsed) {
-          preview.classList.add("collapsed");
-          toggleBtn.classList.add("collapsed");
-          toggleBtn.setAttribute("aria-expanded", "false");
-        } else {
-          preview.classList.remove("collapsed");
-          toggleBtn.classList.remove("collapsed");
-          toggleBtn.setAttribute("aria-expanded", "true");
-        }
+        const itemsCollapsed = range.itemsCollapsed;
+        preview.classList.toggle("collapsed", !!itemsCollapsed);
+        toggleBtn.classList.toggle("collapsed", !!itemsCollapsed);
+        toggleBtn.setAttribute("aria-expanded", String(!!!itemsCollapsed));
       }
     });
   }
@@ -852,7 +864,7 @@ function createRangeElement(rangeData = null) {
 }
 
 function addItemToRange(rangeId, item) {
-  const range = appState.ranges.find((r) => r.id === rangeId);
+  const range = findRangeById(rangeId);
   if (!range) return;
   range.items.push(item);
   const rangeDiv = document.getElementById(rangeId);
@@ -1303,7 +1315,7 @@ function updateTempItemFromTextEditor() {
   if (!temp) return;
 
   const rangeId = appState.modal.rangeId;
-  const range = appState.ranges.find((r) => r.id === rangeId);
+  const range = findRangeById(rangeId);
   const rangeDesc = range ? range.desc || "" : "";
 
   const editor = modalTextEditor;
@@ -1355,7 +1367,7 @@ function openModalForNewItem(rangeId, newItem) {
 }
 
 function openItemModal(rangeId, itemId) {
-  const range = appState.ranges.find((r) => r.id === rangeId);
+  const range = findRangeById(rangeId);
   const item = range?.items.find((it) => it.id === itemId);
   if (!item) return;
 
@@ -1372,7 +1384,7 @@ function openModalWithTempItem() {
 
   setupModalEditorFromTemp(temp);
 
-  const range = appState.ranges.find((r) => r.id === appState.modal.rangeId);
+  const range = findRangeById(appState.modal.rangeId);
   const rangeDesc = range ? range.desc || "" : "";
 
   if (!temp.text || !temp.text.html.trim()) {
@@ -1459,7 +1471,7 @@ function updateModalPreviewFromTemp() {
   const temp = appState.modal.tempItem;
   if (!temp) return;
 
-  const range = appState.ranges.find((r) => r.id === appState.modal.rangeId);
+  const range = findRangeById(appState.modal.rangeId);
   if (!range) return;
 
   modalQscore.innerHTML = `
@@ -1826,7 +1838,7 @@ function updateWizardUI() {
 function updateWizardPreview() {
   const tempItem = wizardState.extractedItem;
   if (!tempItem) return;
-  const range = appState.ranges.find((r) => r.id === wizardState.rangeId);
+  const range = findRangeById(wizardState.rangeId);
   const previewCell = document.getElementById("wizard-preview-cell");
   const scoreCell = document.getElementById("wizard-preview-score");
   const score =

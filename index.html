@@ -74,10 +74,13 @@
     <button id="addRange" style="width: 100%;" class=" 
     flex items-center justify-center bg-transparent border-2 border-dashed border-primary text-primary rounded-custom cursor-pointer transition-all duration-300 ease-out px-4 py-2 gap-2
     hover:border-primary-dark hover:text-primary-dark hover:shadow-md
-    my-2
+    my-2 relative
     ">
       <i class="bi bi-plus-lg"></i>
       <span>افزودن مبحث جدید</span>
+      <span id="total-ranges-score"
+        class="flex items-center justify-center px-2 bg-surface-darker text-secondary rounded-circle text-xs absolute left-2 -bottom-2">
+      </span>
     </button>
 
     <div id="sentinel" class="h-[1px]"></div>
@@ -434,7 +437,7 @@
   ">
       <i class="bi bi-arrow-up"></i>
     </button>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <link rel="stylesheet" href="./utils/katex/katex.min.css">
     <script defer src="./utils/katex/katex.min.js"></script>
     <script defer src="./utils/katex/auto-render.min.js"></script>
     <script src="./utils/cropper/cropper.min.js"></script>
