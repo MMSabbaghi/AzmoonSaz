@@ -655,13 +655,11 @@ function setupRangeInputs(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".range-count").forEach((el) => {
     el.addEventListener("input", (e) => {
       updateRangeInState(rangeId, { count: parseInt(e.target.value) || 0 });
-      updateRangesTotalScoreUI();
     });
   });
   rangeElement.querySelectorAll(".range-score").forEach((el) => {
     el.addEventListener("input", (e) => {
       updateRangeInState(rangeId, { score: e.target.value });
-      updateRangesTotalScoreUI();
     });
   });
   rangeElement.querySelector(".range-desc")?.addEventListener("input", (e) => {
@@ -2270,6 +2268,7 @@ document
 
 // ========== Auto save and Restore data ==========
 _autoSave = debounce(() => {
+  updateRangesTotalScoreUI();
   saveStateToDB(appState).catch((err) => console.warn("Auto-save error:", err));
 }, 2000);
 
@@ -2294,15 +2293,21 @@ async function checkAndRestoreFromDB() {
 }
 
 function handleNewAttempt() {
-  showConfirm({
-    msg: "آیا مطمئن هستید؟ همه داده‌های فعلی پاک می‌شوند.",
-    on_confirm: async () => {
-      await clearStateFromDB();
-      clearAppState();
-      hideQuizHtml();
-      showToast("داده‌ها پاک شدند.");
-    },
-  });
+  async function changeHandler() {
+    await clearStateFromDB();
+    clearAppState();
+    hideQuizHtml();
+  }
+
+  if (appState.ranges.length) {
+    showConfirm({
+      msg: "آیا مطمئن هستید؟ همه داده‌های فعلی پاک می‌شوند.",
+      on_confirm: () => {
+        changeHandler();
+        showToast("داده‌ها پاک شدند.");
+      },
+    });
+  } else changeHandler();
 }
 
 // ========== Import/Export ==========
@@ -2567,18 +2572,23 @@ function initializeFileUpload() {
   const MobileImportInput = document.getElementById("importJsonMobile");
   const DesktopImportInput = document.getElementById("importJson");
 
+  function changeHandler(file) {
+    processImportedFile(file);
+    hideQuizHtml();
+    showToast("داده ها با موفقیت وارد شدند!");
+  }
+
   [MobileImportInput, DesktopImportInput].forEach((input) => {
     if (input) {
       handleFileUpload({
         target: input,
         onChange: (file) => {
-          showConfirm({
-            msg: "آیا مطمئن هستید؟ همه داده‌های فعلی پاک می‌شوند.",
-            on_confirm: async () => {
-              processImportedFile(file);
-              hideQuizHtml();
-            },
-          });
+          if (appState.ranges.length) {
+            showConfirm({
+              msg: "آیا مطمئن هستید؟ همه داده‌های فعلی پاک می‌شوند.",
+              on_confirm: () => changeHandler(file),
+            });
+          } else changeHandler(file);
         },
         readAs: "Text",
       });
