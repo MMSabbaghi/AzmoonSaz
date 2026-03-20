@@ -114,10 +114,26 @@ function debounce(func, wait) {
   };
 }
 
+function debounce(fn, delay) {
+  let timerId;
+  return function (...args) {
+    clearTimeout(timerId);
+    timerId = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+/**
+ * ساخت پروکسی عمیق با ارسال مسیر دقیق تغییر
+ * @param {object|array} target آبجکت مورد نظر
+ * @param {Array<function>} callbacks آرایه کال‌بک
+ * @param {Array<string|number>} path آرایه مسیر فعلی (برای ردیابی)
+ * @param {WeakMap} proxies کش پروکسی‌ها
+ * @returns پروکسی
+ */
 function createDeepProxy(
   target,
   callbacks,
-  rootProp = null,
+  path = [],
   proxies = new WeakMap(),
 ) {
   if (typeof target !== "object" || target === null) {
@@ -131,32 +147,60 @@ function createDeepProxy(
   const handler = {
     get(obj, prop) {
       const value = obj[prop];
-      if (value && typeof value === "object") {
-        return createDeepProxy(value, callbacks, rootProp || prop, proxies);
+
+      if (
+        Array.isArray(obj) &&
+        [
+          "push",
+          "pop",
+          "shift",
+          "unshift",
+          "splice",
+          "sort",
+          "reverse",
+        ].includes(prop)
+      ) {
+        return function (...args) {
+          const result = Array.prototype[prop].apply(obj, args);
+          const pathStr = path.join(".");
+          callbacks.forEach((cb) => {
+            if (!cb) return;
+            cb(pathStr);
+          });
+          return result;
+        };
       }
+
+      if (value && typeof value === "object") {
+        return createDeepProxy(value, callbacks, path.concat(prop), proxies);
+      }
+
       return value;
     },
+
     set(obj, prop, newValue) {
+      const oldValue = obj[prop];
+      if (oldValue === newValue) return true;
       obj[prop] = newValue;
+      const pathStr = path.concat(prop).join(".");
       callbacks.forEach((cb) => {
-        if (cb) {
-          if (cb.length === 0) cb();
-          else cb(rootProp);
-        }
+        if (!cb) return;
+        cb(pathStr);
       });
       return true;
     },
+
     deleteProperty(obj, prop) {
+      const pathStr = path.concat(prop).join(".");
       delete obj[prop];
       callbacks.forEach((cb) => {
-        if (cb) {
-          if (cb.length === 0) cb();
-          else cb(rootProp);
-        }
+        if (!cb) return;
+        cb(pathStr);
       });
       return true;
     },
   };
+
   const proxy = new Proxy(target, handler);
   proxies.set(target, proxy);
   return proxy;
@@ -247,8 +291,8 @@ const _autoSaveProxy = debounce(() => {
   saveStateToDB(appState).catch((err) => console.warn("Auto-save error:", err));
 }, 2000);
 
-const _totalScoreProxy = (prop) => {
-  if (prop === "ranges") updateRangesTotalScoreUI();
+const _totalScoreProxy = (pathStr) => {
+  if (pathStr.startsWith("ranges")) updateRangesTotalScoreUI();
 };
 
 // ========== Global State Management ==========
