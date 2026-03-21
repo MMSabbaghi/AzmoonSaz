@@ -2783,105 +2783,104 @@ function setupInputScrollOnFocus() {
 }
 
 // ========== Initialization ==========
-document.addEventListener("DOMContentLoaded", function () {
-  getPrintArea().style.fontFamily = appState.font;
-  namesUI = createNamesUI();
-  placeNamesUI();
-  initializeDesktopButtons();
-  initializeMobileButtons();
-  initializeFileUpload();
-  initializeHamburgerMenu();
-  checkAndRestoreFromDB();
-  initPreviewImageToolbar();
 
-  setupModal(modalEdit, { onClose: destroyEditModal });
-  if (isMobile()) {
-    setupMobileSwipeToClose(modalEdit);
-  }
+getPrintArea().style.fontFamily = appState.font;
+namesUI = createNamesUI();
+placeNamesUI();
+initializeDesktopButtons();
+initializeMobileButtons();
+initializeFileUpload();
+initializeHamburgerMenu();
+checkAndRestoreFromDB();
+initPreviewImageToolbar();
 
-  initWizardEvents();
-  setupInputScrollOnFocus();
-  setupCropModalEvents();
+setupModal(modalEdit, { onClose: destroyEditModal });
+if (isMobile()) {
+  setupMobileSwipeToClose(modalEdit);
+}
 
-  const modalPlaceholder = document.getElementById(
-    "modal-rich-editor-placeholder",
-  );
-  if (modalPlaceholder) {
-    createRichTextEditor(modalPlaceholder, {
-      features: [
-        "bold",
-        "italic",
-        "underline",
-        "strike",
-        "align-left",
-        "align-center",
-        "align-right",
-        "align-justify",
-        "undo",
-        "redo",
-      ],
-      placeholder: "متن سوال را بنویسید...",
-      contentId: "modal-text-editor",
-      toolbarId: "modal-toolbar",
-      onContentChange: updateTempItemFromTextEditor,
-    });
+initWizardEvents();
+setupInputScrollOnFocus();
+setupCropModalEvents();
 
-    modalTextEditor = document.getElementById("modal-text-editor");
-
-    modalTextEditor.addEventListener("focus", function () {
-      const temp = appState.modal.tempItem;
-      if (!temp) return;
-
-      if (!temp.showText) {
-        modalShowText.checked = true;
-        temp.showText = true;
-      }
-
-      if (!temp.text) {
-        temp.text = {
-          html: "",
-          align: ITEM_DEFAULTS.text.align,
-        };
-        modalTextEditor.innerHTML = "";
-        modalTextEditor.style.textAlign = "right";
-      }
-
-      updateModalPreviewFromTemp();
-    });
-  }
-
-  const wizardPlaceholder = document.getElementById(
-    "wizard-rich-editor-placeholder",
-  );
-  if (wizardPlaceholder) {
-    createRichTextEditor(wizardPlaceholder, {
-      features: [
-        "bold",
-        "italic",
-        "underline",
-        "strike",
-        "align-left",
-        "align-center",
-        "align-right",
-        "align-justify",
-        "undo",
-        "redo",
-      ],
-      placeholder: "متن سوال را ویرایش کنید...",
-      contentId: "wizard-text-editor",
-      toolbarId: "wizard-toolbar",
-      onContentChange: updateWizardPreviewFromEditor,
-    });
-  }
-
-  window.addEventListener("resize", () => {
-    const isNowMobile = window.innerWidth <= 768;
-    document.querySelectorAll(".range-item").forEach((el) => {
-      el.draggable = !isNowMobile;
-    });
-
-    placeNamesUI();
-    adjustMobilePadding();
-    updateToTopPosition();
+const modalPlaceholder = document.getElementById(
+  "modal-rich-editor-placeholder",
+);
+if (modalPlaceholder) {
+  createRichTextEditor(modalPlaceholder, {
+    features: [
+      "bold",
+      "italic",
+      "underline",
+      "strike",
+      "align-left",
+      "align-center",
+      "align-right",
+      "align-justify",
+      "undo",
+      "redo",
+    ],
+    placeholder: "متن سوال را بنویسید...",
+    contentId: "modal-text-editor",
+    toolbarId: "modal-toolbar",
+    onContentChange: updateTempItemFromTextEditor,
   });
+
+  modalTextEditor = document.getElementById("modal-text-editor");
+
+  modalTextEditor.addEventListener("focus", function () {
+    const temp = appState.modal.tempItem;
+    if (!temp) return;
+
+    if (!temp.showText) {
+      modalShowText.checked = true;
+      temp.showText = true;
+    }
+
+    if (!temp.text) {
+      temp.text = {
+        html: "",
+        align: ITEM_DEFAULTS.text.align,
+      };
+      modalTextEditor.innerHTML = "";
+      modalTextEditor.style.textAlign = "right";
+    }
+
+    updateModalPreviewFromTemp();
+  });
+}
+
+const wizardPlaceholder = document.getElementById(
+  "wizard-rich-editor-placeholder",
+);
+if (wizardPlaceholder) {
+  createRichTextEditor(wizardPlaceholder, {
+    features: [
+      "bold",
+      "italic",
+      "underline",
+      "strike",
+      "align-left",
+      "align-center",
+      "align-right",
+      "align-justify",
+      "undo",
+      "redo",
+    ],
+    placeholder: "متن سوال را ویرایش کنید...",
+    contentId: "wizard-text-editor",
+    toolbarId: "wizard-toolbar",
+    onContentChange: updateWizardPreviewFromEditor,
+  });
+}
+
+window.addEventListener("resize", () => {
+  const isNowMobile = window.innerWidth <= 768;
+  document.querySelectorAll(".range-item").forEach((el) => {
+    el.draggable = !isNowMobile;
+  });
+
+  placeNamesUI();
+  adjustMobilePadding();
+  updateToTopPosition();
 });
