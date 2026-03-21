@@ -262,13 +262,35 @@ async function getImageFromClipboard() {
   try {
     const clipboardItems = await navigator.clipboard.read();
     const clipboardItem = clipboardItems[0];
-    const type = clipboardItem.types[0];
 
-    if (type && type.startsWith("image/")) {
-      const blobItems = await clipboardItem.getType(type);
-      const img = URL.createObjectURL(blobItems);
-      return img;
+    let imageType = clipboardItem.types.find((type) =>
+      type.startsWith("image/"),
+    );
+    if (imageType) {
+      const blob = await clipboardItem.getType(imageType);
+      return URL.createObjectURL(blob);
     }
+
+    const htmlType = clipboardItem.types.find((type) => type === "text/html");
+    if (htmlType) {
+      const htmlBlob = await clipboardItem.getType(htmlType);
+      const htmlText = await htmlBlob.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, "text/html");
+      const img = doc.querySelector("img");
+      if (img) {
+        let src = img.src;
+        if (!src.startsWith("data:")) {
+          const response = await fetch(src);
+          const blob = await response.blob();
+          return URL.createObjectURL(blob);
+        } else {
+          return src;
+        }
+      }
+    }
+
+    return null;
   } catch (err) {
     console.error("clipboard error:", err);
     return null;
