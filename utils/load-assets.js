@@ -27,20 +27,20 @@ function LoadAssets({
   onEnd = () => {},
   onProgress = () => {},
 }) {
-  document.addEventListener("DOMContentLoaded", function () {
+  document.addEventListener("DOMContentLoaded", async () => {
     onStart();
 
-    const loadPromises = files.map(({ src, type }, index) => {
-      return loadFile(type, src)
-        .then(() => {
-          const percent = calculateProgressPercent(index + 1, files.length);
-          onProgress(percent);
-        })
-        .catch((error) => {
-          console.error(`Failed to load ${src}`, error);
-        });
-    });
+    for (let i = 0; i < files.length; i++) {
+      const { src, type } = files[i];
+      try {
+        await loadFile(type, src);
+        const percent = calculateProgressPercent(i + 1, files.length);
+        onProgress(percent);
+      } catch (error) {
+        console.error(`Failed to load ${src}`, error);
+      }
+    }
 
-    Promise.all(loadPromises).then(() => setTimeout(onEnd, 500));
+    onEnd();
   });
 }

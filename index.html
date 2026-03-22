@@ -460,7 +460,6 @@
       { type: "css", src: "./style.css" },
       { type: "css", src: "./utils/katex/katex.min.css", },
       { type: "js", src: "./utils/katex/katex.min.js" },
-      { type: "js", src: "./utils/katex/katex.min.js" },
       { type: "js", src: "./utils/katex/auto-render.min.js" },
       { type: "js", src: "./utils/cropper/cropper.min.js" },
       { type: "js", src: "./utils/persian-inputs.js" },
@@ -469,7 +468,7 @@
       { type: "js", src: "./utils/rich-text-editor.js" },
       { type: "js", src: "./utils/tooltip.js" },
       { type: "js", src: "./utils/ai-prompt.js" },
-      { type: "js", src: "./app.js" },
+      { type: "js", src: "./app.js" }
     ];
 
     const overlay = document.getElementById("overlay");
@@ -485,7 +484,13 @@
       progressPercent.textContent = percentStr.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
     }
 
-    LoadAssets({ files, onStart: showOverlay, onEnd: hideOverlay, onProgress: updateProgress });
+    LoadAssets({
+      files,
+      onStart: showOverlay,
+      onProgress: updateProgress,
+      onEnd: () => setTimeout(hideOverlay, 500),
+    });
+
   </script>
 
 </body>
