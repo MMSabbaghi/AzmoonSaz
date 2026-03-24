@@ -64,22 +64,30 @@ function handleSwitchElement({
   activeBgColor = "bg-primary",
   initialState = false,
 }) {
-  const sw = container.querySelector("#switch");
-  const knob = container.querySelector("#knob");
-  let on = initialState;
+  const sw = container.querySelector(".switch");
+  const knob = container.querySelector(".knob");
 
-  function setState(isActive) {
-    const func = isActive ? "add" : "remove";
-    sw.classList[func](activeBgColor);
-    knob.classList[func]("translate-x-4", "scale-105");
+  let isActive = initialState;
+
+  function setState(state) {
+    const method = state ? "add" : "remove";
+    sw.classList[method](activeBgColor);
+    knob.classList[method]("translate-x-4", "scale-105");
+    isActive = state;
+    onChange(isActive);
   }
 
-  setState(on);
+  setState(isActive);
+
   sw.addEventListener("click", () => {
-    on = !on;
-    setState(on);
-    onChange(on);
+    setState(!isActive);
   });
+
+  return {
+    on: () => setState(true),
+    off: () => setState(false),
+    isActive: () => isActive,
+  };
 }
 
 function handleFileUpload({ target, onChange, readAs = "DataURL" }) {
@@ -655,8 +663,8 @@ function getMobileRangeHTML(rangeData) {
         <!-- سوییچ و تکست‌آریا برای توضیحات مبحث (بدون تغییر) -->
         <div class="hidden flex items-center gap-2 mt-3">
           <label class="text-sm text-secondary">متن سوال:</label>
-          <div id="switch" class="relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
-            <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
+          <div class="switch relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
+            <div class="knob absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
           </div>
         </div>
         <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
@@ -706,8 +714,8 @@ function getDesktopRangeHTML(rangeData) {
         <button data-tooltip="تعریف سوال" class="add-text-item btn btn-outline px-3 py-2 rounded-custom"><i class="bi bi-type"></i></button>
         <button data-tooltip="هوش مصنوعی" class="ai-range btn btn-outline px-3 py-2 rounded-custom"><i class="bi bi-openai"></i></button>
         <label class="font-normal text-muted" > متن سوال: </label>
-        <div id="switch" class="relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
-          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
+        <div class="switch relative w-[42px] h-[24px] bg-border-dark rounded-custom cursor-pointer transition-all duration-300 ease-out shadow-inner">
+          <div class="knob absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -1027,8 +1035,8 @@ function createNamesUI() {
       </div>
       <div class="names-switch flex gap-1">
         <label class="text-secondary">نمایش نام:</label>
-        <div id="switch" class="relative w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
-          <div id="knob" class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
+        <div class="switch relative w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
+          <div class="knob absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
         </div>
       </div>
       <div class="flex gap-2 md:mr-auto w-full md:w-fit">
@@ -1384,7 +1392,6 @@ function setupModal(modalElement, options = {}) {
 const modalEdit = document.querySelector(".modal-edit");
 const modalEditPreviewCell = modalEdit.querySelector(".modal-preview-cell");
 let modalTextEditor = document.getElementById("modal-text-editor");
-const modalShowText = document.getElementById("modal-show-text");
 const modalPasteImageBtn = document.getElementById("modalPasteImageBtn");
 const modalClipboardImageAddBtn = document.getElementById(
   "modalClipboardImageAddBtn",
@@ -1473,6 +1480,16 @@ function openItemModal(rangeId, itemId) {
   openModalWithTempItem();
 }
 
+const modalShowText = handleSwitchElement({
+  container: document.getElementById("modal-show-text"),
+  onChange: (isActive) => {
+    const temp = appState.modal.tempItem;
+    if (!temp) return;
+    temp.showText = isActive;
+    updateModalPreviewFromTemp();
+  },
+});
+
 function openModalWithTempItem() {
   const temp = appState.modal.tempItem;
   if (!temp) return;
@@ -1500,7 +1517,7 @@ function openModalWithTempItem() {
 
   updateModalPreviewFromTemp();
   updateModalImageUI();
-  modalShowText.checked = temp.showText !== false;
+  temp.showText !== false ? modalShowText.on() : modalShowText.off();
   openModalElement(modalEdit);
 }
 
@@ -1627,24 +1644,6 @@ function closeEditModal() {
   closeModalElement(modalEdit);
   destroyEditModal();
 }
-
-modalShowText.addEventListener("change", function (e) {
-  const temp = appState.modal.tempItem;
-  if (!temp) return;
-
-  temp.showText = e.target.checked;
-
-  if (e.target.checked && !temp.text) {
-    temp.text = {
-      html: "",
-      align: ITEM_DEFAULTS.text.align,
-    };
-    modalTextEditor.innerHTML = "";
-    modalTextEditor.style.textAlign = "right";
-  }
-
-  updateModalPreviewFromTemp();
-});
 
 saveModalBtn.addEventListener("click", () => {
   showConfirm({
@@ -2855,20 +2854,10 @@ if (modalPlaceholder) {
     if (!temp) return;
 
     if (!temp.showText) {
-      modalShowText.checked = true;
+      modalShowText.on();
       temp.showText = true;
+      updateModalPreviewFromTemp();
     }
-
-    if (!temp.text) {
-      temp.text = {
-        html: "",
-        align: ITEM_DEFAULTS.text.align,
-      };
-      modalTextEditor.innerHTML = "";
-      modalTextEditor.style.textAlign = "right";
-    }
-
-    updateModalPreviewFromTemp();
   });
 }
 

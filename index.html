@@ -179,10 +179,10 @@
 
         <div id="previewImgFloat" class="flex items-center gap-2">
           <label class="text-sm text-secondary">تصویر شناور:</label>
-          <div id="switch"
-            class="relative min-w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
-            <div id="knob"
-              class="absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md">
+          <div
+            class="switch relative min-w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
+            <div
+              class="knob absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md">
             </div>
           </div>
         </div>
@@ -224,12 +224,17 @@
         </table>
       </div>
 
-      <!-- چک‌باکس نمایش متن و دکمه ذخیره -->
+      <!-- سوئیچ نمایش متن و دکمه ذخیره -->
       <div class="flex items-center justify-between mb-2">
-        <label class="flex items-center gap-1">
-          <input type="checkbox" id="modal-show-text" class="w-5 h-5 accent-primary">
-          <span class="text-secondary">نمایش متن سوال</span>
-        </label>
+        <div id="modal-show-text" class="flex items-center gap-2">
+          <label class="text-sm text-secondary"> نمایش متن سوال:</label>
+          <div
+            class="switch relative min-w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
+            <div
+              class="knob absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md">
+            </div>
+          </div>
+        </div>
         <button id="save-modal-btn" class="btn px-3 py-1">
           <i class="bi bi-floppy"></i> ذخیره
         </button>
