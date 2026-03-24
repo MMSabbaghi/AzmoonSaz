@@ -71,6 +71,11 @@ input:focus {
   border: 1px solid var(--primary);
   color: var(--primary);
 }
+
+.btn-dashed {
+  border-style: dashed;
+}
+
 .btn-outline:hover {
   background: var(--primary-light);
   color: var(--text-inverse);

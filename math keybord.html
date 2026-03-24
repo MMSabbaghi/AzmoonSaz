@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>ویرایشگر فرمول</title>
+  <script src="./utils/3.4.17"></script>
+  <link rel="stylesheet" href="./utils/katex/katex.min.css" />
+  <script src="./utils/katex/katex.min.js"></script>
+  <script src="./utils/katex/auto-render.min.js"></script>
+  <link rel="stylesheet" href="./theme.css">
+  <script src="./utils/alert.js"></script>
+
+  <style>
+    @font-face {
+      font-family: "Vazirmatn";
+      src: url("fonts/Vazirmatn-Regular.woff2") format("woff2");
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    body {
+      font-family: "Vazirmatn", sans-serif;
+    }
+  </style>
+
+</head>
+
+<body class="bg-gray-100 min-h-screen flex justify-center items-start py-10">
+
+  <div class="w-full max-w-3xl bg-white shadow-md rounded-lg p-4 space-y-4">
+    <h1 class="text-xl font-semibold text-gray-800 mb-2">ویرایشگر فرمول</h1>
+
+    <div style="direction: ltr;" id="toolbar"
+      class="flex flex-wrap gap-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
+    </div>
+
+    <div class="space-y-2">
+      <div class="flex items-center justify-between">
+        <label for="latex-input" class="text-sm text-gray-700">
+          LaTeX را اینجا بنویسید:
+        </label>
+        <button
+          class="border border-gray-700 rounded-lg px-3 py-1 hover:bg-gray-700 hover:text-white transition-all duration-300 ease-in-out"
+          id="copyToClipboardBtn">کپی کردن</button>
+      </div>
+      <textarea style="direction: ltr;" id="latex-input"
+        class="w-full h-32 border border-gray-300 rounded-md p-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="مثال: \frac{a}{b} + \sqrt{x}"></textarea>
+    </div>
+
+    <div class="space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-gray-700">پیش‌نمایش:</span>
+        <span id="error-msg" class="text-xs text-red-500 hidden"></span>
+      </div>
+      <div style="direction: ltr;" id="preview" class="min-h-[60px] border border-gray-200 rounded-md p-3 bg-white">
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    /////////////////
+    async function copyToClipboard(textToCopy) {
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        showToast("کپی شد!");
+        return true;
+      } catch (err) {
+        console.error("خطا در کپی کردن: ", err);
+        showToast("خطا در کپی کردن!", "error");
+        return false;
+      }
+    }
+
+    function toPersianDigits(str) {
+      return (str + "").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+    }
+
+    function convertDigitsToPersianInsideContainer(container) {
+      const walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false,
+      );
+
+      let node;
+      while ((node = walker.nextNode())) {
+        if (/\d/.test(node.nodeValue)) {
+          node.nodeValue = toPersianDigits(node.nodeValue);
+        }
+      }
+    }
+
+    const MATH_RENDER_DELIMITERS = [
+      { left: "$$", right: "$$", display: true },
+      { left: "$", right: "$", display: false },
+      { left: "\\(", right: "\\)", display: false },
+      { left: "\\[", right: "\\]", display: true },
+    ];
+
+    function renderMathInContainer({ container, onError = () => { } }) {
+      if (typeof renderMathInElement === "undefined") {
+        console.warn("KaTeX auto-render not available");
+        return;
+      }
+      try {
+        renderMathInElement(container, {
+          throwOnError: true,
+          delimiters: MATH_RENDER_DELIMITERS,
+        });
+        convertDigitsToPersianInsideContainer(container);
+      } catch (e) {
+        onError(e)
+      }
+    }
+
+
+    //////////////////
+
+    const tools = [
+      { label: '\\frac{a}{b}', snippet: '\\frac{a}{b}', title: 'کسر' },
+      { label: '\\times ', snippet: '\\times', title: 'علامت ضرب' },
+      { label: '\\div', snippet: '\\div', title: 'علامت تقسیم' },
+      { label: 'a^{n}', snippet: '^{n}', title: 'توان' },
+      { label: '\\sqrt{a}', snippet: '\\sqrt{a}', title: 'رادیکال' },
+      { label: '(x, y)', snippet: '(x, y)', title: 'مختصات' },
+      { label: '\\pi', snippet: '\\pi', title: 'عدد پی' },
+      { label: '\\cong', snippet: '\\cong', title: 'علامت همنهشتی' },
+      { label: '\\in', snippet: '\\in', title: 'عضویت در مجموعه' },
+      { label: '\\subseteq', snippet: '\\subseteq', title: 'زیرمجموعه' },
+      { label: '\\emptyset', snippet: '\\emptyset', title: 'مجموعه تهی' },
+      { label: '\\mathbb{N}', snippet: '\\mathbb{N}', title: 'مجموعه اعداد طبیعی' },
+      { label: '\\mathbb{Z}', snippet: '\\mathbb{Z}', title: 'مجموعه اعداد صحیح' },
+      { label: '\\mathbb{W}', snippet: '\\mathbb{W}', title: 'مجموعه اعداد طبیعی صفر و بالاتر' },
+      { label: '\\mathbb{R}', snippet: '\\mathbb{R}', title: 'مجموعه اعداد حقیقی' },
+      { label: '\\mathbb{Q}', snippet: '\\mathbb{Q}', title: 'مجموعه اعداد گویا' },
+      { label: '\\cup', snippet: '\\cup', title: 'نماد اجتماع' },
+      { label: '\\cap', snippet: '\\cap', title: 'نماد اشتراک ' },
+      { label: '\\geq', snippet: '\\geq', title: 'بزرگتر مساوی' },
+      { label: '\\leq', snippet: '\\leq', title: 'کوچکتر مساوی' },
+      { label: '|a|', snippet: '|a|', title: 'قدر مطلق' },
+      { label: '\\bar{x}', snippet: '\\bar{x}', title: 'نماد بار برای دوره تناوب' },
+      { label: '\\sqrt[n]{a}', snippet: '\\sqrt[n]{a}', title: 'رادیکال با فرجه' },
+      {
+        label: '\\begin{cases} a x + b y = c \\\\ d x + e y = f \\end{cases}',
+        snippet:
+          '\\begin{cases}\n' +
+          'a x + b y = c \\\\\n' +
+          'd x + e y = f\n' +
+          '\\end{cases}',
+        title: 'دستگاه معادله'
+      }
+    ];
+
+
+    const toolbar = document.getElementById('toolbar');
+    const textarea = document.getElementById('latex-input');
+    const preview = document.getElementById('preview');
+    const errorMsg = document.getElementById('error-msg');
+    const copyBtn = document.getElementById('copyToClipboardBtn');
+
+
+    function buildToolbar() {
+      tools.forEach((tool, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className =
+          'px-2 text-xs bg-white border border-gray-300 rounded hover:bg-blue-50 hover:border-blue-400 transition';
+        btn.textContent = `$$${tool.label}$$`;
+        btn.dataset.latex = tool.snippet;
+        btn.dataset.index = index;
+        btn.title = tool.title
+
+        btn.addEventListener('click', () => insertLatexSnippet(tool.snippet));
+
+        toolbar.appendChild(btn);
+      });
+
+      renderMathInContainer({ container: toolbar })
+    }
+
+    function insertLatexSnippet(snippet) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const value = textarea.value;
+
+      const before = value.substring(0, start);
+      const after = value.substring(end);
+
+      // در اینجا می‌توانید الگوی خاص مثل انتخاب داخل {} را هم پیاده‌سازی کنید
+      const newValue = before + snippet + after;
+
+      textarea.value = newValue;
+
+      // تنظیم مکان‌نما بعد از متن درج شده
+      const cursorPosition = start + snippet.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursorPosition, cursorPosition);
+
+      renderPreview();
+    }
+
+    function renderPreview() {
+      const latex = textarea.value || "";
+      if (latex) preview.innerHTML = `$${latex}$`;
+      errorMsg.textContent = '';
+
+      renderMathInContainer({
+        container: preview,
+        onError: () => {
+          preview.textContent = '';
+          errorMsg.textContent = err.message || 'خطا در رندر LaTeX';
+        }
+      })
+    }
+
+    textarea.addEventListener('input', renderPreview);
+    copyBtn.addEventListener("click", () => copyToClipboard(`$${textarea.value}$`));
+
+    //initialize
+    buildToolbar();
+    renderPreview();
+  </script>
+</body>
+
+</html>
