@@ -283,10 +283,13 @@ input[type="range"]::-moz-range-track {
     visibility: hidden;
   }
 
+  canvas {
+    display: none;
+  }
+
   #printable,
   #printable * {
     visibility: visible;
-    overflow: visible !important;
     max-height: none !important;
   }
   #printable {
