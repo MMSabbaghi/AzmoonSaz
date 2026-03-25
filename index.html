@@ -473,6 +473,7 @@
       { type: "js", src: "./utils/rich-text-editor.js" },
       { type: "js", src: "./utils/tooltip.js" },
       { type: "js", src: "./utils/ai-prompt.js" },
+      { type: "js", src: "./utils/Rainfall.js" },
       { type: "js", src: "./app.js" }
     ];
 
@@ -489,11 +490,24 @@
       progressPercent.textContent = percentStr.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
     }
 
+    function initApp() {
+      hideOverlay();
+      if (!isMobile()) {
+        Rainfall.init(document.body, {
+          characters: ["\uf4be", "\uf4cb"],
+          charColor: "var(--primary-color)",
+          zIndex: "-1",
+          maxItems: 100,
+          fontFamily: "bootstrap-icons"
+        })
+      }
+    }
+
     LoadAssets({
       files,
       onStart: showOverlay,
       onProgress: updateProgress,
-      onEnd: () => setTimeout(hideOverlay, 500),
+      onEnd: () => setTimeout(initApp, 500),
     });
 
   </script>
