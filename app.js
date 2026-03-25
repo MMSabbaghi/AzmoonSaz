@@ -715,9 +715,9 @@ function getDesktopRangeHTML(rangeData) {
         <button data-tooltip="هوش مصنوعی" class="ai-range btn btn-outline btn-dashed px-3 py-2 rounded-custom"><i class="bi bi-openai"></i></button>
       </div>
       <div class="flex items-center gap-2">
-        <button data-tooltip="حذف مبحث" class="p-1 text-muted hover:text-error rounded-custom remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
-        <button data-tooltip="کپی آیتم ها" class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
-        <button data-tooltip="چسباندن" class="p-1 text-muted hover:text-primary rounded-custom paste-range transition-all duration-500 ease-out"><i class="bi bi-clipboard-plus"></i></button>
+      <button data-tooltip="کپی آیتم ها" class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
+      <button data-tooltip="چسباندن" class="p-1 text-muted hover:text-primary rounded-custom paste-range transition-all duration-500 ease-out"><i class="bi bi-clipboard-plus"></i></button>
+      <button data-tooltip="حذف مبحث" class="p-1 text-muted hover:text-error rounded-custom remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
       </div>
     </div>
     <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
