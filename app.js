@@ -548,8 +548,11 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
 
   container.innerHTML = `
   ${renderItemContent(item, { rangeDesc })}
-  <button class="remove-item absolute -top-1 -left-1 w-4 h-4 bg-error text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5">&times;</button>
-  <button class="copy-item absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:w-6 max-md:h-6 max-md:text-base max-md:-top-1.5 max-md:-left-1.5"> <i class="bi bi-copy"></i></button>
+  <div class="w-full flex absolute bottom-0 right-0">
+  <button title="حذف" class="remove-item w-full bg-error py-1 text-white flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100  max-md:py-0 max-md:h-6 max-md:text-base"><i class="bi bi-trash3"></i></button>
+  <button title="ویرایش" class="edit-item w-full bg-primary py-1 text-white flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:py-0 max-md:h-6 max-md:text-base"> <i class="bi bi-pencil-square"></i> </button>
+  <button title="کپی" class="copy-item w-full bg-secondary py-1 text-white flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100 max-md:py-0 max-md:h-6 max-md:text-base"> <i class="bi bi-copy"></i></button>
+  </div>
   `;
 
   const removeBtn = container.querySelector(".remove-item");
