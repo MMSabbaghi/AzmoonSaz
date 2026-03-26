@@ -1411,52 +1411,13 @@ const previewCropBtn = document.getElementById("previewCropBtn");
 const previewImgFloat = document.getElementById("previewImgFloat");
 
 function updateTempItemFromTextEditor() {
-  if (_updatingEditorFromCode) return;
-
   const temp = appState.modal.tempItem;
   if (!temp) return;
 
-  const rangeId = appState.modal.rangeId;
-  const range = findRangeById(rangeId);
-  const rangeDesc = range ? range.desc || "" : "";
-
   const editor = modalTextEditor;
-  const currentText = editor.innerText.trim();
   const currentHTML = editor.innerHTML;
 
-  if (_userModified) {
-    if (currentText === "") {
-      _updatingEditorFromCode = true;
-      editor.innerHTML = rangeDesc;
-      _updatingEditorFromCode = false;
-      temp.text = null;
-      _userModified = false;
-    } else {
-      if (!temp.text) {
-        temp.text = { html: currentHTML, align: ITEM_DEFAULTS.text.align };
-      } else {
-        temp.text.html = currentHTML;
-      }
-    }
-  } else {
-    if (currentText === "") {
-      if (rangeDesc !== "") {
-        _updatingEditorFromCode = true;
-        editor.innerHTML = rangeDesc;
-        _updatingEditorFromCode = false;
-      }
-      temp.text = null;
-    } else if (currentText === rangeDesc.trim()) {
-      temp.text = null;
-    } else {
-      _userModified = true;
-      if (!temp.text) {
-        temp.text = { html: currentHTML, align: ITEM_DEFAULTS.text.align };
-      } else {
-        temp.text.html = currentHTML;
-      }
-    }
-  }
+  temp.text = { html: currentHTML, align: ITEM_DEFAULTS.text.align };
   updateModalPreviewFromTemp();
 }
 
@@ -1495,26 +1456,6 @@ function openModalWithTempItem() {
   if (!temp) return;
 
   setupModalEditorFromTemp(temp);
-
-  const range = findRangeById(appState.modal.rangeId);
-  const rangeDesc = range ? range.desc || "" : "";
-
-  if (!temp.text || !temp.text.html.trim()) {
-    if (rangeDesc) {
-      _updatingEditorFromCode = true;
-      modalTextEditor.innerHTML = rangeDesc;
-      _updatingEditorFromCode = false;
-      temp.text = null;
-      _userModified = false;
-    } else {
-      modalTextEditor.innerHTML = "";
-      temp.text = null;
-      _userModified = false;
-    }
-  } else {
-    _userModified = true;
-  }
-
   updateModalPreviewFromTemp();
   updateModalImageUI();
   temp.showText !== false ? modalShowText.on() : modalShowText.off();
@@ -1635,9 +1576,6 @@ function destroyEditModal() {
   setTimeout(() => {
     modalTextEditor.innerHTML = "";
   }, 300);
-
-  _updatingEditorFromCode = false;
-  _userModified = false;
 }
 
 function closeEditModal() {
@@ -2518,10 +2456,6 @@ window.addEventListener("scroll", () => {
 moveToTopBtn.addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
-
-// ========== Rich Text Editor Initialization ==========
-let _updatingEditorFromCode = false;
-let _userModified = false;
 
 // ========== Preview Image Toolbar ==========
 let selectedPreviewImage = null;
