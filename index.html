@@ -227,7 +227,7 @@
       <!-- سوئیچ نمایش متن و دکمه ذخیره -->
       <div class="flex items-center justify-between mb-2">
         <div id="modal-show-text" class="flex items-center gap-2">
-          <label class="text-sm text-secondary"> نمایش متن سوال:</label>
+          <label class="text-sm text-secondary"> نمایش متن ثابت سوالات: </label>
           <div
             class="switch relative min-w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
             <div
@@ -492,15 +492,15 @@
 
     function initApp() {
       hideOverlay();
-      if (!isMobile()) {
-        Rainfall.init(document.body, {
-          characters: ["\uf4be", "\uf4cb"],
-          charColor: "var(--primary-color)",
-          zIndex: "-1",
-          maxItems: 100,
-          fontFamily: "bootstrap-icons"
-        })
-      }
+      // if (!isMobile()) {
+      //   Rainfall.init(document.body, {
+      //     characters: ["\uf4be", "\uf4cb"],
+      //     charColor: "var(--primary-color)",
+      //     zIndex: "-1",
+      //     maxItems: 100,
+      //     fontFamily: "bootstrap-icons"
+      //   })
+      // }
     }
 
     LoadAssets({

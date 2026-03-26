@@ -483,14 +483,14 @@ function renderItemContent(item, options = {}) {
   const { rangeDesc = "", imageClass = "", textClass = "" } = options;
   let html = "";
 
-  if (item.showText) {
-    let textContent = item.text ? item.text.html : rangeDesc;
-    const textPos = item.image?.float ? "position: absolute;" : "";
-    textContent = String(textContent);
-    if (textContent && textContent.trim() !== "") {
-      const align = item.text ? item.text.align.toLowerCase() : "right";
-      html += `<div class="${textClass}" style="${textPos} text-align: ${align};">${textContent}</div>`;
-    }
+  const { showText, text } = item;
+  let textPrefix = showText && rangeDesc ? rangeDesc : "";
+  let textContent = textPrefix + (text?.html || "");
+  const textPos = item.image?.float ? "position: absolute;" : "";
+  textContent = String(textContent);
+  if (textContent && textContent.trim() !== "") {
+    const align = item.text ? item.text.align.toLowerCase() : "right";
+    html += `<div class="${textClass}" style="${textPos} text-align: ${align};">${textContent}</div>`;
   }
 
   if (item.image) {
@@ -663,8 +663,8 @@ function getMobileRangeHTML(rangeData) {
           <button class="ai-range flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
             <i class="bi bi-openai text-lg"></i> <span>هوش مصنوعی</span>
           </button>
-          <button class="range-desc flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
-            <i class="bi bi-input-cursor-text text-lg"></i> <span>متن کلی</span>
+          <button class="range-desc-switch flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
+            <i class="bi bi-input-cursor-text text-lg"></i> <span>متن ثابت</span>
           </button>
         </div>
 
@@ -707,7 +707,7 @@ function getDesktopRangeHTML(rangeData) {
           <label class="font-normal text-muted" > نمره: </label>
           <input value="${rangeData.score}" data-number-input="true" class="w-20 border border-border-light rounded-custom p-2 range-score" placeholder="نمره">
         </div>
-        <button data-tooltip="متن کلی سوالات" class="range-desc btn btn-outline btn-dashed px-3 py-2 rounded-custom"><i class="bi bi-input-cursor-text"></i></button>
+        <button data-tooltip="متن ثابت سوالات" class="range-desc-switch btn btn-outline btn-dashed px-3 py-2 rounded-custom"><i class="bi bi-input-cursor-text"></i></button>
         <div class="inline-block">
           <div class="file-input">
             <input type="file" id="${fileID}" accept="image/*" multiple class="file sr-only range-images">
@@ -869,17 +869,19 @@ function setupFileUploadOnRange(rangeElement, rangeId) {
 
 function setupSwitchOnRange(rangeElement) {
   let isActive = false;
-  rangeElement.querySelector(".range-desc").addEventListener("click", () => {
-    isActive = !isActive;
-    setElementState({
-      target: rangeElement.querySelector("#textareaBox"),
-      stateClasses: {
-        on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-        off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-      },
-      isActive,
+  rangeElement
+    .querySelector(".range-desc-switch")
+    .addEventListener("click", () => {
+      isActive = !isActive;
+      setElementState({
+        target: rangeElement.querySelector("#textareaBox"),
+        stateClasses: {
+          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+        },
+        isActive,
+      });
     });
-  });
 }
 
 function setupDropdownMenu(rangeElement) {
