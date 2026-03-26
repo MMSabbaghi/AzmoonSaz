@@ -84,6 +84,7 @@ function handleSwitchElement({
   });
 
   return {
+    container,
     on: () => setState(true),
     off: () => setState(false),
     isActive: () => isActive,
@@ -1426,7 +1427,7 @@ function openModalForNewItem(rangeId, newItem) {
   appState.modal.itemId = null;
   appState.modal.isOpen = true;
   appState.modal.tempItem = JSON.parse(JSON.stringify(newItem));
-  openModalWithTempItem();
+  openModalWithTempItem(rangeId);
 }
 
 function openItemModal(rangeId, itemId) {
@@ -1438,7 +1439,7 @@ function openItemModal(rangeId, itemId) {
   appState.modal.isOpen = true;
   appState.modal.itemId = itemId;
   appState.modal.tempItem = JSON.parse(JSON.stringify(item));
-  openModalWithTempItem();
+  openModalWithTempItem(rangeId);
 }
 
 const modalShowText = handleSwitchElement({
@@ -1451,15 +1452,25 @@ const modalShowText = handleSwitchElement({
   },
 });
 
-function openModalWithTempItem() {
+function openModalWithTempItem(rangeId) {
+  const range = findRangeById(rangeId);
   const temp = appState.modal.tempItem;
   if (!temp) return;
 
   setupModalEditorFromTemp(temp);
   updateModalPreviewFromTemp();
   updateModalImageUI();
-  temp.showText !== false ? modalShowText.on() : modalShowText.off();
+  setupModalShowTextSwitch(temp, range);
   openModalElement(modalEdit);
+}
+
+function setupModalShowTextSwitch(temp, range) {
+  const hasDesc = !!range.desc;
+  modalShowText.container.classList.toggle("hidden", !hasDesc);
+  if (hasDesc) {
+    const showText = temp.showText !== false;
+    showText ? modalShowText.on() : modalShowText.off();
+  }
 }
 
 function setupModalEditorFromTemp(temp) {
