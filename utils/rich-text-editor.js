@@ -570,6 +570,17 @@
       </div>`;
     }
 
+    if (features.includes("latex")) {
+      html += `
+    <div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light">
+      <button type="button"
+        class="toolbar-btn bg-transparent border-none rounded-circle px-3 py-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 flex items-center justify-center gap-1 latex-modal-open">
+        <i class="bi bi-function"></i>
+        <span class="text-sm"> <i class="bi bi-superscript"></i> افزودن فرمول </span>
+      </button>
+    </div>`;
+    }
+
     // undo/redo
     if (features.includes("undo") || features.includes("redo")) {
       html +=
@@ -584,18 +595,6 @@
     }
 
     html += "</div>";
-
-    if (features.includes("latex")) {
-      html += `
-    <div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light">
-      <button type="button"
-        class="toolbar-btn bg-transparent border-none rounded-circle px-3 py-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 flex items-center justify-center gap-1 latex-modal-open">
-        <i class="bi bi-function"></i>
-        <span class="text-sm">فرمول</span>
-      </button>
-    </div>`;
-    }
-
     return html;
   }
 
