@@ -347,14 +347,6 @@ const ITEM_DEFAULTS = {
   image: { height: 75, align: "RIGHT" },
   showText: true,
 };
-
-const MATH_RENDER_DELIMITERS = [
-  { left: "$$", right: "$$", display: true },
-  { left: "$", right: "$", display: false },
-  { left: "\\(", right: "\\)", display: false },
-  { left: "\\[", right: "\\]", display: true },
-];
-
 // ---------- State helpers ----------
 
 function findRangeById(id) {
@@ -1651,39 +1643,6 @@ removeImageBtn.addEventListener("click", () => {
   });
 });
 
-// ========== Math Rendering ==========
-function convertDigitsToPersianInsideContainer(container) {
-  const walker = document.createTreeWalker(
-    container,
-    NodeFilter.SHOW_TEXT,
-    null,
-    false,
-  );
-
-  let node;
-  while ((node = walker.nextNode())) {
-    if (/\d/.test(node.nodeValue)) {
-      node.nodeValue = toPersianDigits(node.nodeValue);
-    }
-  }
-}
-
-function renderMathInContainer(container) {
-  if (typeof renderMathInElement === "undefined") {
-    console.warn("KaTeX auto-render not available");
-    return;
-  }
-  try {
-    renderMathInElement(container, {
-      delimiters: MATH_RENDER_DELIMITERS,
-      throwOnError: false,
-    });
-    convertDigitsToPersianInsideContainer(container);
-  } catch (e) {
-    console.error("Math rendering error:", e);
-  }
-}
-
 // ========== AI Wizard ==========
 
 const wizardState = {
@@ -2785,6 +2744,7 @@ if (modalPlaceholder) {
       "align-justify",
       "undo",
       "redo",
+      "latex",
     ],
     placeholder: "متن سوال را بنویسید...",
     contentId: "modal-text-editor",
