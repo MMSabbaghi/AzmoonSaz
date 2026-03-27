@@ -145,10 +145,14 @@
     const range = sel.rangeCount ? sel.getRangeAt(0) : null;
 
     const span = document.createElement("span");
-    span.className = "math-inline cursor-pointer hover:bg-gray-100";
+    span.className = "math-inline cursor-pointer hover:bg-gray-100 p-1";
     span.setAttribute("data-latex", latex);
-    span.style.direction = "ltr";
-    span.textContent = latex;
+    span.style.position = "relative";
+    span.innerHTML = `
+    <span data-latex="${latex}" class="math-inline-cover w-full h-full z-[2] absolute top-0 left-0"></span>
+    <span class="z-[1]">$${latex}$</span>
+    `;
+    renderMathInContainer(span);
 
     const spacer = document.createTextNode("​");
 
@@ -761,7 +765,7 @@
         if (
           target &&
           target.classList &&
-          target.classList.contains("math-inline")
+          target.classList.contains("math-inline-cover")
         ) {
           const latex =
             target.getAttribute("data-latex") || target.textContent || "";
