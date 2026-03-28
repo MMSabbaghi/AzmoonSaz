@@ -147,6 +147,7 @@
     const span = document.createElement("span");
     span.className = "math-inline cursor-pointer hover:bg-gray-100 p-1";
     span.setAttribute("data-latex", latex);
+    span.setAttribute("contenteditable", false);
     span.style.position = "relative";
     span.innerHTML = `
     <span data-latex="${latex}" class="math-inline-cover w-full h-full z-[2] absolute top-0 left-0"></span>
