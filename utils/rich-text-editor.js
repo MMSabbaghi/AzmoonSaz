@@ -138,13 +138,22 @@
     }
   }
 
-  function renderMathSpanData(span, latex) {
+  function setMathSpanData(span, latex) {
     span.setAttribute("data-latex", latex);
     span.innerHTML = `
     <span data-latex="${latex}" class="math-inline-cover pointer-events-auto w-full h-full z-[2] absolute top-0 left-0"></span>
     <span class="z-[1] pointer-events-none">$${latex}$</span>
     `;
-    renderMathInContainer(span);
+  }
+
+  function createMathSpan(latex) {
+    const span = document.createElement("span");
+    span.className =
+      "math-inline inline-flex cursor-pointer hover:bg-gray-100 p-1";
+    span.setAttribute("contenteditable", false);
+    span.style.position = "relative";
+    setMathSpanData(span, latex);
+    return span;
   }
 
   function insertMathSpanAtSelection(editor, latex) {
@@ -153,12 +162,8 @@
     const sel = window.getSelection();
     const range = sel.rangeCount ? sel.getRangeAt(0) : null;
 
-    const span = document.createElement("span");
-    span.className =
-      "math-inline inline-flex cursor-pointer hover:bg-gray-100 p-1";
-    span.setAttribute("contenteditable", false);
-    span.style.position = "relative";
-    renderMathSpanData(span, latex);
+    const span = createMathSpan(latex);
+    renderMathInContainer(span);
 
     const spacer = document.createTextNode("​");
 
@@ -206,9 +211,12 @@
 
     const inlineNodes = container.querySelectorAll(".math-inline");
     inlineNodes.forEach((node) => {
-      const tex = node.getAttribute("data-latex") || node.textContent || "";
-      node.className = "math-inline";
-      node.textContent = `$${tex}$`;
+      if (!!!node.getAttribute("data-rendered")) {
+        const tex = node.getAttribute("data-latex") || node.textContent || "";
+        node.setAttribute("data-rendered", true);
+        node.className = "math-inline";
+        node.textContent = `$${tex}$`;
+      }
     });
 
     try {
@@ -661,6 +669,24 @@
 
     container.appendChild(wrapper);
 
+    function getEditorHtml() {
+      const clonedEditor = editor.cloneNode(true);
+
+      const inlineNodes = clonedEditor.querySelectorAll(".math-inline");
+      inlineNodes.forEach((node) => {
+        const latex = node.getAttribute("data-latex") || node.textContent || "";
+        node.setAttribute("data-rendered", false);
+        setMathSpanData(node, latex);
+      });
+      return clonedEditor.innerHTML;
+    }
+
+    function handleContentChange() {
+      if (!onContentChange) return;
+      const editorHtml = getEditorHtml();
+      onContentChange(editorHtml);
+    }
+
     // تابع به‌روزرسانی وضعیت دکمه‌های تولبار (bold, italic, ...)
     const updateToolbarState = () => {
       toolbar.querySelectorAll("[data-command]").forEach((btn) => {
@@ -678,7 +704,7 @@
         document.execCommand(btn.dataset.command, false, null);
         editor.focus();
         updateToolbarState();
-        if (onContentChange) onContentChange(editor.innerHTML);
+        handleContentChange();
       });
     });
 
@@ -688,7 +714,7 @@
       colorInput.addEventListener("input", (e) => {
         document.execCommand("foreColor", false, e.target.value);
         editor.focus();
-        if (onContentChange) onContentChange(editor.innerHTML);
+        handleContentChange();
       });
     }
 
@@ -715,7 +741,7 @@
           console.warn("Font size error:", err);
         }
         editor.focus();
-        if (onContentChange) onContentChange(editor.innerHTML);
+        handleContentChange();
       });
     }
 
@@ -724,14 +750,14 @@
       btn.addEventListener("click", () => {
         document.execCommand("undo");
         updateToolbarState();
-        if (onContentChange) onContentChange(editor.innerHTML);
+        handleContentChange();
       });
     });
     toolbar.querySelectorAll('[data-action="redo"]').forEach((btn) => {
       btn.addEventListener("click", () => {
         document.execCommand("redo");
         updateToolbarState();
-        if (onContentChange) onContentChange(editor.innerHTML);
+        handleContentChange();
       });
     });
 
@@ -739,12 +765,12 @@
     if (features.includes("latex")) {
       const mathEditorModal = createMathEditorModal({
         onSave: (latex, mathNode) => {
-          console.log(mathNode);
+          if (mathNode) {
+            setMathSpanData(mathNode, latex);
+            renderMathInContainer(mathNode);
+          } else insertMathSpanAtSelection(editor, latex);
 
-          if (mathNode) renderMathSpanData(mathNode, latex);
-          else insertMathSpanAtSelection(editor, latex);
-
-          if (onContentChange) onContentChange(editor.innerHTML);
+          handleContentChange();
           editor.focus();
         },
       });
@@ -797,7 +823,7 @@
 
     editor.addEventListener("input", () => {
       saveSelectionWithin(editor);
-      if (onContentChange) onContentChange(editor.innerHTML);
+      handleContentChange();
     });
 
     editor.addEventListener("paste", function (event) {
@@ -812,7 +838,7 @@
       if (html && html.includes("math-inline")) {
         document.execCommand("insertHTML", false, html);
         saveSelectionWithin(editor);
-        if (onContentChange) onContentChange(editor.innerHTML);
+        handleContentChange();
         return;
       }
 
@@ -823,8 +849,9 @@
       getEditorElement: () => editor,
       setContent: (html) => {
         editor.innerHTML = html;
+        renderMathInContainer(editor);
       },
-      getContent: () => editor.innerHTML,
+      getContent: getEditorHtml,
       setAlignment: (align) => {
         editor.style.textAlign = align;
       },

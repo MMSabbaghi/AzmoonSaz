@@ -1384,7 +1384,6 @@ function setupModal(modalElement, options = {}) {
 // ========== Edit modal ==========
 const modalEdit = document.querySelector(".modal-edit");
 const modalEditPreviewCell = modalEdit.querySelector(".modal-preview-cell");
-let modalTextEditor = document.getElementById("modal-text-editor");
 const modalPasteImageBtn = document.getElementById("modalPasteImageBtn");
 const modalClipboardImageAddBtn = document.getElementById(
   "modalClipboardImageAddBtn",
@@ -1407,10 +1406,10 @@ function updateTempItemFromTextEditor() {
   const temp = appState.modal.tempItem;
   if (!temp) return;
 
-  const editor = modalTextEditor;
-  const currentHTML = editor.innerHTML;
-
-  temp.text = { html: currentHTML, align: ITEM_DEFAULTS.text.align };
+  temp.text = {
+    html: editModalEditor.getContent(),
+    align: ITEM_DEFAULTS.text.align,
+  };
   updateModalPreviewFromTemp();
 }
 
@@ -1467,11 +1466,11 @@ function setupModalShowTextSwitch(temp, range) {
 
 function setupModalEditorFromTemp(temp) {
   if (temp.text) {
-    modalTextEditor.innerHTML = temp.text.html;
-    modalTextEditor.style.textAlign = temp.text.align.toLowerCase();
+    editModalEditor.setContent(temp.text.html);
+    editModalEditor.setAlignment(temp.text.align.toLowerCase());
   } else {
-    modalTextEditor.innerHTML = "";
-    modalTextEditor.style.textAlign = "right";
+    editModalEditor.setContent("");
+    editModalEditor.setAlignment("right");
   }
 }
 
@@ -1577,7 +1576,7 @@ function destroyEditModal() {
   appState.modal.isOpen = false;
 
   setTimeout(() => {
-    modalTextEditor.innerHTML = "";
+    editModalEditor.setContent("");
   }, 300);
 }
 
@@ -1706,9 +1705,8 @@ function validateStep2() {
 }
 
 function validateStep3() {
-  const editor = document.getElementById("wizard-text-editor");
-  const html = editor.innerHTML.trim();
-  if (!html) {
+  const html = wizardTextEditor.getContent();
+  if (!html.trim()) {
     showToast("لطفاً متن سوال را وارد کنید", "error");
     return false;
   }
@@ -1724,7 +1722,7 @@ function validateStep3() {
     wizardState.extractedItem.text = { html, align: "RIGHT" };
   } else {
     wizardState.extractedItem.text.html = html;
-    const align = editor.style.textAlign;
+    const align = wizardTextEditor.getAlignment();
     if (align) wizardState.extractedItem.text.align = align.toUpperCase();
   }
 
@@ -1810,13 +1808,12 @@ function updateStepContent() {
     });
   } else if (wizardState.step === 3) {
     const item = wizardState.extractedItem;
-    const editor = document.getElementById("wizard-text-editor");
     if (item?.text) {
-      editor.innerHTML = item.text.html;
-      editor.style.textAlign = item.text.align.toLowerCase();
+      wizardTextEditor.setContent(item.text.html);
+      wizardTextEditor.setAlignment(item.text.align.toLowerCase);
     } else {
-      editor.innerHTML = "";
-      editor.style.textAlign = "right";
+      wizardTextEditor.setContent("");
+      wizardTextEditor.setAlignment("right");
     }
     const countInput = document.getElementById("wizard-similar-count");
     if (countInput) countInput.value = wizardState.count;
@@ -2005,13 +2002,12 @@ function renderGeneratedPreview(items, containerId, emptyId) {
 
 function updateWizardPreviewFromEditor() {
   if (!wizardState.extractedItem) return;
-  const editor = document.getElementById("wizard-text-editor");
-  const html = editor.innerHTML;
+  const html = wizardTextEditor.getContent();
   if (!wizardState.extractedItem.text) {
     wizardState.extractedItem.text = { html, align: "RIGHT" };
   } else {
     wizardState.extractedItem.text.html = html;
-    const align = editor.style.textAlign;
+    const align = wizardTextEditor.getAlignment();
     if (align) wizardState.extractedItem.text.align = align.toUpperCase();
   }
   updateWizardPreview();
@@ -2731,53 +2727,49 @@ setupCropModalEvents();
 const modalPlaceholder = document.getElementById(
   "modal-rich-editor-placeholder",
 );
-if (modalPlaceholder) {
-  createRichTextEditor(modalPlaceholder, {
-    features: [
-      "bold",
-      "italic",
-      "underline",
-      "strike",
-      "align-left",
-      "align-center",
-      "align-right",
-      "align-justify",
-      "undo",
-      "redo",
-      "latex",
-    ],
-    placeholder: "متن سوال را بنویسید...",
-    contentId: "modal-text-editor",
-    toolbarId: "modal-toolbar",
-    onContentChange: updateTempItemFromTextEditor,
-  });
 
-  modalTextEditor = document.getElementById("modal-text-editor");
-}
+const editModalEditor = createRichTextEditor(modalPlaceholder, {
+  features: [
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "align-left",
+    "align-center",
+    "align-right",
+    "align-justify",
+    "undo",
+    "redo",
+    "latex",
+  ],
+  placeholder: "متن سوال را بنویسید...",
+  contentId: "modal-text-editor",
+  toolbarId: "modal-toolbar",
+  onContentChange: updateTempItemFromTextEditor,
+});
 
 const wizardPlaceholder = document.getElementById(
   "wizard-rich-editor-placeholder",
 );
-if (wizardPlaceholder) {
-  createRichTextEditor(wizardPlaceholder, {
-    features: [
-      "bold",
-      "italic",
-      "underline",
-      "strike",
-      "align-left",
-      "align-center",
-      "align-right",
-      "align-justify",
-      "undo",
-      "redo",
-    ],
-    placeholder: "متن سوال را ویرایش کنید...",
-    contentId: "wizard-text-editor",
-    toolbarId: "wizard-toolbar",
-    onContentChange: updateWizardPreviewFromEditor,
-  });
-}
+
+const wizardTextEditor = createRichTextEditor(wizardPlaceholder, {
+  features: [
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "align-left",
+    "align-center",
+    "align-right",
+    "align-justify",
+    "undo",
+    "redo",
+  ],
+  placeholder: "متن سوال را ویرایش کنید...",
+  contentId: "wizard-text-editor",
+  toolbarId: "wizard-toolbar",
+  onContentChange: updateWizardPreviewFromEditor,
+});
 
 window.addEventListener("resize", () => {
   const isNowMobile = window.innerWidth <= 768;
