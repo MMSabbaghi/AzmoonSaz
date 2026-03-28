@@ -138,6 +138,15 @@
     }
   }
 
+  function renderMathSpanData(span, latex) {
+    span.setAttribute("data-latex", latex);
+    span.innerHTML = `
+    <span data-latex="${latex}" class="math-inline-cover w-full h-full z-[2] absolute top-0 left-0"></span>
+    <span class="z-[1]">$${latex}$</span>
+    `;
+    renderMathInContainer(span);
+  }
+
   function insertMathSpanAtSelection(editor, latex) {
     restoreSelectionOrMoveToEnd(editor);
 
@@ -147,14 +156,9 @@
     const span = document.createElement("span");
     span.className =
       "math-inline inline-flex cursor-pointer hover:bg-gray-100 p-1";
-    span.setAttribute("data-latex", latex);
     span.setAttribute("contenteditable", false);
     span.style.position = "relative";
-    span.innerHTML = `
-    <span data-latex="${latex}" class="math-inline-cover w-full h-full z-[2] absolute top-0 left-0"></span>
-    <span class="z-[1]">$${latex}$</span>
-    `;
-    renderMathInContainer(span);
+    renderMathSpanData(span, latex);
 
     const spacer = document.createTextNode("​");
 
@@ -735,12 +739,10 @@
     if (features.includes("latex")) {
       const mathEditorModal = createMathEditorModal({
         onSave: (latex, mathNode) => {
-          if (mathNode) {
-            mathNode.setAttribute("data-latex", latex);
-            mathNode.textContent = latex;
-          } else {
-            insertMathSpanAtSelection(editor, latex);
-          }
+          console.log(mathNode);
+
+          if (mathNode) renderMathSpanData(mathNode, latex);
+          else insertMathSpanAtSelection(editor, latex);
 
           if (onContentChange) onContentChange(editor.innerHTML);
           editor.focus();
@@ -775,7 +777,7 @@
           mathEditorModal.open({
             title: "ویرایش فرمول",
             initialValue: latex,
-            mathNode: target,
+            mathNode: target.parentNode,
           });
         }
       });
