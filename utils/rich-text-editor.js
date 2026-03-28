@@ -145,7 +145,8 @@
     const range = sel.rangeCount ? sel.getRangeAt(0) : null;
 
     const span = document.createElement("span");
-    span.className = "math-inline cursor-pointer hover:bg-gray-100 p-1";
+    span.className =
+      "math-inline inline-flex cursor-pointer hover:bg-gray-100 p-1";
     span.setAttribute("data-latex", latex);
     span.setAttribute("contenteditable", false);
     span.style.position = "relative";
