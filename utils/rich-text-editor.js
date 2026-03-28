@@ -141,8 +141,8 @@
   function renderMathSpanData(span, latex) {
     span.setAttribute("data-latex", latex);
     span.innerHTML = `
-    <span data-latex="${latex}" class="math-inline-cover w-full h-full z-[2] absolute top-0 left-0"></span>
-    <span class="z-[1]">$${latex}$</span>
+    <span data-latex="${latex}" class="math-inline-cover pointer-events-auto w-full h-full z-[2] absolute top-0 left-0"></span>
+    <span class="z-[1] pointer-events-none">$${latex}$</span>
     `;
     renderMathInContainer(span);
   }
@@ -803,12 +803,17 @@
     editor.addEventListener("paste", function (event) {
       event.preventDefault();
 
-      let text;
+      const cb = event.clipboardData;
+      if (!cb) return;
 
-      if (event.clipboardData) {
-        text = event.clipboardData.getData("text/plain");
-      } else if (window.clipboardData && window.clipboardData.getData) {
-        text = window.clipboardData.getData("Text");
+      const html = cb.getData("text/html") || "";
+      const text = cb.getData("text/plain") || "";
+
+      if (html && html.includes("math-inline")) {
+        document.execCommand("insertHTML", false, html);
+        saveSelectionWithin(editor);
+        if (onContentChange) onContentChange(editor.innerHTML);
+        return;
       }
 
       if (text) document.execCommand("insertText", false, text);
