@@ -2753,17 +2753,6 @@ if (modalPlaceholder) {
   });
 
   modalTextEditor = document.getElementById("modal-text-editor");
-
-  modalTextEditor.addEventListener("focus", function () {
-    const temp = appState.modal.tempItem;
-    if (!temp) return;
-
-    if (!temp.showText) {
-      modalShowText.on();
-      temp.showText = true;
-      updateModalPreviewFromTemp();
-    }
-  });
 }
 
 const wizardPlaceholder = document.getElementById(
