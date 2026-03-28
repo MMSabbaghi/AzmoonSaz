@@ -777,6 +777,8 @@
           });
         }
       });
+
+      saveSelection();
     }
 
     editor.addEventListener("mouseup", () => {
@@ -794,7 +796,19 @@
       if (onContentChange) onContentChange(editor.innerHTML);
     });
 
-    saveSelection();
+    editor.addEventListener("paste", function (event) {
+      event.preventDefault();
+
+      let text;
+
+      if (event.clipboardData) {
+        text = event.clipboardData.getData("text/plain");
+      } else if (window.clipboardData && window.clipboardData.getData) {
+        text = window.clipboardData.getData("Text");
+      }
+
+      if (text) document.execCommand("insertText", false, text);
+    });
 
     return {
       getEditorElement: () => editor,
