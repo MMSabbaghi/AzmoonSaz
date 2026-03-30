@@ -383,7 +383,7 @@ function getPrintArea() {
 function calculateTotalScore() {
   return appState.ranges.reduce((acc, { count, score, items }) => {
     const isValidScore = score && count && items.length > 0;
-    return isValidScore ? acc + score * count : acc;
+    return isValidScore ? acc + +score : acc;
   }, 0);
 }
 
@@ -1638,11 +1638,12 @@ function partLabel(i) {
 }
 
 function renderRangeAsMultiPart(range) {
-  const partsHtml = range.items
+  const items = range.items;
+  const partsHtml = items
     .map((item, idx) => {
       return `
         <div class="flex gap-1">
-          <div class="font-bold whitespace-nowrap">${partLabel(idx)})</div>
+          <div class="font-bold whitespace-nowrap ${items.length < 2 ? "hidden" : ""}">${partLabel(idx)})</div>
           <div class="flex-1">${renderItemForQuiz(item, null)}</div>
         </div>
       `;
