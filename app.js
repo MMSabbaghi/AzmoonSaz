@@ -740,7 +740,7 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
 
   container.innerHTML = `
     <button
-    class="absolute top-1 left-1 max-w-[80%] inline-flex items-center gap-1 px-2 py-1
+    class="z-[10] absolute top-1 left-1 max-w-[80%] inline-flex items-center gap-1 px-2 py-1
            rounded-full bg-surface-dark text-secondary border border-border-light
            text-[11px] hover:bg-surface-darker transition"
     data-action="open-item-label"
