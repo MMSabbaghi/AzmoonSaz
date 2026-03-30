@@ -41,6 +41,42 @@ function pickRandomItems(source, count) {
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
+function pickRandomItemsUniqueLabels(items, count) {
+  if (!Array.isArray(items) || items.length === 0 || count <= 0) return [];
+
+  const labeled = items.filter((it) => !!it.labelId);
+  const unlabeled = items.filter((it) => !it.labelId);
+
+  const byLabel = new Map();
+  labeled.forEach((it) => {
+    if (!byLabel.has(it.labelId)) byLabel.set(it.labelId, []);
+    byLabel.get(it.labelId).push(it);
+  });
+
+  const distinctLabelsCount = byLabel.size;
+
+  const maxPossible = distinctLabelsCount + unlabeled.length;
+  if (count > maxPossible) return null;
+
+  const result = [];
+
+  const labelIds = fisherYatesShuffle([...byLabel.keys()]);
+  for (const lid of labelIds) {
+    if (result.length >= count) break;
+    const group = byLabel.get(lid);
+    const pick = pickRandomItems(group, 1)[0];
+    if (pick) result.push(pick);
+  }
+
+  if (result.length < count) {
+    const remaining = count - result.length;
+    const extra = pickRandomItems(unlabeled, remaining);
+    result.push(...extra);
+  }
+
+  return result;
+}
+
 async function copyToClipboard(textToCopy) {
   try {
     await navigator.clipboard.writeText(textToCopy);
@@ -233,12 +269,48 @@ async function pasteToTextarea(textareaId) {
 
 function addItemsFromJSONToRange(rangeId, jsonString) {
   try {
-    const pastedArray = JSON.parse(jsonString);
-    if (!Array.isArray(pastedArray)) throw new Error("Not an array");
+    const range = findRangeById(rangeId);
+    if (!range) return;
+    ensureRangeLabels(range);
 
-    const itemsToAdd = pastedArray.map((item) => createItemFromData(item));
-    itemsToAdd.forEach((item) => addItemToRange(rangeId, item));
-    showToast(`${toPersianDigits(itemsToAdd.length)} آیتم با موفقیت اضافه شد.`);
+    const parsed = JSON.parse(jsonString);
+
+    // New format
+    if (
+      parsed &&
+      parsed.type === "quizapp-items-v1" &&
+      Array.isArray(parsed.items)
+    ) {
+      const incomingLabels = Array.isArray(parsed.labels) ? parsed.labels : [];
+      mergeLabelsIntoRange(range, incomingLabels);
+
+      const itemsToAdd = parsed.items.map((item) => createItemFromData(item));
+      itemsToAdd.forEach((it) => {
+        normalizeItemLabelForRange(range, it);
+        addItemToRange(rangeId, it);
+      });
+
+      showToast(
+        `${toPersianDigits(itemsToAdd.length)} آیتم با موفقیت اضافه شد.`,
+      );
+      return;
+    }
+
+    // Old format: array of items only
+    if (Array.isArray(parsed)) {
+      const itemsToAdd = parsed.map((item) => createItemFromData(item));
+      itemsToAdd.forEach((it) => {
+        // چون لیبل‌ها همراهش نیامده، اگر labelId ناشناخته باشد حذف می‌کنیم
+        normalizeItemLabelForRange(range, it);
+        addItemToRange(rangeId, it);
+      });
+      showToast(
+        `${toPersianDigits(itemsToAdd.length)} آیتم با موفقیت اضافه شد.`,
+      );
+      return;
+    }
+
+    throw new Error("Unsupported clipboard payload");
   } catch (err) {
     console.error("Invalid JSON:", err);
   }
@@ -249,12 +321,10 @@ function createItemFromData(dataItem) {
     id: createRandomId("item"),
     text: dataItem.text ? { ...dataItem.text } : null,
     image: dataItem.image
-      ? {
-          ...dataItem.image,
-          imageId: createRandomId("img"),
-        }
+      ? { ...dataItem.image, imageId: createRandomId("img") }
       : null,
     showText: dataItem.showText !== false,
+    labelId: dataItem.labelId || null,
   };
 }
 
@@ -315,6 +385,102 @@ function calculateTotalScore() {
     const isValidScore = score && count && items.length > 0;
     return isValidScore ? acc + score * count : acc;
   }, 0);
+}
+
+function sanitizeText(str = "") {
+  return String(str).replace(/[<>]/g, "");
+}
+
+function ensureRangeLabels(range) {
+  if (!range) return;
+  if (!Array.isArray(range.labels)) range.labels = [];
+}
+
+function findLabelById(range, labelId) {
+  if (!range || !labelId) return null;
+  ensureRangeLabels(range);
+  return range.labels.find((l) => l.id === labelId) || null;
+}
+
+function getItemLabelName(range, item) {
+  if (!item?.labelId) return null;
+  const lbl = findLabelById(range, item.labelId);
+  return lbl?.name || null;
+}
+
+function createRangeLabel(range, name) {
+  ensureRangeLabels(range);
+  const newLabel = {
+    id: createRandomId("lbl"),
+    name: (name || "برچسب جدید").trim() || "برچسب جدید",
+  };
+  range.labels.unshift(newLabel);
+  return newLabel;
+}
+
+function mergeLabelsIntoRange(range, labelsToMerge = []) {
+  ensureRangeLabels(range);
+  const byId = new Map(range.labels.map((l) => [l.id, l]));
+  labelsToMerge.forEach((l) => {
+    if (!l?.id) return;
+    if (!byId.has(l.id)) {
+      range.labels.push({ id: l.id, name: l.name || "بدون نام" });
+      byId.set(l.id, l);
+    }
+  });
+}
+
+function normalizeItemLabelForRange(range, item, labelIdRemap = null) {
+  ensureRangeLabels(range);
+  if (!item?.labelId) return;
+
+  const exists = !!findLabelById(range, item.labelId);
+  if (exists) return;
+
+  if (labelIdRemap && labelIdRemap[item.labelId]) {
+    item.labelId = labelIdRemap[item.labelId];
+    return;
+  }
+
+  item.labelId = null;
+}
+
+function buildClipboardPayloadForItems(rangeId, items) {
+  const range = findRangeById(rangeId);
+  ensureRangeLabels(range);
+
+  const usedLabelIds = new Set(items.map((it) => it.labelId).filter(Boolean));
+  const labels = range.labels.filter((l) => usedLabelIds.has(l.id));
+
+  return {
+    type: "quizapp-items-v1",
+    labels,
+    items,
+  };
+}
+
+function normalizeLabelName(name) {
+  return (name || "").trim().replace(/\s+/g, " ");
+}
+
+function isDuplicateLabelName(range, name, exceptId = null) {
+  ensureRangeLabels(range);
+  const n = normalizeLabelName(name).toLocaleLowerCase();
+  return range.labels.some(
+    (l) =>
+      l.id !== exceptId && normalizeLabelName(l.name).toLocaleLowerCase() === n,
+  );
+}
+
+function setLabelButtonUI(buttonEl, range, labelId) {
+  const name = labelId ? findLabelById(range, labelId)?.name : null;
+  const textEl = buttonEl.querySelector("span");
+  const iconEl = buttonEl.querySelector("i.bi");
+  if (textEl) textEl.textContent = name ? sanitizeText(name) : "افزودن برچسب";
+  if (iconEl) {
+    iconEl.classList.toggle("bi-tag", !!name);
+    iconEl.classList.toggle("bi-plus-lg", !name);
+  }
 }
 
 // ========== Proxy ==========
@@ -391,6 +557,7 @@ function createTextItem(
     text: { html, align },
     image: null,
     showText,
+    labelId: null,
   };
 }
 
@@ -406,6 +573,7 @@ function createImageItem({
     text: null,
     image: { src, height, align, imageId },
     showText,
+    labelId: null,
   };
 }
 
@@ -530,6 +698,33 @@ function renderRangeItems(rangeElement, rangeId) {
   }
 }
 
+function updateThumbnailLabelUI(rangeId, itemId) {
+  const rangeDiv = document.getElementById(rangeId);
+  if (!rangeDiv) return;
+  const thumb = rangeDiv.querySelector(
+    `.item-thumbnail[data-item-id="${itemId}"]`,
+  );
+  if (!thumb) return;
+  const btn = thumb.querySelector(`[data-action="open-item-label"]`);
+  if (!btn) return;
+
+  const range = findRangeById(rangeId);
+  const item = range?.items.find((it) => it.id === itemId);
+  if (!range || !item) return;
+
+  setLabelButtonUI(btn, range, item.labelId);
+}
+
+function updateAllThumbnailsForLabel(rangeId, labelId) {
+  const range = findRangeById(rangeId);
+  const rangeDiv = document.getElementById(rangeId);
+  if (!range || !rangeDiv) return;
+
+  range.items.forEach((it) => {
+    if (it.labelId === labelId) updateThumbnailLabelUI(rangeId, it.id);
+  });
+}
+
 function createItemThumbnailElement(item, rangeDiv, rangeId) {
   const container = document.createElement("div");
   container.className =
@@ -539,7 +734,24 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
   const range = findRangeById(rangeId);
   const rangeDesc = range ? range.desc : "";
 
+  const labelName = range ? getItemLabelName(range, item) : null;
+  const labelBtnText = labelName ? sanitizeText(labelName) : "افزودن برچسب";
+  const labelBtnIcon = labelName ? "bi-tag" : "bi-plus-lg";
+
   container.innerHTML = `
+    <button
+    class="absolute top-1 left-1 max-w-[80%] inline-flex items-center gap-1 px-2 py-1
+           rounded-full bg-surface-dark text-secondary border border-border-light
+           text-[11px] hover:bg-surface-darker transition"
+    data-action="open-item-label"
+    data-range-id="${rangeId}"
+    data-item-id="${item.id}"
+    title="برچسب">
+    <i class="bi ${labelBtnIcon}"></i>
+    <span class="truncate">${labelBtnText}</span>
+    <i class="bi bi-chevron-down"></i>
+  </button>
+  
   ${renderItemContent(item, { rangeDesc })}
   <div class="w-full flex absolute bottom-0 right-0">
   <button title="حذف" class="remove-item w-full bg-error py-1 text-white flex items-center justify-center text-[0.8rem] opacity-70 transition-opacity duration-200 border-0 cursor-pointer hover:opacity-100  max-md:py-0 max-md:h-6 max-md:text-base"><i class="bi bi-trash3"></i></button>
@@ -550,6 +762,7 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
 
   const removeBtn = container.querySelector(".remove-item");
   const copyItemBtn = container.querySelector(".copy-item");
+  const editItemBtn = container.querySelector(".edit-item");
 
   removeBtn.onclick = (e) => {
     e.stopPropagation();
@@ -566,10 +779,11 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
 
   copyItemBtn.onclick = (e) => {
     e.stopPropagation();
-    copyToClipboard(JSON.stringify([item]));
+    const payload = buildClipboardPayloadForItems(rangeId, [item]);
+    copyToClipboard(JSON.stringify(payload));
   };
 
-  container.addEventListener("click", (e) => openItemModal(rangeId, item.id));
+  editItemBtn.addEventListener("click", (e) => openItemModal(rangeId, item.id));
 
   return container;
 }
@@ -579,6 +793,222 @@ function updateRangeItemCountBadge(rangeDiv) {
   rangeDiv.querySelector(".range-total").textContent =
     toPersianDigits(itemsCount);
 }
+
+// ========== Lable DropDown ==========
+
+const labelsDropdown = new Dropdown({
+  rootId: "dropdownRoot",
+  closeOnEsc: false,
+  closeOnOutsideClick: false,
+  closeOnBackdrop: false,
+  animDuration: 140,
+});
+
+function openLabelDropdown({
+  rangeId,
+  getActiveLabelId,
+  setActiveLabelId,
+  anchorEl,
+  onAfterChange = () => {},
+}) {
+  const range = findRangeById(rangeId);
+  if (!range) return;
+  ensureRangeLabels(range);
+
+  const render = () => {
+    const activeId = getActiveLabelId();
+
+    const addandclearRow = `
+    <div class="flex items-center gap-1">
+      <button class="btn btn-outline w-full text-right rounded-[12px] px-2.5 py-2.5 flex items-center gap-2"
+              data-action="add-label">
+        <i class="bi bi-plus-lg"></i>
+        <span class="text-[13px] font-bold">افزودن برچسب</span>
+      </button>
+    <button class="btn btn-outline btn-dashed w-full text-right rounded-[12px] px-2.5 py-2.5 flex items-center gap-2"
+            data-action="clear-label">
+      <i class="bi bi-x-lg"></i>
+      <span class="text-[13px] font-bold">بدون برچسب</span>
+    </button>
+    </div>
+    `;
+
+    const rows = range.labels
+      .map((l) => {
+        const isActive = l.id === activeId;
+        return `
+        <div class="w-full rounded-[12px] px-2.5 py-2.5 flex items-center justify-between gap-2
+                    hover:bg-surface-dark border border-transparent hover:border-border-light"
+             data-row-label-id="${l.id}">
+          <button class="flex-1 text-right inline-flex items-center gap-2"
+                  style="background:transparent;border:none;padding:0;"
+                  data-action="set-label"
+                  data-label-id="${l.id}">
+            <span class="text-[13px] font-bold truncate" data-role="label-name">${sanitizeText(l.name)}</span>
+          </button>
+
+          <div class="inline-flex items-center gap-2">
+            ${isActive ? `<i class="bi bi-check2 text-success text-lg"></i>` : `<span class="w-[18px]"></span>`}
+
+            <button class="w-9 h-9 rounded-[12px] border border-border-light bg-surface hover:bg-surface-darker"
+                    data-action="rename-label" data-label-id="${l.id}" title="تغییر نام">
+              <i class="bi bi-pen"></i>
+            </button>
+
+            <button class="w-9 h-9 rounded-[12px] border border-border-light bg-surface hover:bg-surface-darker"
+                    data-action="delete-label" data-label-id="${l.id}" title="حذف برچسب">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+
+    return addandclearRow + rows;
+  };
+
+  labelsDropdown.open({
+    anchorEl,
+    title: "برچسب‌ها",
+    render,
+    onMount: ({ body }) => {
+      body.addEventListener("click", (e) => {
+        const t = e.target;
+
+        const setBtn = t.closest("[data-action='set-label']");
+        if (setBtn) {
+          const lid = setBtn.dataset.labelId;
+          setActiveLabelId(lid);
+          onAfterChange();
+          labelsDropdown.close?.();
+          return;
+        }
+
+        const clearBtn = t.closest("[data-action='clear-label']");
+        if (clearBtn) {
+          setActiveLabelId(null);
+          onAfterChange();
+          labelsDropdown.close?.();
+          return;
+        }
+
+        const addBtn = t.closest("[data-action='add-label']");
+        if (addBtn) {
+          let base = "برچسب جدید";
+          let name = base;
+          let i = 1;
+          while (isDuplicateLabelName(range, name)) name = `${base} ${++i}`;
+
+          const newLbl = createRangeLabel(range, name);
+
+          body.innerHTML = render();
+          requestAnimationFrame(() => {
+            const pen = body.querySelector(
+              `[data-action="rename-label"][data-label-id="${newLbl.id}"]`,
+            );
+            if (pen) pen.click();
+          });
+          return;
+        }
+
+        const deleteBtn = t.closest("[data-action='delete-label']");
+        if (deleteBtn) {
+          const lid = deleteBtn.dataset.labelId;
+          const lbl = findLabelById(range, lid);
+          if (!lbl) return;
+
+          showConfirm({
+            msg: `برچسب «${sanitizeText(lbl.name)}» حذف شود؟ (از آیتم‌ها هم پاک می‌شود)`,
+            on_confirm: () => {
+              range.labels = range.labels.filter((l) => l.id !== lid);
+              range.items.forEach((it) => {
+                if (it.labelId === lid) it.labelId = null;
+              });
+
+              body.innerHTML = render();
+              range.items.forEach((it) => {
+                if (it.labelId === null) updateThumbnailLabelUI(rangeId, it.id);
+              });
+            },
+          });
+          return;
+        }
+
+        const renameBtn = t.closest("[data-action='rename-label']");
+        if (renameBtn) {
+          const lid = renameBtn.dataset.labelId;
+          const lbl = findLabelById(range, lid);
+          if (!lbl) return;
+
+          const row = body.querySelector(`[data-row-label-id="${lid}"]`);
+          if (!row) return;
+          if (row.querySelector("input[data-role='rename-input']")) return;
+
+          const nameEl = row.querySelector("[data-role='label-name']");
+          if (!nameEl) return;
+
+          const input = document.createElement("input");
+          input.setAttribute("data-role", "rename-input");
+          input.className =
+            "w-full border border-border rounded-custom px-2 py-1 bg-surface";
+          input.value = lbl.name || "";
+          input.dir = "rtl";
+
+          nameEl.replaceWith(input);
+          input.focus();
+          input.select();
+
+          const commit = () => {
+            const newName = normalizeLabelName(input.value) || "بدون نام";
+            if (isDuplicateLabelName(range, newName, lid)) {
+              showToast("نام برچسب تکراری است.", "error");
+              input.focus();
+              input.select();
+              return;
+            }
+            lbl.name = newName;
+
+            body.innerHTML = render();
+            updateAllThumbnailsForLabel(rangeId, lid);
+            onAfterChange();
+          };
+
+          input.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter") commit();
+            if (ev.key === "Escape") body.innerHTML = render();
+          });
+          input.addEventListener("blur", commit);
+        }
+      });
+    },
+  });
+}
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest('[data-action="open-item-label"]');
+  if (!btn) return;
+  e.stopPropagation();
+
+  const rangeId = btn.dataset.rangeId;
+  const itemId = btn.dataset.itemId;
+
+  const range = findRangeById(rangeId);
+  const item = range?.items.find((it) => it.id === itemId);
+  if (!range || !item) return;
+
+  openLabelDropdown({
+    rangeId,
+    anchorEl: btn,
+    getActiveLabelId: () => item.labelId,
+    setActiveLabelId: (lid) => {
+      item.labelId = lid;
+    },
+    onAfterChange: () => {
+      updateThumbnailLabelUI(rangeId, itemId);
+    },
+  });
+});
 
 // ========== Range DOM Building ==========
 const rangesContainer = document.getElementById("ranges");
@@ -793,8 +1223,10 @@ function setupCopyRangeButton(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".copy-range").forEach((btn) => {
     btn.addEventListener("click", () => {
       const items = findRangeById(rangeId)?.items || [];
-      if (items.length) copyToClipboard(JSON.stringify(items));
-      else showToast("آیتمی برای کپی وجود ندارد.", "error");
+      if (items.length) {
+        const payload = buildClipboardPayloadForItems(rangeId, items);
+        copyToClipboard(JSON.stringify(payload));
+      } else showToast("آیتمی برای کپی وجود ندارد.", "error");
     });
   });
 }
@@ -950,6 +1382,7 @@ function createRangeElement(rangeData = null) {
       desc: "",
       items: [],
       itemsCollapsed: false,
+      labels: [],
     };
     appState.ranges.push(newRange);
     rangeData = newRange;
@@ -1193,17 +1626,27 @@ const printArea = getPrintArea();
 
 function buildQuizData(names, ranges) {
   const finalData = Object.fromEntries(names.map((n) => [n, []]));
+
   ranges.forEach((r) => {
     const items = Array.isArray(r.items) ? r.items : [];
+
     names.forEach((student) => {
+      const picked = pickRandomItemsUniqueLabels(items, r.count);
+      if (!picked) {
+        throw new Error(
+          `مبحث «${r.rangeName || "بدون عنوان"}»: تعداد درخواستی (${r.count}) بیشتر از ظرفیت یکتا بر اساس برچسب‌هاست.`,
+        );
+      }
+
       finalData[student].push({
         rangeName: r.rangeName,
-        items: pickRandomItems(items, r.count),
+        items: picked,
         score: r.score,
         desc: r.desc,
       });
     });
   });
+
   return finalData;
 }
 
@@ -1275,17 +1718,24 @@ function validateQuizInputs() {
 
 function buildQuizHtml(validRanges) {
   const { names, showNames } = getStudentNames();
-  const quizData = buildQuizData(names, validRanges);
+
+  let quizData;
+  try {
+    quizData = buildQuizData(names, validRanges);
+  } catch (err) {
+    showToast(err.message, "error");
+    return null;
+  }
 
   return names
     .map(
       (student) => `
-      <tr>
-        <td class="questions">
-          ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
-        </td>
-      </tr>
-    `,
+    <tr>
+      <td class="questions">
+        ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
+      </td>
+    </tr>
+  `,
     )
     .join("");
 }
@@ -1295,10 +1745,9 @@ function generateQuizHtml() {
   if (!validRanges) return false;
 
   const html = buildQuizHtml(validRanges);
-  printArea.innerHTML = `
-    <table class="w-full">
-      <tbody>${html}</tbody>
-    </table>`;
+  if (!html) return false;
+
+  printArea.innerHTML = `<table class="w-full"><tbody>${html}</tbody></table>`;
   return true;
 }
 
@@ -1401,6 +1850,32 @@ const previewImgBrightness = document.getElementById("previewImgBrightness");
 const previewImgContrast = document.getElementById("previewImgContrast");
 const previewCropBtn = document.getElementById("previewCropBtn");
 const previewImgFloat = document.getElementById("previewImgFloat");
+const modalLabelBtn = document.getElementById("modalLabelBtn");
+
+function updateModalLabelBtnUI() {
+  const range = findRangeById(appState.modal.rangeId);
+  const temp = appState.modal.tempItem;
+  if (!range || !temp || !modalLabelBtn) return;
+  setLabelButtonUI(modalLabelBtn, range, temp.labelId);
+}
+
+modalLabelBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const rangeId = appState.modal.rangeId;
+  const range = findRangeById(rangeId);
+  const temp = appState.modal.tempItem;
+  if (!range || !temp) return;
+
+  openLabelDropdown({
+    rangeId,
+    anchorEl: modalLabelBtn,
+    getActiveLabelId: () => temp.labelId,
+    setActiveLabelId: (lid) => {
+      temp.labelId = lid;
+    },
+    onAfterChange: updateModalLabelBtnUI,
+  });
+});
 
 function updateTempItemFromTextEditor() {
   const temp = appState.modal.tempItem;
@@ -1448,6 +1923,7 @@ function openModalWithTempItem(rangeId) {
   const temp = appState.modal.tempItem;
   if (!temp) return;
 
+  updateModalLabelBtnUI();
   setupModalEditorFromTemp(temp);
   updateModalPreviewFromTemp();
   updateModalImageUI();
@@ -2328,9 +2804,14 @@ function importRangesFromData(data) {
       count: r.count || 1,
       score: r.score || 1,
       desc: r.desc || "",
+      labels: Array.isArray(r.labels)
+        ? r.labels.map((l) => ({ id: l.id, name: l.name }))
+        : [],
       items,
       itemsCollapsed: true,
     };
+    ensureRangeLabels(rangeWithId);
+    items.forEach((it) => normalizeItemLabelForRange(rangeWithId, it));
     appState.ranges.push(rangeWithId);
   });
 }
@@ -2365,9 +2846,11 @@ function exportData() {
             count: r.count,
             score: r.score,
             desc: r.desc,
+            labels: Array.isArray(r.labels) ? r.labels : [],
             items: r.items.map((item) => ({
               ...item,
               showText: item.showText !== false,
+              labelId: item.labelId || null,
             })),
           })),
         };

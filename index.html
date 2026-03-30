@@ -107,17 +107,25 @@
       </div>
 
       <!-- دکمه آپلود تصویر (در صورت نبود تصویر) -->
-      <div id="modalImageUploadContainer" class="mb-2">
-        <input type="file" id="modalImageUpload" accept="image/*" class="sr-only">
-        <label data-tooltip="افزودن تصویر" for="modalImageUpload"
-          class="btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
-          <i class="bi bi-image"></i>
-          <span class="md:hidden">افزودن تصویر</span>
-        </label>
-        <button id="modalClipboardImageAddBtn" data-tooltip="چسباندن تصویر"
-          class="max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
-          <i class="bi bi-clipboard-plus"></i>
+      <div class="flex items-center mb-2">
+        <div id="modalImageUploadContainer">
+          <input type="file" id="modalImageUpload" accept="image/*" class="sr-only">
+          <label data-tooltip="افزودن تصویر" for="modalImageUpload"
+            class="btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
+            <i class="bi bi-image"></i>
+            <span class="md:hidden">افزودن تصویر</span>
+          </label>
+          <button id="modalClipboardImageAddBtn" data-tooltip="چسباندن تصویر"
+            class="max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
+            <i class="bi bi-clipboard-plus"></i>
+          </button>
+        </div>
+        <button id="modalLabelBtn"
+          class="mr-auto max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer"> <i
+            class="bi bi-tag"></i>
+          <span></span>
         </button>
+
       </div>
 
       <div id="modal-rich-editor-placeholder" class="rich-editor-placeholder"></div>
@@ -454,6 +462,7 @@
     </div>
   </div>
 
+  <div id="dropdownRoot"></div>
 
   <script src="./utils/load-assets.js"></script>
   <script>
@@ -474,6 +483,7 @@
       { type: "js", src: "./utils/tooltip.js" },
       { type: "js", src: "./utils/ai-prompt.js" },
       { type: "js", src: "./utils/Rainfall.js" },
+      { type: "js", src: "./utils/UI-Components.js" },
       { type: "js", src: "./app.js" }
     ];
 
