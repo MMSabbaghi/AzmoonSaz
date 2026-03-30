@@ -948,6 +948,12 @@ function openLabelDropdown({
           const nameEl = row.querySelector("[data-role='label-name']");
           if (!nameEl) return;
 
+          const setButton = row.querySelector("[data-action='set-label']");
+          if (!setButton) return;
+
+          const container = document.createElement("div");
+          container.className = "flex-1";
+
           const input = document.createElement("input");
           input.setAttribute("data-role", "rename-input");
           input.className =
@@ -955,7 +961,9 @@ function openLabelDropdown({
           input.value = lbl.name || "";
           input.dir = "rtl";
 
-          nameEl.replaceWith(input);
+          container.appendChild(input);
+          setButton.replaceWith(container);
+
           input.focus();
           input.select();
 
