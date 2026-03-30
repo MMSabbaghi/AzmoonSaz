@@ -1621,8 +1621,43 @@ document.addEventListener("paste", async () => {
 });
 
 // ========== Quiz Generation ==========
-
 const printArea = getPrintArea();
+
+const persianParts = ["الف", "ب", "ج", "د", "ه", "و", "ز", "ح", "ط", "ی"];
+
+function partLabel(i) {
+  return persianParts[i] || `${toPersianDigits(i + 1)}`;
+}
+
+function renderRangeAsMultiPart(range) {
+  const partsHtml = range.items
+    .map((item, idx) => {
+      return `
+        <div class="flex gap-2">
+          <div class="font-bold whitespace-nowrap">${partLabel(idx)})</div>
+          <div class="flex-1">${renderItemForQuiz(item, range.desc)}</div>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `<div class="space-y-2">${partsHtml}</div>`;
+}
+
+function createQuestionRowHtmlMulti(qNum, range) {
+  return `
+    <tr>
+      <td class="w-10 text-center font-bold align-top">
+        ${toPersianDigits(qNum)}
+        <span class="font-normal text-xs">
+          ${+range.score > 0 ? `(${toPersianDigits(range.score)}نمره)` : ``}
+        </span>
+      </td>
+      <td class="px-2">
+        ${renderRangeAsMultiPart(range)}
+      </td>
+    </tr>`;
+}
 
 function buildQuizData(names, ranges) {
   const finalData = Object.fromEntries(names.map((n) => [n, []]));
@@ -1672,11 +1707,11 @@ function createQuestionRowHtml(qNum, item, range) {
 
 function createStudentTableHtml(studentQuiz, name) {
   let qNum = 1;
+
   const rows = studentQuiz
-    .flatMap((range) =>
-      range.items.map((item) => createQuestionRowHtml(qNum++, item, range)),
-    )
+    .map((range) => createQuestionRowHtmlMulti(qNum++, range))
     .join("");
+
   return `
     <table class="w-full border-collapse">
       <tr class="bg-gray-200">
