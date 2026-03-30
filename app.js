@@ -1031,88 +1031,115 @@ function getRangeHTML(rangeData) {
 }
 
 function getMobileRangeHTML(rangeData) {
-  const fileID = createRandomId("file");
   return `
     <div class="relative range-card-mobile my-1 rounded-custom bg-surface border border-border-light/80 p-4 transition-all">
-      <!-- بخش تنظیمات -->
-      <div class="settings-section mb-3">
-        <!-- ردیف اول: عنوان + دکمه‌های جابجایی + منوی سه‌نقطه -->
-        <div class="flex justify-between items-center mb-3">
-          <div class="flex items-center gap-2 flex-1">
-            <div class="relative flex-1">
-              <input value="${rangeData.rangeName}" type="text" placeholder="عنوان مبحث" 
-                     class="range-name w-full border-0 border-b-2 border-border-light bg-transparent px-1 py-2 text-base font-medium text-primary focus:border-primary-dark focus:ring-0 transition-all">
-            </div>
+      
+      <!-- Top row: title + menu -->
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <div class="text-xs text-muted">مبحث</div>
+          <div class="range-title text-primary font-semibold text-base truncate">
+            ${rangeData.rangeName || "بدون عنوان"}
           </div>
-          <!-- گروه دکمه‌های کناری -->
-          <div class="flex items-center gap-1">
-            <button class="move-up action-circle flex-shrink-0 w-8 h-8 flex items-center justify-center">
-              <i class="bi bi-arrow-up-short text-lg"></i>
+
+          <div class="mt-2 flex gap-2 text-xs">
+            <span class="px-2 py-1 rounded-custom bg-surface-dark border border-border-light/60 text-secondary">
+              تعداد: <span class="font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
+            </span>
+            <span class="px-2 py-1 rounded-custom bg-surface-dark border border-border-light/60 text-secondary">
+              نمره: <span class="font-semibold text-primary">${toPersianDigits(rangeData.score || 0)}</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <button class="move-up action-circle flex-shrink-0 w-9 h-9 flex items-center justify-center">
+            <i class="bi bi-arrow-up-short text-lg"></i>
+          </button>
+          <button class="move-down action-circle flex-shrink-0 w-9 h-9 flex items-center justify-center">
+            <i class="bi bi-arrow-down-short text-lg"></i>
+          </button>
+
+          <div class="dropdown relative">
+            <button class="dropdown-toggle action-circle border-0 w-9 h-9 flex items-center justify-center">
+              <i class="bi bi-three-dots-vertical text-base text-secondary"></i>
             </button>
-            <button class="move-down action-circle flex-shrink-0 w-8 h-8 flex items-center justify-center">
-              <i class="bi bi-arrow-down-short text-lg"></i>
-            </button>
-            <div class="dropdown relative">
-              <button class="dropdown-toggle action-circle border-0 w-8 h-8 flex items-center justify-center">
-                <i class="bi bi-three-dots-vertical text-base text-secondary"></i>
+            <div class="dropdown-menu hidden min-w-[170px] absolute top-full left-0 bg-surface border border-border-light rounded-custom p-2 shadow-lg z-50 flex-col gap-1">
+              <button class="copy-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom transition-all w-full text-right">
+                <i class="bi bi-copy text-muted"></i> کپی
               </button>
-              <div class="dropdown-menu hidden min-w-[140px] absolute top-full left-0 right-auto bg-surface border border-border-light rounded-custom p-2 shadow-lg z-50 flex-col gap-1">
-                <button class="copy-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom transition-all w-full text-right"><i class="bi bi-copy text-muted"></i> کپی</button>
-                <button class="paste-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom w-full text-right"><i class="bi bi-clipboard-plus text-muted"></i> چسباندن</button>
-                <button class="remove-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom transition-all w-full text-right"><i class="bi bi-trash3 text-muted"></i> حذف</button>
-              </div>
+              <button class="paste-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom w-full text-right">
+                <i class="bi bi-clipboard-plus text-muted"></i> چسباندن
+              </button>
+              <button class="remove-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom transition-all w-full text-right">
+                <i class="bi bi-trash3 text-muted"></i> حذف
+              </button>
             </div>
           </div>
-        </div>
-
-        <!-- ردیف دوم: تعداد و نمره (دکمه‌های جابجایی به بالا منتقل شدند) -->
-        <div class="flex items-center gap-2 mb-2 overflow-x-auto scrollable-x pb-1">
-          <div class="flex items-center gap-1 px-3 py-2 rounded-custom border border-border-light w-full">
-            <label class="text-sm text-secondary ml-1">تعداد:</label>
-            <input value="${rangeData.count}" data-number-input="true" data-float="false" 
-                   class="range-count w-14 text-center bg-transparent border-0 p-1 text-base font-medium text-primary focus:ring-1 focus:ring-primary-light rounded-custom">
-          </div>
-          <div class="flex items-center gap-1 px-3 py-2 rounded-custom border border-border-light w-full">
-            <label class="text-sm text-secondary ml-1">نمره:</label>
-            <input value="${rangeData.score}" data-number-input="true" 
-                   class="range-score w-14 text-center bg-transparent border-0 p-1 text-base font-medium text-primary focus:ring-1 focus:ring-primary-light rounded-custom">
-          </div>
-        </div>
-
-        <!-- ردیف سوم: دکمه‌های افزودن متن، تصویر و هوش مصنوعی -->
-        <div class="flex gap-2">
-          <button class="add-text-item flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
-            <i class="bi bi-plus-lg text-lg"></i> <span>افزودن سوال</span>
-          </button>
-          <!-- آپلود تصویر -->
-          <input type="file" id="${fileID}" accept="image/*" multiple class="sr-only range-images">
-          <label for="${fileID}" class="flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
-            <i class="bi bi-image text-lg"></i> <span>تصویر سوال</span>
-          </label>
-        </div>
-        <div class="flex gap-2 my-2">
-          <button class="ai-range flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
-            <i class="bi bi-openai text-lg"></i> <span>هوش مصنوعی</span>
-          </button>
-          <button class="range-desc-switch flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
-            <i class="bi bi-input-cursor-text text-lg"></i> <span>متن ثابت</span>
-          </button>
-        </div>
-
-        <!-- تکست‌آریا برای توضیحات مبحث -->
-        <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-          <textarea class="range-desc w-full h-15 border border-border-light rounded-custom p-3 text-sm focus:outline-none placeholder-muted" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
         </div>
       </div>
 
-      <!-- بخش پیش‌نمایش آیتم‌ها -->
-      <div class="preview-section border-t border-border-light pt-3 mt-1">
+      <!-- Meta inputs (hidden by default) -->
+      <div class="range-meta range-meta overflow-hidden transition-all duration-500 ease-out mt-2 max-h-0 opacity-0 blur-sm -translate-y-3">
+        <div class="grid grid-cols-1 gap-2">
+          <div>
+            <label class="block text-xs text-muted mb-1">عنوان مبحث</label>
+            <input value="${rangeData.rangeName}" type="text"
+                   class="range-name w-full border border-border-light rounded-custom p-2 bg-transparent text-primary"
+                   placeholder="عنوان مبحث">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs text-muted mb-1">تعداد</label>
+              <input value="${rangeData.count}" data-number-input="true" data-float="false"
+                     class="range-count w-full border border-border-light rounded-custom p-2 bg-transparent text-primary text-center">
+            </div>
+            <div>
+              <label class="block text-xs text-muted mb-1">نمره</label>
+              <input value="${rangeData.score}" data-number-input="true"
+                     class="range-score w-full border border-border-light rounded-custom p-2 bg-transparent text-primary text-center">
+            </div>
+          </div>
+
+                <!-- Desc -->
+      <div  class="mt-2">
+              <label class="block text-xs text-muted mb-1"> متن ثابت سوالات </label>  
+      <textarea class="range-desc w-full h-15 border border-border-light rounded-custom p-3 text-sm focus:outline-none placeholder-muted"
+                  placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+      </div>
+
+        </div>
+      </div>
+
+      <!-- Primary actions -->
+      <div class="flex gap-2 mt-3">
+      <button class="toggle-meta flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
+      <i class="bi bi-gear text-lg"></i> <span> تنظیمات</span>
+      </button>
+      <button class="ai-range flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
+      <i class="bi bi-openai text-lg"></i> <span>هوش مصنوعی</span>
+      </button>
+      </div>
+      
+      <div class="flex gap-2 mt-2">
+      <button class="add-text-item flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
+        <i class="bi bi-plus-lg text-lg"></i> <span>افزودن سوال</span>
+      </button>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-section border-t border-border-light pt-3 mt-3">
         <button class="toggle-items-btn flex gap-2 items-center w-full bg-surface-dark hover:bg-surface-darker rounded-custom px-4 py-2.5 transition-all ${rangeData.itemsCollapsed ? "collapsed" : ""}">
-          <span class="text-sm font-medium text-secondary flex items-center gap-2"><i class="bi bi-grid-3x3-gap-fill text-muted"></i>سوالات تعریف شده</span>
-            <span class="range-total flex items-center justify-center min-w-[2rem] h-8 px-2 bg-surface-darker text-secondary rounded-circle text-sm font-semibold">${toPersianDigits(rangeData.items.length)}</span>
+          <span class="text-sm font-medium text-secondary flex items-center gap-2">
+            <i class="bi bi-grid-3x3-gap-fill text-muted"></i>سوالات تعریف شده
+          </span>
+          <span class="range-total flex items-center justify-center min-w-[2rem] h-8 px-2 bg-surface-darker text-secondary rounded-circle text-sm font-semibold">
+            ${toPersianDigits(rangeData.items.length)}
+          </span>
           <i class="mr-auto transition-transform duration-300 bi-chevron-down text-muted toggle-arrow text-lg"></i>
         </button>
-        <div class="items-preview grid grid-cols-2 gap-[5px] mt-1 ${rangeData.itemsCollapsed ? "collapsed" : ""} mt-3">
+        <div class="items-preview grid grid-cols-2 gap-[5px] mt-3 ${rangeData.itemsCollapsed ? "collapsed" : ""}">
           <!-- آیتم‌ها -->
         </div>
       </div>
@@ -1121,54 +1148,150 @@ function getMobileRangeHTML(rangeData) {
 }
 
 function getDesktopRangeHTML(rangeData) {
-  const fileID = createRandomId("file");
   return `
-  <div class="border border-border-dark p-2 rounded-custom bg-surface-dark relative overflow-visible">
-    <div class="range-header flex justify-between items-center font-bold my-1">
-      <div class="flex items-center gap-2">
-        <div class="relative">
-          <label class="font-normal text-muted"> مبحث: </label>
-          <input value="${rangeData.rangeName}" type="text" class="border border-border-light rounded-custom p-2 range-name" placeholder="عنوان مبحث">
-        </div>
-        <div>
-          <label class="font-normal text-muted"> تعداد: </label>
-          <input value="${rangeData.count}" data-number-input="true" data-float="false" class="w-20 border border-border-light rounded-custom p-2 range-count" placeholder="تعداد">
-        </div>
-        <div>
-          <label class="font-normal text-muted" > نمره: </label>
-          <input value="${rangeData.score}" data-number-input="true" class="w-20 border border-border-light rounded-custom p-2 range-score" placeholder="نمره">
-        </div>
-        <button data-tooltip="متن ثابت سوالات" class="range-desc-switch btn btn-outline btn-dashed px-3 py-2 rounded-custom"><i class="bi bi-input-cursor-text"></i></button>
-        <div class="inline-block">
-          <div class="file-input">
-            <input type="file" id="${fileID}" accept="image/*" multiple class="file sr-only range-images">
-            <label data-tooltip="تصویر سوال" for="${fileID}" class="btn btn-outline btn-dashed px-4 py-2 rounded-custom relative flex items-center justify-center"><i class="bi bi-image"></i></label>
+  <div class="group relative overflow-visible rounded-2xl border border-border-dark  p-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,.65)]">
+
+    <!-- Header (Redesigned) -->
+    <div class="relative">
+      <!-- subtle glow / accent -->
+      <div class="pointer-events-none absolute -inset-4 rounded-[22px] opacity-0 blur-2xl transition duration-300 group-hover:opacity-100"
+           style="background: radial-gradient(650px 220px at 85% 0%, rgba(99,102,241,.18), transparent 55%),
+                          radial-gradient(520px 200px at 0% 15%, rgba(16,185,129,.10), transparent 55%);">
+      </div>
+
+      <div class="relative flex items-start justify-between gap-4">
+        <!-- Left: Title + meta -->
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-3 min-w-0">
+            <!-- icon badge -->
+            <div class="shrink-0 grid place-items-center w-10 h-10 rounded-2xl border border-border-light/60 bg-surface-darker">
+              <i class="bi bi-journal-text text-lg text-secondary"></i>
+            </div>
+
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-xs text-muted tracking-wide">مبحث</span>
+                <span class="range-title text-[15px] font-semibold text-primary truncate max-w-[520px]">
+                  ${rangeData.rangeName || "بدون عنوان"}
+                </span>
+              </div>
+
+              <!-- Meta chips (modern) -->
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border border-border-light/60 bg-surface-darker text-xs text-secondary">
+                  <i class="bi bi-hash text-muted"></i>
+                  تعداد
+                  <span class="font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
+                </span>
+
+                <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border border-border-light/60 bg-surface-darker text-xs text-secondary">
+                  <i class="bi bi-award text-muted"></i>
+                  نمره
+                  <span class="font-semibold text-primary">${toPersianDigits(rangeData.score || 0)}</span>
+                </span>
+
+                <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border border-border-light/60 bg-surface-darker text-xs text-secondary">
+                  <i class="bi bi-grid-3x3-gap text-muted"></i>
+                  سوالات
+                  <span class="font-semibold text-primary">${toPersianDigits(rangeData.items.length || 0)}</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-        <button data-tooltip="تعریف سوال" class="add-text-item btn btn-outline btn-dashed px-3 py-2 rounded-custom"><i class="bi bi-type"></i></button>
-        <button data-tooltip="هوش مصنوعی" class="ai-range btn btn-outline btn-dashed px-3 py-2 rounded-custom"><i class="bi bi-openai"></i></button>
-      </div>
-      <div class="flex items-center gap-2">
-      <button data-tooltip="کپی آیتم ها" class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out"><i class="bi bi-copy"></i></button>
-      <button data-tooltip="چسباندن" class="p-1 text-muted hover:text-primary rounded-custom paste-range transition-all duration-500 ease-out"><i class="bi bi-clipboard-plus"></i></button>
-      <button data-tooltip="حذف مبحث" class="p-1 text-muted hover:text-error rounded-custom remove-range transition-all duration-500 ease-out"><i class="bi bi-trash3"></i></button>
+
+        <!-- Right: Actions (modern segmented) -->
+        <div class="shrink-0 flex items-center gap-2">
+          <!-- Primary action pills -->
+          <div class="flex items-center rounded-2xl border border-border-light/60 bg-surface-darker p-1">
+
+            <button class="add-text-item inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition"
+                   data-tooltip="تعریف سوال">
+              <i class="bi bi-plus-lg text-base"></i>
+            </button>
+            </div>
+          <div class="flex items-center rounded-2xl border border-border-light/60 bg-surface-darker p-1">
+            <button class="toggle-meta inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition"
+                    data-tooltip="تنظیمات">
+              <i class="bi bi-gear text-base"></i>
+            </button>
+
+            <button class="ai-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition"
+                    data-tooltip="هوش مصنوعی">
+              <i class="bi bi-openai text-base"></i>
+            </button>
+          </div>
+
+          <!-- Secondary actions -->
+          <div class="flex items-center rounded-2xl border border-border-light/60 bg-surface-darker p-1">
+            <button data-tooltip="کپی آیتم ها"
+                    class="copy-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition">
+              <i class="bi bi-copy text-[18px]"></i>
+            </button>
+
+            <button data-tooltip="چسباندن"
+                    class="paste-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition">
+              <i class="bi bi-clipboard-plus text-[18px]"></i>
+            </button>
+
+            <button data-tooltip="حذف مبحث"
+                    class="remove-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-error hover:bg-surface-dark transition">
+              <i class="bi bi-trash3 text-[18px]"></i>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-    <div id="textareaBox" class="overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-      <textarea class="range-desc w-full h-15 border border-border-light rounded-custom p-3 text-sm focus:outline-none placeholder-muted" placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+
+    <!-- Meta inputs (collapsed by default) -->
+    <div class="range-meta overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out mt-3">
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="block text-xs text-muted mb-1">عنوان مبحث</label>
+          <input value="${rangeData.rangeName}" type="text"
+                 class="range-name w-full border border-border-light rounded-custom p-2 bg-surface text-primary"
+                 placeholder="عنوان مبحث">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">تعداد</label>
+          <input value="${rangeData.count}" data-number-input="true" data-float="false"
+                 class="range-count w-full border border-border-light rounded-custom p-2 bg-surface text-primary"
+                 placeholder="تعداد">
+        </div>
+        <div>
+          <label class="block text-xs text-muted mb-1">نمره</label>
+          <input value="${rangeData.score}" data-number-input="true"
+                 class="range-score w-full border border-border-light rounded-custom p-2 bg-surface text-primary"
+                 placeholder="نمره">
+        </div>
+      </div>
+
+      <!-- Desc -->
+      <div class="mt-2">
+        <label class="block text-xs text-muted mb-1">متن ثابت سوالات</label>
+        <textarea class="range-desc w-full h-15 border border-border-light rounded-custom p-3 text-sm focus:outline-none placeholder-muted"
+                  placeholder="متن سوال را اینجا بنویسید.">${rangeData.desc || ""}</textarea>
+      </div>
     </div>
+
+    <!-- Preview -->
     <div class="preview-section border-t border-border-light">
-      <button class="toggle-items-btn flex gap-2 items-center w-full bg-surface-dark hover:bg-surface-darker rounded-custom py-2 transition-all ${rangeData.itemsCollapsed ? "collapsed" : ""}">
-        <span class="text-sm font-medium text-secondary flex items-center gap-2"><i class="bi bi-grid-3x3-gap-fill text-muted"></i>سوالات تعریف شده</span>
-        <span class="range-total flex items-center justify-center min-w-[2rem] h-8 px-2 bg-surface-darker text-secondary rounded-circle text-sm font-semibold">${toPersianDigits(rangeData.items.length)}</span>
+      <button class="toggle-items-btn flex gap-2 items-center w-full rounded-custom py-2 ${rangeData.itemsCollapsed ? "collapsed" : ""}">
+        <span class="text-sm font-medium text-secondary flex items-center gap-2">
+          <i class="bi bi-grid-3x3-gap-fill text-muted"></i>سوالات تعریف شده
+        </span>
+        <span class="range-total hidden flex items-center justify-center min-w-[2rem] h-8 px-2 bg-surface-darker text-secondary rounded-circle text-sm font-semibold">
+          ${toPersianDigits(rangeData.items.length)}
+        </span>
         <i class="mr-auto transition-transform duration-300 bi-chevron-down text-muted toggle-arrow text-lg"></i>
       </button>
-      <div class="items-preview grid grid-cols-6 gap-[5px] mt-1 ${rangeData.itemsCollapsed ? "collapsed" : ""}">
+
+      <div class="items-preview grid grid-cols-6 gap-[5px] mt-2 ${rangeData.itemsCollapsed ? "collapsed" : ""}">
         <!-- آیتم‌ها -->
       </div>
     </div>
-  </div>  
-  `;
+
+  </div>`;
 }
 
 function updateRangesTotalScoreUI() {
@@ -1182,21 +1305,29 @@ function setupRangeInputs(rangeElement, rangeId) {
     el.addEventListener("input", (e) => {
       const newVal = e.target.value;
       updateRangeInState(rangeId, { rangeName: newVal });
+
       rangeElement.querySelectorAll(".range-name").forEach((other) => {
         if (other !== e.target) other.value = newVal;
       });
+
+      const title = rangeElement.querySelector(".range-title");
+      if (title) title.textContent = newVal || "بدون عنوان";
     });
   });
+
   rangeElement.querySelectorAll(".range-count").forEach((el) => {
     el.addEventListener("input", (e) => {
-      updateRangeInState(rangeId, { count: parseInt(e.target.value) || 0 });
+      const val = parseInt(e.target.value) || 0;
+      updateRangeInState(rangeId, { count: val });
     });
   });
+
   rangeElement.querySelectorAll(".range-score").forEach((el) => {
     el.addEventListener("input", (e) => {
       updateRangeInState(rangeId, { score: e.target.value });
     });
   });
+
   rangeElement.querySelector(".range-desc")?.addEventListener("input", (e) => {
     updateRangeInState(rangeId, { desc: e.target.value });
   });
@@ -1290,33 +1421,6 @@ function setupToggleItemsButton(rangeElement, rangeId) {
   }
 }
 
-function setupFileUploadOnRange(rangeElement, rangeId) {
-  handleFileUpload({
-    target: rangeElement.querySelector(".range-images"),
-    onChange: (src) => {
-      const newItem = createImageItem({ src });
-      openModalForNewItem(rangeId, newItem);
-    },
-  });
-}
-
-function setupSwitchOnRange(rangeElement) {
-  let isActive = false;
-  rangeElement
-    .querySelector(".range-desc-switch")
-    .addEventListener("click", () => {
-      isActive = !isActive;
-      setElementState({
-        target: rangeElement.querySelector("#textareaBox"),
-        stateClasses: {
-          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-        },
-        isActive,
-      });
-    });
-}
-
 function setupDropdownMenu(rangeElement) {
   const dropdownToggle = rangeElement.querySelector(".dropdown-toggle");
   const dropdownMenu = rangeElement.querySelector(".dropdown-menu");
@@ -1345,6 +1449,31 @@ function setActiveRangeStyle(rangeId) {
   document.getElementById(rangeId).classList.add("shadow-default");
 }
 
+function setupMetaToggle(rangeElement, rangeId) {
+  const btns = rangeElement.querySelectorAll(".toggle-meta");
+  if (!btns?.length) return;
+
+  btns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const range = findRangeById(rangeId);
+      if (!range) return;
+
+      range.ui = range.ui || { metaOpen: false };
+      range.ui.metaOpen = !range.ui.metaOpen;
+
+      setElementState({
+        target: rangeElement.querySelector(".range-meta"),
+        stateClasses: {
+          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
+          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
+        },
+        isActive: !!range.ui.metaOpen,
+      });
+    });
+  });
+}
+
 function attachRangeEvents(rangeElement, rangeId) {
   rangeElement.addEventListener("click", (e) => {
     if (rangeElement.dataset.swiping === "true") {
@@ -1362,9 +1491,8 @@ function attachRangeEvents(rangeElement, rangeId) {
     rangeElement.draggable = false;
   }
 
-  setupSwitchOnRange(rangeElement);
   setupDropdownMenu(rangeElement);
-  setupFileUploadOnRange(rangeElement, rangeId);
+  setupMetaToggle(rangeElement, rangeId);
   setupRangeButtons(rangeElement, rangeId);
   setupRangeInputs(rangeElement, rangeId);
   renderRangeItems(rangeElement, rangeId);
@@ -1380,21 +1508,30 @@ function buildRangeDOM(rangeData) {
   return div;
 }
 
+function getNextDefaultRangeName() {
+  const n = (appState?.ranges?.length || 0) + 1;
+  return `مبحث ${toPersianDigits(n)}`;
+}
+
 function createRangeElement(rangeData = null) {
   if (!rangeData) {
     const newRange = {
       id: createRandomId("range-item"),
-      rangeName: "",
+      rangeName: getNextDefaultRangeName(),
       count: 1,
       score: 1,
       desc: "",
       items: [],
       itemsCollapsed: false,
       labels: [],
+      ui: { metaOpen: false },
     };
     appState.ranges.push(newRange);
     rangeData = newRange;
+  } else {
+    rangeData.ui = rangeData.ui || { metaOpen: false };
   }
+
   const el = buildRangeDOM(rangeData);
   attachRangeEvents(el, rangeData.id);
   return el;
