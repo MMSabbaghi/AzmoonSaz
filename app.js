@@ -1641,15 +1641,15 @@ function renderRangeAsMultiPart(range) {
   const partsHtml = range.items
     .map((item, idx) => {
       return `
-        <div class="flex gap-2">
+        <div class="flex gap-1">
           <div class="font-bold whitespace-nowrap">${partLabel(idx)})</div>
-          <div class="flex-1">${renderItemForQuiz(item, range.desc)}</div>
+          <div class="flex-1">${renderItemForQuiz(item, null)}</div>
         </div>
       `;
     })
     .join("");
 
-  return `<div class="space-y-2">${partsHtml}</div>`;
+  return `<div class="space-y-1">${partsHtml}</div>`;
 }
 
 function createQuestionRowHtmlMulti(qNum, range) {
@@ -1662,6 +1662,7 @@ function createQuestionRowHtmlMulti(qNum, range) {
         </span>
       </td>
       <td class="px-2">
+      <p> ${range.desc}  </p>
         ${renderRangeAsMultiPart(range)}
       </td>
     </tr>`;
