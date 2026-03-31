@@ -1,3 +1,603 @@
+class Modal {
+  // ---------- Static stack management ----------
+  static _openStack = [];
+  static _baseZ = 1000;
+  static _lockCount = 0;
+
+  static _lockBody() {
+    Modal._lockCount++;
+    if (Modal._lockCount === 1) {
+      document.documentElement.classList.add("overflow-hidden");
+      document.body.classList.add("overflow-hidden");
+    }
+  }
+  static _unlockBody() {
+    Modal._lockCount = Math.max(0, Modal._lockCount - 1);
+    if (Modal._lockCount === 0) {
+      document.documentElement.classList.remove("overflow-hidden");
+      document.body.classList.remove("overflow-hidden");
+    }
+  }
+
+  static getTopInstance() {
+    return Modal._openStack[Modal._openStack.length - 1] || null;
+  }
+
+  // ---------- Instance ----------
+  constructor(modalRoot, options = {}) {
+    this.root =
+      typeof modalRoot === "string"
+        ? document.querySelector(modalRoot)
+        : modalRoot;
+
+    if (!this.root) throw new Error("Modal: modal root not found.");
+
+    this.options = {
+      title: options.title ?? null, // اگر header بسازیم
+      closeOnEscape: options.closeOnEscape ?? true,
+      closeOnOverlayClick: options.closeOnOverlayClick ?? true,
+      showCloseButton: options.showCloseButton ?? true,
+      initialFocusSelector: options.initialFocusSelector ?? null,
+      onOpen: options.onOpen ?? (() => {}),
+      onClose: options.onClose ?? (() => {}),
+      wizard: {
+        enabled: options.wizard?.enabled ?? "auto", // "auto" | true | false
+        startStep: options.wizard?.startStep ?? 1,
+        loop: options.wizard?.loop ?? false,
+        onStepChange: options.wizard?.onStepChange ?? (() => {}),
+        labels: {
+          next: options.wizard?.labels?.next ?? "بعدی",
+          prev: options.wizard?.labels?.prev ?? "قبلی",
+          finish: options.wizard?.labels?.finish ?? "اتمام",
+        },
+      },
+    };
+
+    this.isOpen = false;
+    this.isWizard = false;
+    this.currentStepIndex = 0;
+
+    // built elements refs
+    this.overlayEl = null;
+    this.panelEl = null;
+    this.headerEl = null;
+    this.bodyEl = null;
+    this.footerEl = null;
+
+    this.stepEls = [];
+    this.prevBtn = null;
+    this.nextBtn = null;
+
+    this._built = false;
+    this._lastActiveEl = null;
+
+    // bind handlers
+    this._onKeyDown = this._onKeyDown.bind(this);
+    this._onOverlayClick = this._onOverlayClick.bind(this);
+
+    this.build(); // یکبار بساز
+  }
+
+  // ---------- Build ----------
+  build() {
+    if (this._built) return;
+
+    // Root base classes (hidden by default)
+    this.root.style.display = "none";
+    this.root.setAttribute("role", "dialog");
+    this.root.setAttribute("aria-modal", "true");
+
+    this.root.classList.add(
+      "fixed",
+      "inset-0",
+      "items-center",
+      "justify-center",
+      "p-4",
+      "sm:p-6",
+      "transition-opacity",
+      "duration-200",
+      "opacity-0",
+    );
+
+    // Find user-provided anchors
+    const bodyAnchor = this.root.querySelector("[data-modal-body]");
+    const footerAnchor = this.root.querySelector("[data-modal-footer]");
+
+    // اگر body وجود ندارد => طبق خواسته شما، هیچ ساختاری نساز (فقط root را آماده می‌کنیم)
+    if (!bodyAnchor) {
+      this._built = true;
+      return;
+    }
+
+    // Create overlay if not exists
+    this.overlayEl =
+      this.root.querySelector("[data-modal-overlay]") ||
+      this.root.querySelector(".modal-overlay");
+
+    if (!this.overlayEl) {
+      this.overlayEl = document.createElement("div");
+      this.overlayEl.setAttribute("data-modal-overlay", "");
+      this.root.prepend(this.overlayEl);
+    }
+    this.overlayEl.className = [
+      "absolute",
+      "inset-0",
+      "bg-black/40",
+      "backdrop-blur-sm",
+      "opacity-0",
+      "transition-opacity",
+      "duration-200",
+    ].join(" ");
+
+    // Create panel wrapper (modal content)
+    this.panelEl =
+      this.root.querySelector("[data-modal-panel]") ||
+      this.root.querySelector(".modal-content");
+
+    if (!this.panelEl) {
+      this.panelEl = document.createElement("div");
+      this.panelEl.setAttribute("data-modal-panel", "");
+      // body & footer will be moved into panel
+      this.root.appendChild(this.panelEl);
+    }
+
+    this.panelEl.className = [
+      "relative",
+      "z-10",
+      "w-full",
+      "max-w-3xl",
+      "bg-white",
+      "dark:bg-zinc-900",
+      "text-zinc-900",
+      "dark:text-zinc-100",
+      "rounded-2xl",
+      "shadow-2xl",
+      "border",
+      "border-zinc-200/70",
+      "dark:border-zinc-800",
+      "overflow-hidden",
+      "max-h-[90vh]",
+      "flex",
+      "flex-col",
+      "transform",
+      "transition-all",
+      "duration-200",
+      "scale-95",
+      "opacity-0",
+      // موبایل: نزدیک به فول‌اسکرین و چسبیده‌تر
+      "sm:max-h-[85vh]",
+    ].join(" ");
+
+    // Move body/footer anchors into panel in a clean layout
+    // Header (optional auto)
+    // اگر خودتان هدر گذاشته باشید دست نمی‌زنیم؛ اگر نباشد و title داده باشید، هدر می‌سازیم.
+    const existingHeader =
+      this.root.querySelector("[data-modal-header]") ||
+      this.panelEl.querySelector("[data-modal-header]");
+
+    if (existingHeader) {
+      this.headerEl = existingHeader;
+    } else if (this.options.title || this.options.showCloseButton) {
+      this.headerEl = document.createElement("div");
+      this.headerEl.setAttribute("data-modal-header", "");
+      this.headerEl.className = [
+        "flex",
+        "items-center",
+        "gap-3",
+        "px-4",
+        "sm:px-6",
+        "py-4",
+        "border-b",
+        "border-zinc-200/70",
+        "dark:border-zinc-800",
+      ].join(" ");
+
+      const titleEl = document.createElement("h2");
+      titleEl.className = "text-base sm:text-lg font-bold";
+      titleEl.textContent = this.options.title ?? "";
+      this.headerEl.appendChild(titleEl);
+
+      if (this.options.showCloseButton) {
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.setAttribute("data-modal-close", "");
+        closeBtn.className = [
+          "ms-auto",
+          "inline-flex",
+          "items-center",
+          "justify-center",
+          "h-10",
+          "w-10",
+          "rounded-xl",
+          "hover:bg-zinc-100",
+          "dark:hover:bg-zinc-800",
+          "transition",
+          "focus:outline-none",
+          "focus:ring-2",
+          "focus:ring-indigo-500/50",
+        ].join(" ");
+        closeBtn.innerHTML = `<span class="text-2xl leading-none">&times;</span>`;
+        closeBtn.addEventListener("click", () => this.close());
+        this.headerEl.appendChild(closeBtn);
+      }
+
+      this.panelEl.appendChild(this.headerEl);
+    }
+
+    // Body
+    this.bodyEl = bodyAnchor;
+    this.bodyEl.classList.add(
+      "px-4",
+      "sm:px-6",
+      "py-4",
+      "overflow-y-auto",
+      "min-h-0", // مهم برای flex column + scroll
+    );
+
+    // Footer
+    this.footerEl = footerAnchor || null;
+    if (this.footerEl) {
+      this.footerEl.classList.add(
+        "px-4",
+        "sm:px-6",
+        "py-4",
+        "border-t",
+        "border-zinc-200/70",
+        "dark:border-zinc-800",
+        "flex",
+        "items-center",
+        "gap-2",
+      );
+    }
+
+    // Ensure correct order inside panel:
+    // header (optional) -> body -> footer (optional)
+    // Remove from current place then append
+    const ensureInsidePanel = (el) => {
+      if (!el) return;
+      if (el.parentElement !== this.panelEl) {
+        el.parentElement?.removeChild(el);
+        this.panelEl.appendChild(el);
+      }
+    };
+    ensureInsidePanel(this.bodyEl);
+    ensureInsidePanel(this.footerEl);
+
+    // Wizard detection
+    this.stepEls = Array.from(this.bodyEl.querySelectorAll("[data-step]"));
+    const wizardAuto = this.options.wizard.enabled === "auto";
+    const wizardEnabled =
+      this.options.wizard.enabled === true ||
+      (wizardAuto && this.stepEls.length > 0);
+
+    if (wizardEnabled) {
+      // طبق خواسته شما: در حالت ویزارد باید حتماً data-step وجود داشته باشد
+      if (this.stepEls.length === 0) {
+        throw new Error(
+          "Modal: wizard enabled but no [data-step] found inside [data-modal-body].",
+        );
+      }
+      this.isWizard = true;
+      this._setupWizardUI();
+      this.goToStep(this.options.wizard.startStep, { silent: true });
+    } else {
+      this.isWizard = false;
+    }
+
+    // Overlay click
+    if (this.options.closeOnOverlayClick) {
+      this.overlayEl.addEventListener("click", this._onOverlayClick);
+    }
+
+    // Close buttons inside content (اگر خودتان دکمه گذاشته باشید)
+    this.root
+      .querySelectorAll("[data-modal-close], .modal-close-btn")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => this.close());
+      });
+
+    this._built = true;
+  }
+
+  _setupWizardUI() {
+    // Footer: اگر وجود ندارد بساز، و اگر وجود دارد و خالی است/یا می‌خواهید کنترل شود، پرش می‌کنیم
+    if (!this.footerEl) {
+      this.footerEl = document.createElement("div");
+      this.footerEl.setAttribute("data-modal-footer", "");
+      this.footerEl.className = [
+        "px-4",
+        "sm:px-6",
+        "py-4",
+        "border-t",
+        "border-zinc-200/70",
+        "dark:border-zinc-800",
+        "flex",
+        "items-center",
+        "gap-2",
+      ].join(" ");
+      this.panelEl.appendChild(this.footerEl);
+    }
+
+    // اگر فوتر قبلاً توسط شما پر شده، دست نمی‌زنیم مگر اینکه دکمه‌های wizard موجود نباشند
+    let prev = this.footerEl.querySelector("[data-wizard-prev]");
+    let next = this.footerEl.querySelector("[data-wizard-next]");
+
+    if (!prev) {
+      prev = document.createElement("button");
+      prev.type = "button";
+      prev.setAttribute("data-wizard-prev", "");
+      prev.className = [
+        "inline-flex",
+        "items-center",
+        "justify-center",
+        "px-4",
+        "py-2.5",
+        "rounded-xl",
+        "border",
+        "border-zinc-200",
+        "dark:border-zinc-800",
+        "bg-white",
+        "dark:bg-zinc-900",
+        "hover:bg-zinc-50",
+        "dark:hover:bg-zinc-800",
+        "transition",
+        "disabled:opacity-50",
+        "disabled:cursor-not-allowed",
+        "focus:outline-none",
+        "focus:ring-2",
+        "focus:ring-indigo-500/40",
+      ].join(" ");
+      prev.textContent = this.options.wizard.labels.prev;
+      this.footerEl.appendChild(prev);
+    }
+
+    if (!next) {
+      next = document.createElement("button");
+      next.type = "button";
+      next.setAttribute("data-wizard-next", "");
+      next.className = [
+        "ms-auto",
+        "inline-flex",
+        "items-center",
+        "justify-center",
+        "px-4",
+        "py-2.5",
+        "rounded-xl",
+        "bg-indigo-600",
+        "text-white",
+        "hover:bg-indigo-500",
+        "transition",
+        "disabled:opacity-50",
+        "disabled:cursor-not-allowed",
+        "focus:outline-none",
+        "focus:ring-2",
+        "focus:ring-indigo-500/40",
+      ].join(" ");
+      next.textContent = this.options.wizard.labels.next;
+      this.footerEl.appendChild(next);
+    }
+
+    this.prevBtn = prev;
+    this.nextBtn = next;
+
+    this.prevBtn.addEventListener("click", () => this.prevStep());
+    this.nextBtn.addEventListener("click", () => this.nextStep());
+
+    // Init steps styles
+    this.stepEls.forEach((step) => {
+      step.classList.add(
+        "transition-all",
+        "duration-200",
+        "ease-out",
+        "will-change-transform",
+      );
+    });
+  }
+
+  // ---------- Open / Close ----------
+  open() {
+    this.build();
+    this._lastActiveEl = document.activeElement;
+
+    // stacking
+    const z = Modal._baseZ + Modal._openStack.length * 10;
+    this.root.style.zIndex = String(z);
+
+    // show
+    this.root.style.display = "flex";
+    // force reflow
+    void this.root.offsetHeight;
+
+    this.isOpen = true;
+    Modal._openStack.push(this);
+    Modal._lockBody();
+
+    // animate in
+    this.root.classList.remove("opacity-0");
+    this.root.classList.add("opacity-100");
+
+    if (this.overlayEl) this.overlayEl.classList.add("opacity-100");
+    if (this.panelEl) {
+      this.panelEl.classList.remove("opacity-0", "scale-95");
+      this.panelEl.classList.add("opacity-100", "scale-100");
+    }
+
+    // keydown only once per instance open
+    document.addEventListener("keydown", this._onKeyDown);
+
+    // focus
+    setTimeout(() => {
+      const focusTarget =
+        (this.options.initialFocusSelector &&
+          this.root.querySelector(this.options.initialFocusSelector)) ||
+        this.root.querySelector("[data-modal-autofocus]") ||
+        this.root.querySelector(
+          "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+        );
+
+      focusTarget?.focus?.();
+    }, 0);
+
+    this.options.onOpen(this);
+  }
+
+  close() {
+    if (!this.isOpen) return;
+
+    // فقط بالایی با ESC/close بسته شود (رفتار منطقی در stack)
+    const top = Modal.getTopInstance();
+    if (top && top !== this) {
+      // اگر خواستید می‌توانید اجازه بدهید هر کدام بسته شود؛
+      // اما معمولاً فقط top باید تعامل بگیرد.
+      this.root.style.zIndex = String(
+        Modal._baseZ + (Modal._openStack.length - 1) * 10,
+      );
+    }
+
+    this.isOpen = false;
+
+    // animate out
+    this.root.classList.remove("opacity-100");
+    this.root.classList.add("opacity-0");
+    if (this.overlayEl) this.overlayEl.classList.remove("opacity-100");
+    if (this.panelEl) {
+      this.panelEl.classList.remove("opacity-100", "scale-100");
+      this.panelEl.classList.add("opacity-0", "scale-95");
+    }
+
+    document.removeEventListener("keydown", this._onKeyDown);
+
+    // remove from stack
+    const idx = Modal._openStack.lastIndexOf(this);
+    if (idx >= 0) Modal._openStack.splice(idx, 1);
+    Modal._unlockBody();
+
+    setTimeout(() => {
+      this.root.style.display = "none";
+      // restore focus
+      this._lastActiveEl?.focus?.();
+      this.options.onClose(this);
+    }, 200);
+  }
+
+  // ---------- Wizard API ----------
+  goToStep(stepNumber, { silent = false } = {}) {
+    if (!this.isWizard) return;
+
+    const idx = this.stepEls.findIndex((el) => {
+      const n = Number(el.getAttribute("data-step"));
+      return n === Number(stepNumber);
+    });
+
+    if (idx === -1) return;
+
+    this.currentStepIndex = idx;
+
+    this.stepEls.forEach((el, i) => {
+      const active = i === idx;
+
+      // hide/show with animation-friendly classes
+      if (active) {
+        el.classList.remove(
+          "hidden",
+          "opacity-0",
+          "translate-y-1",
+          "scale-[0.99]",
+        );
+        el.classList.add("opacity-100", "translate-y-0", "scale-100");
+      } else {
+        el.classList.add(
+          "hidden",
+          "opacity-0",
+          "translate-y-1",
+          "scale-[0.99]",
+        );
+        el.classList.remove("opacity-100", "translate-y-0", "scale-100");
+      }
+    });
+
+    const isFirst = this.currentStepIndex === 0;
+    const isLast = this.currentStepIndex === this.stepEls.length - 1;
+
+    if (this.prevBtn)
+      this.prevBtn.disabled = !this.options.wizard.loop && isFirst;
+
+    if (this.nextBtn) {
+      this.nextBtn.textContent = isLast
+        ? this.options.wizard.labels.finish
+        : this.options.wizard.labels.next;
+    }
+
+    if (!silent) {
+      const currentStepNo = Number(
+        this.stepEls[this.currentStepIndex].getAttribute("data-step"),
+      );
+      this.options.wizard.onStepChange(currentStepNo, this);
+    }
+  }
+
+  nextStep() {
+    if (!this.isWizard) return;
+    const isLast = this.currentStepIndex === this.stepEls.length - 1;
+
+    if (isLast) {
+      // Finish behavior: default close
+      this.close();
+      return;
+    }
+
+    const nextEl = this.stepEls[this.currentStepIndex + 1];
+    const nextNo = Number(nextEl.getAttribute("data-step"));
+    this.goToStep(nextNo);
+  }
+
+  prevStep() {
+    if (!this.isWizard) return;
+    const isFirst = this.currentStepIndex === 0;
+
+    if (isFirst) {
+      if (this.options.wizard.loop) {
+        const lastNo = Number(
+          this.stepEls[this.stepEls.length - 1].getAttribute("data-step"),
+        );
+        this.goToStep(lastNo);
+      }
+      return;
+    }
+
+    const prevEl = this.stepEls[this.currentStepIndex - 1];
+    const prevNo = Number(prevEl.getAttribute("data-step"));
+    this.goToStep(prevNo);
+  }
+
+  // ---------- Events ----------
+  _onOverlayClick(e) {
+    if (!this.isOpen) return;
+    if (e.target !== this.overlayEl) return;
+    this.close();
+  }
+
+  _onKeyDown(e) {
+    if (!this.isOpen) return;
+
+    // فقط top modal با esc بسته شود
+    const top = Modal.getTopInstance();
+    if (top !== this) return;
+
+    if (this.options.closeOnEscape && e.key === "Escape") {
+      e.preventDefault();
+      this.close();
+      return;
+    }
+
+    // (اختیاری) کلیدهای ناوبری ویزارد
+    if (this.isWizard) {
+      if (e.key === "ArrowRight") this.nextStep();
+      if (e.key === "ArrowLeft") this.prevStep();
+    }
+  }
+}
+
 class Dropdown {
   constructor({
     rootId = "dropdownRoot",

@@ -98,36 +98,32 @@
     </div>
   </div>
 
-  <!-- ========== مودال ویرایش آیتم (یکپارچه) ========== -->
-  <div class="modal modal-edit" style="display: none;">
-    <div class="modal-overlay"></div>
-    <div class="modal-content w-[72rem] flex flex-col z-10 p-6 bg-surface overflow-x-hidden">
-      <!-- هدر مودال -->
-      <div class="flex items-center justify-between mb-4 pb-2 border-b border-border">
-        <h2 class="text-xl font-bold text-primary">ویرایش سوال</h2>
-        <button class="modal-close-btn text-2xl leading-none hover:text-secondary">&times;</button>
-      </div>
-
+  <!-- ========== مودال ویرایش آیتم ========== -->
+  <div id="modal-edit">
+    <!-- Body -->
+    <div data-modal-body>
       <!-- دکمه آپلود تصویر (در صورت نبود تصویر) -->
       <div class="flex items-center mb-2">
         <div id="modalImageUploadContainer">
-          <input type="file" id="modalImageUpload" accept="image/*" class="sr-only">
+          <input type="file" id="modalImageUpload" accept="image/*" class="sr-only" />
           <label data-tooltip="افزودن تصویر" for="modalImageUpload"
             class="btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
             <i class="bi bi-image"></i>
             <span class="md:hidden">افزودن تصویر</span>
           </label>
+
           <button id="modalClipboardImageAddBtn" data-tooltip="چسباندن تصویر"
-            class="max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer">
+            class="max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer" type="button">
             <i class="bi bi-clipboard-plus"></i>
           </button>
         </div>
+
         <button id="modalLabelBtn"
-          class="mr-auto max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer"> <i
-            class="bi bi-tag"></i>
+          class="mr-auto max-md:hidden btn btn-outline px-4 py-2 inline-flex items-center gap-2 cursor-pointer"
+          type="button">
+          <i class="bi bi-tag"></i>
           <span></span>
         </button>
-
       </div>
 
       <div id="modal-rich-editor-placeholder" class="rich-editor-placeholder"></div>
@@ -135,31 +131,32 @@
       <!-- نوار ابزار تنظیمات تصویر -->
       <div id="previewImageToolbar" dir="rtl"
         class="hidden min-h-[60px] border-y border-border-light py-2 flex overflow-x-auto flex-row flex-nowrap items-center gap-4 mb-4">
-
         <!-- ارتفاع تصویر -->
         <div class="flex-none flex items-center gap-3 min-w-[180px] flex-1">
           <span class="text-sm font-medium text-secondary">ارتفاع:</span>
           <div class="flex items-center gap-2 flex-1">
             <input type="range" id="previewImgHeight" min="20" max="800" value="300"
-              class="w-24 sm:w-32 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary">
+              class="w-24 sm:w-32 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary" />
             <span id="previewImgHeightValue"
-              class="text-xs bg-surface-darker px-2 py-1 rounded-custom text-secondary w-12 text-center">300px</span>
+              class="text-xs bg-surface-darker px-2 py-1 rounded-custom text-secondary w-12 text-center">
+              300px
+            </span>
           </div>
         </div>
 
         <!-- دکمه‌های تراز -->
         <div class="flex-none flex items-center gap-1 rounded-custom">
-          <button
+          <button type="button"
             class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
             data-align="right" data-tooltip="تراز به راست">
             <i class="bi bi-align-start"></i>
           </button>
-          <button
+          <button type="button"
             class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
             data-align="center" data-tooltip="تراز به وسط">
             <i class="bi bi-align-middle"></i>
           </button>
-          <button
+          <button type="button"
             class="btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2"
             data-align="left" data-tooltip="تراز به چپ">
             <i class="bi bi-align-end"></i>
@@ -167,7 +164,7 @@
         </div>
 
         <!-- دکمه برش -->
-        <button id="previewCropBtn" data-tooltip="برش تصویر"
+        <button id="previewCropBtn" type="button" data-tooltip="برش تصویر"
           class="flex-none btn px-4 py-2 rounded-custom bg-surface-dark hover:bg-surface-darker text-sm font-medium flex items-center gap-2">
           <i class="bi bi-crop"></i>
           <span class="hidden sm:inline">برش</span>
@@ -178,12 +175,12 @@
           <div class="flex items-center gap-2">
             <span class="whitespace-nowrap text-sm font-medium text-secondary">روشنایی:</span>
             <input type="range" id="previewImgBrightness" min="0" max="200" value="100"
-              class="w-20 sm:w-24 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary">
+              class="w-20 sm:w-24 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary" />
           </div>
           <div class="flex items-center gap-2">
             <span class="whitespace-nowrap text-sm font-medium text-secondary">کنتراست:</span>
             <input type="range" id="previewImgContrast" min="0" max="200" value="100"
-              class="w-20 sm:w-24 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary">
+              class="w-20 sm:w-24 h-2 bg-surface-darker rounded-custom appearance-none cursor-pointer accent-primary" />
           </div>
         </div>
 
@@ -198,22 +195,20 @@
         </div>
 
         <div class="flex items-center gap-1 mr-auto">
-          <!-- دکمه جایگزینی تصویر -->
-          <button id="modalPasteImageBtn" data-tooltip="چسباندن تصویر"
+          <button id="modalPasteImageBtn" type="button" data-tooltip="چسباندن تصویر"
             class="max-md:hidden p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out text-lg">
             <i class="bi bi-clipboard-plus"></i>
           </button>
 
           <div>
-            <input type="file" id="modalReplaceImageUpload" accept="image/*" class="sr-only">
+            <input type="file" id="modalReplaceImageUpload" accept="image/*" class="sr-only" />
             <label for="modalReplaceImageUpload" data-tooltip="آپلود تصویر"
               class="cursor-pointer p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out text-lg">
               <i class="bi bi-image"></i>
             </label>
           </div>
 
-          <!-- دکمه حذف -->
-          <button id="removeImageBtn" data-tooltip="حذف تصویر"
+          <button id="removeImageBtn" type="button" data-tooltip="حذف تصویر"
             class="p-1 text-muted hover:text-primary rounded-custom copy-range transition-all duration-500 ease-out text-lg">
             <i class="bi bi-trash"></i>
             <span class="hidden sm:inline">حذف</span>
@@ -221,51 +216,52 @@
         </div>
       </div>
 
-      <!-- ========== جدول پیش‌نمایش ========== -->
+      <!-- جدول پیش‌نمایش -->
       <div class="mb-4 relative">
         <table class="w-full border-collapse bg-surface border border-border-light">
           <tr>
-            <td id="modal-Qscore" class="w-10 text-center font-bold border border-border-light">
-            </td>
-            <td class="p-2 relative modal-preview-cell" id="modal-preview-cell">
-              <!-- محتوای پیش‌نمایش -->
-            </td>
+            <td id="modal-Qscore" class="w-10 text-center font-bold border border-border-light"></td>
+            <td class="p-2 relative modal-preview-cell" id="modal-preview-cell"></td>
           </tr>
         </table>
       </div>
+    </div>
 
-      <!-- سوئیچ نمایش متن و دکمه ذخیره -->
-      <div class="flex items-center justify-between mb-2">
-        <div id="modal-show-text" class="flex items-center gap-2">
-          <label class="text-sm text-secondary"> نمایش متن ثابت سوالات: </label>
+    <!-- Footer -->
+    <div data-modal-footer class="flex items-center justify-between">
+      <div id="modal-show-text" class="flex items-center gap-2">
+        <label class="text-sm text-secondary"> نمایش متن ثابت سوالات: </label>
+        <div
+          class="switch relative min-w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
           <div
-            class="switch relative min-w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
-            <div
-              class="knob absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md">
-            </div>
+            class="knob absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md">
           </div>
         </div>
-        <button id="save-modal-btn" class="btn px-3 py-1 mr-auto">
-          <i class="bi bi-floppy"></i> ذخیره
-        </button>
       </div>
+
+      <button id="save-modal-btn" type="button" class="btn px-3 py-1 mr-auto">
+        <i class="bi bi-floppy"></i> ذخیره
+      </button>
     </div>
+  </div>
   </div>
 
   <!-- مودال برش تصویر -->
-  <div id="cropModal"
-    class="crop-modal fixed inset-0 bg-overlay backdrop-blur z-[9999] flex items-center justify-center p-4 invisible opacity-0 transition-all">
-    <div
-      class="crop-panel md:max-w-[600px] bg-surface rounded-custom p-2.5 w-full max-w-[450px] scale-90 transition-transform duration-300">
-      <h3 class="text-lg font-medium mb-4 flex items-center gap-2 text-primary"><i class="bi bi-crop"></i> برش تصویر
-      </h3>
-      <div class="crop-container w-full max-h-[400px] mb-2.5">
-        <img id="cropImage" class="block max-w-full" src="" alt="برای کراپ">
+  <div id="cropModal">
+    <div data-modal-body>
+      <div class="w-full max-h-[400px]">
+        <img id="cropImage" class="block max-w-full" src="" alt="برای کراپ" />
       </div>
-      <div class="crop-actions flex gap-3 mt-5">
-        <button id="applyCrop" class="btn flex-1 py-3">اعمال برش</button>
-        <button id="cancelCrop" class="btn btn-secondary flex-1 py-3">لغو</button>
-      </div>
+    </div>
+
+    <div data-modal-footer class="flex gap-3">
+      <button id="applyCrop" type="button" class="btn flex-1 py-3">
+        اعمال برش
+      </button>
+
+      <button id="cancelCrop" type="button" class="btn btn-secondary flex-1 py-3" data-modal-close>
+        لغو
+      </button>
     </div>
   </div>
 

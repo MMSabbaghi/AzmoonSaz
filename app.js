@@ -2230,7 +2230,13 @@ function setupModal(modalElement, options = {}) {
 }
 
 // ========== Edit modal ==========
-const modalEdit = document.querySelector(".modal-edit");
+const editModal = new Modal("#modal-edit", {
+  title: "ویرایشگر سوال",
+  initialFocusSelector: "#save-modal-btn",
+});
+
+// ---- DOM refs  ----
+const modalEdit = document.querySelector("#modal-edit");
 const modalEditPreviewCell = modalEdit.querySelector(".modal-preview-cell");
 const modalPasteImageBtn = document.getElementById("modalPasteImageBtn");
 const modalClipboardImageAddBtn = document.getElementById(
@@ -2251,6 +2257,7 @@ const previewCropBtn = document.getElementById("previewCropBtn");
 const previewImgFloat = document.getElementById("previewImgFloat");
 const modalLabelBtn = document.getElementById("modalLabelBtn");
 
+// ---------- Label ----------
 function updateModalLabelBtnUI() {
   const range = findRangeById(appState.modal.rangeId);
   const temp = appState.modal.tempItem;
@@ -2276,6 +2283,7 @@ modalLabelBtn?.addEventListener("click", (e) => {
   });
 });
 
+// ---------- Text editor sync ----------
 function updateTempItemFromTextEditor() {
   const temp = appState.modal.tempItem;
   if (!temp) return;
@@ -2287,6 +2295,7 @@ function updateTempItemFromTextEditor() {
   updateModalPreviewFromTemp();
 }
 
+// ---------- Open modal for new/edit ----------
 function openModalForNewItem(rangeId, newItem) {
   appState.modal.rangeId = rangeId;
   appState.modal.itemId = null;
@@ -2307,6 +2316,7 @@ function openItemModal(rangeId, itemId) {
   openModalWithTempItem(rangeId);
 }
 
+// ---------- show text switch ----------
 const modalShowText = handleSwitchElement({
   container: document.getElementById("modal-show-text"),
   onChange: (isActive) => {
@@ -2327,7 +2337,7 @@ function openModalWithTempItem(rangeId) {
   updateModalPreviewFromTemp();
   updateModalImageUI();
   setupModalShowTextSwitch(temp, range);
-  openModalElement(modalEdit);
+  editModal.open();
 }
 
 function setupModalShowTextSwitch(temp, range) {
@@ -2349,6 +2359,7 @@ function setupModalEditorFromTemp(temp) {
   }
 }
 
+// ---------- Image UI ----------
 function updateModalImageUI() {
   const hasImage = appState.modal.tempItem && appState.modal.tempItem.image;
   modalImageUploadContainer.classList.toggle("hidden", hasImage);
@@ -2379,12 +2390,13 @@ function syncImageToolbarWithCurrentImage() {
   previewImgHeightValue.textContent = height + "px";
 
   const filter = img.style.filter || "";
-  const brightnessMatch = filter.match(/brightness\((\d+)%\)/);
-  const contrastMatch = filter.match(/contrast\((\d+)%\)/);
+  const brightnessMatch = filter.match(/brightness$$(\d+)%$$/);
+  const contrastMatch = filter.match(/contrast$$(\d+)%$$/);
   previewImgBrightness.value = brightnessMatch
     ? parseInt(brightnessMatch[1])
     : 100;
   previewImgContrast.value = contrastMatch ? parseInt(contrastMatch[1]) : 100;
+
   setTextFloat();
 
   handleSwitchElement({
@@ -2397,6 +2409,7 @@ function syncImageToolbarWithCurrentImage() {
   });
 }
 
+// ---------- Preview ----------
 function updateModalPreviewFromTemp() {
   const temp = appState.modal.tempItem;
   if (!temp) return;
@@ -2418,6 +2431,7 @@ function updateModalPreviewFromTemp() {
   setTextFloat();
 }
 
+// ---------- Save / Close ----------
 function saveModalChanges() {
   const { rangeId, itemId } = appState.modal;
 
@@ -2456,7 +2470,7 @@ function destroyEditModal() {
 }
 
 function closeEditModal() {
-  closeModalElement(modalEdit);
+  editModal.close();
   destroyEditModal();
 }
 
@@ -2467,6 +2481,7 @@ saveModalBtn.addEventListener("click", () => {
   });
 });
 
+// ---------- Image change ----------
 function handleModalImageChange(src) {
   const temp = appState.modal.tempItem;
   if (!temp.image) {
@@ -3363,6 +3378,43 @@ function setupAlignmentButtons() {
     });
   });
 }
+// ========== crop modal ==========
+const cropModal = new Modal("#cropModal", {
+  title: "برش تصویر",
+  onClose: () => {
+    if (cropper) {
+      cropper.destroy();
+      cropper = null;
+    }
+  },
+});
+
+function setupCropModalEvents() {
+  const applyBtn = document.getElementById("applyCrop");
+  const cancelBtn = document.getElementById("cancelCrop");
+  const cropModal = document.getElementById("cropModal");
+
+  applyBtn.addEventListener("click", () => {
+    if (!cropper || !selectedPreviewImage) return;
+
+    const canvas = cropper.getCroppedCanvas();
+    if (canvas) {
+      const dataUrl = canvas.toDataURL("image/png");
+      selectedPreviewImage.src = dataUrl;
+      selectedPreviewImage.style.filter = "none";
+      if (previewImgBrightness) previewImgBrightness.value = 100;
+      if (previewImgContrast) previewImgContrast.value = 100;
+      if (appState.modal?.tempItem?.image) {
+        appState.modal.tempItem.image.src = dataUrl;
+      }
+    }
+
+    cropModal.close();
+  });
+
+  // Cancel crop
+  cancelBtn.addEventListener("click", cropModal.close);
+}
 
 function setupCropButton() {
   previewCropBtn.addEventListener("click", () => {
@@ -3370,7 +3422,7 @@ function setupCropButton() {
     if (!img) return;
     selectedPreviewImage = img;
     document.getElementById("cropImage").src = img.src;
-    document.getElementById("cropModal").classList.add("visible");
+    cropModal.open();
     document.getElementById("cropImage").onload = () => {
       if (cropper) cropper.destroy();
       cropper = new Cropper(document.getElementById("cropImage"), {
@@ -3380,42 +3432,6 @@ function setupCropButton() {
         autoCropArea: 1,
       });
     };
-  });
-}
-
-function setupCropModalEvents() {
-  const applyBtn = document.getElementById("applyCrop");
-  const cancelBtn = document.getElementById("cancelCrop");
-  const cropModal = document.getElementById("cropModal");
-
-  applyBtn.addEventListener("click", function () {
-    if (!cropper || !selectedPreviewImage) return;
-
-    const canvas = cropper.getCroppedCanvas();
-    if (canvas) {
-      selectedPreviewImage.src = canvas.toDataURL("image/png");
-      selectedPreviewImage.style.filter = "none";
-      previewImgBrightness.value = 100;
-      previewImgContrast.value = 100;
-
-      if (appState.modal.tempItem?.image) {
-        appState.modal.tempItem.image.src = selectedPreviewImage.src;
-      }
-    }
-
-    cropModal.classList.remove("visible");
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
-  });
-
-  cancelBtn.addEventListener("click", function () {
-    cropModal.classList.remove("visible");
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
   });
 }
 
@@ -3596,11 +3612,6 @@ initializeFileUpload();
 initializeHamburgerMenu();
 checkAndRestoreFromDB();
 initPreviewImageToolbar();
-
-setupModal(modalEdit, { onClose: destroyEditModal });
-if (isMobile()) {
-  setupMobileSwipeToClose(modalEdit);
-}
 
 initWizardEvents();
 setupInputScrollOnFocus();
