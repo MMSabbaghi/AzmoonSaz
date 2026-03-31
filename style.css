@@ -512,27 +512,3 @@ input[type="range"]::-moz-range-track {
     scroll-margin: 20px;
   }
 }
-
-/* ========== Responsive Utilities for md breakpoint ========== */
-@media screen and (min-width: 769px) {
-  .md\:flex {
-    display: flex !important;
-  }
-  .md\:hidden {
-    display: none !important;
-  }
-}
-
-.loading-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.7);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-body.is-loading .loading-overlay {
-  display: flex;
-}
