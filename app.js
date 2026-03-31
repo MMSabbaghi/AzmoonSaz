@@ -1619,31 +1619,29 @@ function createPrintSettingsUI() {
   const panelCount = document.createElement("div");
   panelCount.className = "tab-panel panel-count hidden my-2";
   panelCount.innerHTML = `
-    <div class="flex flex-col gap-2">
-      <div class="text-[12px] md:text-[13px] text-muted leading-6">
-        در این حالت فقط <b class="text-primary">تعداد</b> برگه‌ها را وارد کنید.
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <label class="text-secondary text-xs md:text-[12px] whitespace-nowrap">تعداد</label>
+    <div class="flex flex-col gap-2">    
+    <div class="flex flex-wrap items-center gap-2">
+    <label class="text-secondary text-xs md:text-[12px] whitespace-nowrap">تعداد</label>
         <input
           type="text"
           inputmode="numeric"
           class="names-count-input h-10 w-28 px-3 rounded-custom border border-border-light bg-surface text-primary text-sm
-                 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          focus:outline-none focus:ring-2 focus:ring-primary/20"
           value=""
           data-number-input="true"
-        />
-        <div class="text-[12px] text-muted">حداقل مقدار: ۱</div>
+          />
+          <div class="text-[12px] md:text-[13px] text-muted leading-6">
+            در این حالت فقط <b class="text-primary">تعداد</b> برگه‌ها را وارد کنید.
+          </div>
+
       </div>
     </div>
   `;
 
   const panelNames = document.createElement("div");
-  panelNames.className = "tab-panel panel-names hidden my-2";
+  panelNames.className = "tab-panel panel-names my-2";
 
-  const namesContent = document.createElement("div");
-  namesContent.innerHTML = `
+  panelNames.innerHTML = `
     <div class="text-[12px] md:text-[13px] text-muted leading-6 mb-2">
       هر نام را در <b class="text-primary">یک خط جدا</b> بنویسید. تعداد به‌صورت خودکار محاسبه می‌شود.
     </div>
@@ -1661,18 +1659,8 @@ function createPrintSettingsUI() {
     <div class="mt-2 text-[12px] text-muted names-derived"></div>
   `;
 
-  const textarea = namesContent.querySelector(".names-textarea");
-  const namesDerived = namesContent.querySelector(".names-derived");
-
-  const acc = new Accordion({
-    title: "اسامی دانش‌آموزان",
-    iconClass: "bi bi-person-lines-fill",
-    open: true,
-    badgeText: "",
-    content: namesContent,
-  });
-
-  panelNames.appendChild(acc.el);
+  const textarea = panelNames.querySelector(".names-textarea");
+  const namesDerived = panelNames.querySelector(".names-derived");
 
   // Font panel (leaf)
   const panelFont = document.createElement("div");
@@ -1772,20 +1760,6 @@ function createPrintSettingsUI() {
   fontSelect.value = appState.font;
   fontSizeSelect.value = appState.fontSize;
 
-  // badge
-  const updateBadge = () => {
-    if (!acc || typeof acc.setBadge !== "function") return;
-    if (appState.inputMode === "names") {
-      acc.setBadge(
-        appState.names.length
-          ? `${toPersianDigits(appState.names.length)}`
-          : "خالی",
-      );
-    } else {
-      acc.setBadge(`${appState.namesCount}`);
-    }
-  };
-
   const syncCountInputValue = () => {
     if (!countInput) return;
     countInput.value =
@@ -1797,18 +1771,15 @@ function createPrintSettingsUI() {
   const applyMode = (mode) => {
     appState.inputMode = mode;
     if (mode === "count") {
-      if (acc?.close) acc.close();
       if (textarea) textarea.disabled = true;
       if (countInput) countInput.disabled = false;
     } else {
-      if (acc?.open) acc.open();
       if (textarea) textarea.disabled = false;
       if (countInput) countInput.disabled = true;
     }
 
     namesDerived.textContent = `تعداد استخراج‌شده: ${toPersianDigits(appState.names.length || 0)}`;
     syncCountInputValue();
-    updateBadge();
   };
 
   if (countInput) {
@@ -1818,7 +1789,6 @@ function createPrintSettingsUI() {
       const raw = String(e.target.value || "").replace(/[^\d]/g, "");
       const val = Math.max(1, parseInt(raw || "1", 10));
       e.target.value = String(val);
-      updateBadge();
     });
   }
 
@@ -1833,7 +1803,6 @@ function createPrintSettingsUI() {
 
       namesDerived.textContent = `تعداد استخراج‌شده: ${appState.names.length || 0}`;
       syncCountInputValue();
-      updateBadge();
     });
   }
 
@@ -1861,32 +1830,18 @@ function createPrintSettingsUI() {
     });
   });
 
-  container.querySelector(".preview-btn").addEventListener("click", (e) => {
-    if (appState.inputMode === "count") {
-      if (!appState.namesCount || appState.namesCount < 1) {
-        showToast("لطفاً تعداد معتبر وارد کنید.", "error");
-        return;
-      }
-    } else {
-      if (!appState.names || appState.names.length < 1) {
-        showToast(
-          "حداقل یک نام وارد کنید یا حالت را روی «بدون نام» بگذارید.",
-          "error",
-        );
-        return;
-      }
-    }
-
-    handleGenerateClick(e);
-  });
+  container
+    .querySelector(".preview-btn")
+    .addEventListener("click", handleGenerateClick);
 
   container.querySelector(".print-btn").addEventListener("click", () => {
     if (hasGeneratedTable) window.print();
     else showToast("برگه‌ای برای چاپ وجود ندارد!", "error");
   });
 
+  console.log(appState);
+
   applyMode(appState.inputMode);
-  updateBadge();
   syncCountInputValue();
 
   const area = getPrintArea();
@@ -2024,29 +1979,32 @@ function createQuestionRowHtmlMulti(qNum, range) {
 }
 
 function buildQuizData(names, ranges) {
-  const finalData = Object.fromEntries(names.map((n) => [n, []]));
+  return new Promise((resolve) => {
+    const finalData = Object.fromEntries(names.map((n) => [n, []]));
 
-  ranges.forEach((r) => {
-    const items = Array.isArray(r.items) ? r.items : [];
+    ranges.forEach((r) => {
+      const items = Array.isArray(r.items) ? r.items : [];
 
-    names.forEach((student) => {
-      const picked = pickRandomItemsUniqueLabels(items, r.count);
-      if (!picked) {
-        throw new Error(
-          `مبحث «${r.rangeName || "بدون عنوان"}»: تعداد درخواستی (${r.count}) بیشتر از ظرفیت یکتا بر اساس برچسب‌هاست.`,
-        );
-      }
+      names.forEach((student) => {
+        const picked = pickRandomItemsUniqueLabels(items, r.count);
 
-      finalData[student].push({
-        rangeName: r.rangeName,
-        items: picked,
-        score: r.score,
-        desc: r.desc,
+        if (!picked) {
+          throw new Error(
+            `مبحث «${r.rangeName || "بدون عنوان"}»: تعداد درخواستی (${r.count}) بیشتر از ظرفیت یکتا بر اساس برچسب‌هاست.`,
+          );
+        }
+
+        finalData[student].push({
+          rangeName: r.rangeName,
+          items: picked,
+          score: r.score,
+          desc: r.desc,
+        });
       });
     });
-  });
 
-  return finalData;
+    resolve(finalData);
+  });
 }
 
 function renderItemForQuiz(item, rangeDesc) {
@@ -2115,12 +2073,12 @@ function validateQuizInputs() {
   return validRanges;
 }
 
-function buildQuizHtml(validRanges) {
+async function buildQuizHtml(validRanges) {
   const { names, showNames } = getStudentNames();
 
   let quizData;
   try {
-    quizData = buildQuizData(names, validRanges);
+    quizData = await buildQuizData(names, validRanges);
   } catch (err) {
     showToast(err.message, "error");
     return null;
@@ -2139,11 +2097,11 @@ function buildQuizHtml(validRanges) {
     .join("");
 }
 
-function generateQuizHtml() {
+async function generateQuizHtml() {
   const validRanges = validateQuizInputs();
   if (!validRanges) return false;
 
-  const html = buildQuizHtml(validRanges);
+  const html = await buildQuizHtml(validRanges);
   if (!html) return false;
 
   printArea.innerHTML = `<table class="w-full"><tbody>${html}</tbody></table>`;
@@ -2159,8 +2117,22 @@ function hideQuizHtml() {
   `;
 }
 
-function handleGenerateClick(e) {
-  hasGeneratedTable = generateQuizHtml();
+async function handleGenerateClick(e) {
+  if (appState.inputMode === "count") {
+    if (!appState.namesCount || appState.namesCount < 1) {
+      showToast("لطفاً تعداد معتبر وارد کنید.", "error");
+      return;
+    }
+  } else if (appState.inputMode === "name") {
+    if (!appState.names || appState.names.length < 1) {
+      showToast(
+        "حداقل یک نام وارد کنید یا حالت را روی «بدون نام» بگذارید.",
+        "error",
+      );
+      return;
+    }
+  }
+  hasGeneratedTable = await generateQuizHtml();
   if (hasGeneratedTable) {
     e.target.scrollIntoView({ behavior: "smooth" });
     renderMathInContainer(printArea);
@@ -2338,8 +2310,6 @@ function openModalWithTempItem(rangeId) {
   updateModalImageUI();
   setupModalShowTextSwitch(temp, range);
   editModal.open();
-
-  console.log(editModal);
 }
 
 function setupModalShowTextSwitch(temp, range) {
