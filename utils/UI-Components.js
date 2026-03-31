@@ -253,7 +253,7 @@ class Modal {
       "border-zinc-200/70",
       "dark:border-zinc-800",
       "overflow-hidden",
-      "max-h-[90vh]",
+      "max-h-[100vh]",
       "flex",
       "flex-col",
       "transform",
@@ -261,7 +261,7 @@ class Modal {
       "duration-200",
       "scale-95",
       "opacity-0",
-      "sm:max-h-[85vh]",
+      "sm:max-h-[95vh]",
     ].join(" ");
 
     // Move body/footer anchors into panel in a clean layout

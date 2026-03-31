@@ -2129,68 +2129,6 @@ async function handleGenerateClick(e) {
   }
 }
 
-// ========== Modal Utilities ==========
-function openModalElement(modalElement) {
-  modalElement.style.display = "flex";
-  void modalElement.offsetHeight; // force reflow
-  modalElement.classList.add("modal--visible");
-  document.body.classList.add("overflow-hidden");
-}
-
-function closeModalElement(modalElement) {
-  modalElement.classList.remove("modal--visible");
-  document.body.classList.remove("overflow-hidden");
-  setTimeout(() => {
-    modalElement.style.display = "none";
-  }, 300);
-}
-
-function setupModal(modalElement, options = {}) {
-  const {
-    closeOnEscape = true,
-    closeOnOverlayClick = true,
-    onClose = () => {},
-  } = options;
-
-  const overlaySelector = ".modal-overlay";
-  const closeButtonSelector = ".modal-close-btn";
-
-  if (closeOnOverlayClick) {
-    const overlay = modalElement.querySelector(overlaySelector);
-    if (overlay) {
-      overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) {
-          closeModalElement(modalElement);
-          onClose();
-        }
-      });
-    }
-  }
-
-  if (closeButtonSelector) {
-    const closeBtn = modalElement.querySelector(closeButtonSelector);
-    if (closeBtn) {
-      closeBtn.addEventListener("click", () => {
-        closeModalElement(modalElement);
-        onClose();
-      });
-    }
-  }
-
-  if (closeOnEscape) {
-    const escapeHandler = (e) => {
-      if (
-        e.key === "Escape" &&
-        modalElement.classList.contains("modal--visible")
-      ) {
-        closeModalElement(modalElement);
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", escapeHandler);
-  }
-}
-
 // ========== Edit modal ==========
 const editModal = new Modal("#modal-edit", {
   title: "ویرایشگر سوال",
@@ -2495,10 +2433,9 @@ removeImageBtn.addEventListener("click", () => {
 });
 
 // ========== AI Wizard ==========
-
 const wizardState = {
   isOpen: false,
-  mode: "extract",
+  mode: "extract", // "extract" | "generate"
   step: 1,
   rangeId: null,
   extractedItem: null,
@@ -2507,32 +2444,7 @@ const wizardState = {
   count: 5,
 };
 
-function showWizardStep(step) {
-  if (wizardState.transitioning) return;
-  wizardState.transitioning = true;
-
-  const steps = document.querySelectorAll(".modal-ai .step");
-  const currentStepEl = document.querySelector(
-    `.modal-ai .step-${wizardState.step}`,
-  );
-  const nextStepEl = document.querySelector(`.modal-ai .step-${step}`);
-
-  if (currentStepEl && currentStepEl !== nextStepEl) {
-    currentStepEl.classList.add("opacity-0", "scale-95", "pointer-events-none");
-    setTimeout(() => currentStepEl.classList.add("hidden"), 200);
-  }
-
-  nextStepEl.classList.remove("hidden");
-  setTimeout(() => {
-    nextStepEl.classList.remove("opacity-0", "scale-95", "pointer-events-none");
-  }, 50);
-
-  setTimeout(() => {
-    wizardState.step = step;
-    wizardState.transitioning = false;
-    updateWizardUI();
-  }, 250);
-}
+let aiWizardModal = null;
 
 function validateStep2() {
   const raw = document.getElementById("extractResponseInput").value.trim();
@@ -2570,188 +2482,23 @@ function validateStep3() {
       showText: true,
     };
   }
+
   if (!wizardState.extractedItem.text) {
     wizardState.extractedItem.text = { html, align: "RIGHT" };
   } else {
     wizardState.extractedItem.text.html = html;
     const align = wizardTextEditor.getAlignment();
-    if (align) wizardState.extractedItem.text.align = align.toUpperCase();
+    if (align)
+      wizardState.extractedItem.text.align = String(align).toUpperCase();
   }
 
   const countInput = document.getElementById("wizard-similar-count");
-  wizardState.count = countInput ? parseInt(countInput.value) || 5 : 5;
+  wizardState.count = countInput ? parseInt(countInput.value, 10) || 5 : 5;
 
   wizardState.mode = "generate";
   wizardState.sourceItem = wizardState.extractedItem;
+
   return true;
-}
-
-function nextStep() {
-  if (wizardState.transitioning) return;
-
-  if (wizardState.step === 2 && !validateStep2()) return;
-  if (wizardState.step === 3 && !validateStep3()) return;
-
-  if (wizardState.step === 5) {
-    closeWizard();
-    return;
-  }
-
-  const next = wizardState.step + 1;
-  if (next > 5) return;
-  showWizardStep(next);
-}
-
-function prevStep() {
-  const prev = wizardState.step - 1;
-  if (prev < 1) return;
-  if (wizardState.step === 4 && prev === 3 && wizardState.extractedItem) {
-    wizardState.mode = "extract";
-    showWizardStep(3);
-    return;
-  }
-  showWizardStep(prev);
-}
-
-function updateStepIndicators() {
-  document.querySelectorAll(".modal-ai .step-item").forEach((item, idx) => {
-    const stepNum = idx + 1;
-    const circle = item.querySelector(".step-circle");
-    if (stepNum === wizardState.step) {
-      circle.classList.add("bg-primary", "text-white");
-      circle.classList.remove(
-        "bg-surface-dark",
-        "text-secondary",
-        "bg-success",
-      );
-    } else if (stepNum < wizardState.step) {
-      circle.classList.add("bg-success", "text-white");
-      circle.classList.remove(
-        "bg-surface-dark",
-        "text-secondary",
-        "bg-primary",
-      );
-    } else {
-      circle.classList.add("bg-surface-dark", "text-secondary");
-      circle.classList.remove("bg-primary", "bg-success", "text-white");
-    }
-  });
-}
-
-function updateNavigationButtons() {
-  const prevBtn = document.getElementById("wizardPrevBtn");
-  const nextBtn = document.getElementById("wizardNextBtn");
-
-  if (wizardState.step === 1) {
-    prevBtn.classList.add("hidden");
-  } else {
-    prevBtn.classList.remove("hidden");
-  }
-  prevBtn.disabled = false;
-
-  nextBtn.disabled = false;
-  nextBtn.textContent = wizardState.step === 5 ? "پایان" : "بعدی";
-}
-
-function updateStepContent() {
-  if (wizardState.step === 1) {
-    document.getElementById("extractPromptDisplay").textContent = getAIPrompt({
-      task: "extract",
-    });
-  } else if (wizardState.step === 3) {
-    const item = wizardState.extractedItem;
-    if (item?.text) {
-      wizardTextEditor.setContent(item.text.html);
-      wizardTextEditor.setAlignment(item.text.align.toLowerCase);
-    } else {
-      wizardTextEditor.setContent("");
-      wizardTextEditor.setAlignment("right");
-    }
-    const countInput = document.getElementById("wizard-similar-count");
-    if (countInput) countInput.value = wizardState.count;
-    updateWizardPreview();
-  } else if (wizardState.step === 4) {
-    updateGeneratePrompt();
-  } else if (wizardState.step === 5) {
-    document.getElementById("generateResponseInput").value = "";
-    document.getElementById("generatePreviewContainer").classList.add("hidden");
-    document.getElementById("addGeneratedBtn").disabled = true;
-    wizardState.generatedItems = [];
-  }
-}
-
-function updateWizardUI() {
-  updateStepIndicators();
-  updateNavigationButtons();
-  updateStepContent();
-}
-
-function updateWizardPreview() {
-  const tempItem = wizardState.extractedItem;
-  if (!tempItem) return;
-  const range = findRangeById(wizardState.rangeId);
-  const previewCell = document.getElementById("wizard-preview-cell");
-  const scoreCell = document.getElementById("wizard-preview-score");
-  const score =
-    range?.score > 0 ? `(${toPersianDigits(range.score)} نمره)` : "";
-  scoreCell.innerHTML = `${toPersianDigits(1)} <span class="font-normal text-xs">${score}</span>`;
-  previewCell.innerHTML = renderItemContent(tempItem, {
-    rangeDesc: range?.desc || "",
-  });
-  renderMathInContainer(previewCell);
-}
-
-function updateGeneratePrompt() {
-  if (!wizardState.sourceItem?.text) return;
-  const count = wizardState.count;
-  const type = detectQuestionType(wizardState.sourceItem.text.html);
-  const prompt = getAIPrompt({
-    task: "generate-similar",
-    sampleText: wizardState.sourceItem.text.html,
-    count,
-    type,
-  });
-  document.getElementById("generatePromptDisplay").textContent = prompt;
-}
-
-function openWizard(mode, rangeId, sourceItem = null) {
-  wizardState.mode = mode;
-  wizardState.rangeId = rangeId;
-  wizardState.isOpen = true;
-  wizardState.generatedItems = [];
-  wizardState.extractedItem = null;
-  wizardState.sourceItem = sourceItem;
-  wizardState.step = mode === "extract" ? 1 : 4;
-  wizardState.count = appState.namesCount || 5;
-
-  const modal = document.querySelector(".modal-ai");
-  openModalElement(modal);
-
-  document.querySelectorAll(".modal-ai .step").forEach((el) => {
-    el.classList.add("hidden", "opacity-0", "scale-95");
-  });
-  const startStep = document.querySelector(
-    `.modal-ai .step-${wizardState.step}`,
-  );
-  startStep.classList.remove("hidden");
-  setTimeout(() => startStep.classList.remove("opacity-0", "scale-95"), 50);
-
-  updateWizardUI();
-}
-
-function closeWizard() {
-  closeModalElement(document.querySelector(".modal-ai"));
-  wizardState.isOpen = false;
-  wizardState.mode = "extract";
-  wizardState.step = 1;
-  wizardState.rangeId = null;
-  wizardState.extractedItem = null;
-  wizardState.sourceItem = null;
-  wizardState.generatedItems = [];
-  wizardState.count = 5;
-  document.getElementById("extractResponseInput").value = "";
-  document.getElementById("generateResponseInput").value = "";
-  document.getElementById("generatePreviewContainer").classList.add("hidden");
 }
 
 function detectQuestionType(text) {
@@ -2760,6 +2507,152 @@ function detectQuestionType(text) {
   if (text.includes("صحیح") || text.includes("غلط")) return "true_false";
   if (text.includes("........")) return "fill_blank";
   return "descriptive";
+}
+
+function updateStepIndicators() {
+  document
+    .querySelectorAll("#modal-ai [data-step-indicator]")
+    .forEach((item) => {
+      const stepNum = Number(item.getAttribute("data-step-indicator"));
+      const circle = item.querySelector(".step-circle");
+      if (!circle) return;
+
+      if (stepNum === wizardState.step) {
+        circle.classList.add("bg-primary", "text-white");
+        circle.classList.remove(
+          "bg-surface-dark",
+          "text-secondary",
+          "bg-success",
+        );
+      } else if (stepNum < wizardState.step) {
+        circle.classList.add("bg-success", "text-white");
+        circle.classList.remove(
+          "bg-surface-dark",
+          "text-secondary",
+          "bg-primary",
+        );
+      } else {
+        circle.classList.add("bg-surface-dark", "text-secondary");
+        circle.classList.remove("bg-primary", "bg-success", "text-white");
+      }
+    });
+}
+
+function updateWizardPreview() {
+  const tempItem = wizardState.extractedItem;
+  if (!tempItem) return;
+
+  const range = findRangeById(wizardState.rangeId);
+  const previewCell = document.getElementById("wizard-preview-cell");
+  const scoreCell = document.getElementById("wizard-preview-score");
+
+  const score =
+    range?.score > 0 ? `(${toPersianDigits(range.score)} نمره)` : "";
+  scoreCell.innerHTML = `${toPersianDigits(1)} <span class="font-normal text-xs">${score}</span>`;
+
+  previewCell.innerHTML = renderItemContent(tempItem, {
+    rangeDesc: range?.desc || "",
+  });
+  renderMathInContainer(previewCell);
+}
+
+function updateGeneratePrompt() {
+  if (!wizardState.sourceItem?.text) return;
+
+  const count = wizardState.count;
+  const type = detectQuestionType(wizardState.sourceItem.text.html);
+  const prompt = getAIPrompt({
+    task: "generate-similar",
+    sampleText: wizardState.sourceItem.text.html,
+    count,
+    type,
+  });
+
+  document.getElementById("generatePromptDisplay").textContent = prompt;
+}
+
+function updateStepContent() {
+  if (wizardState.step === 1) {
+    document.getElementById("extractPromptDisplay").textContent = getAIPrompt({
+      task: "extract",
+    });
+  }
+
+  if (wizardState.step === 3) {
+    const item = wizardState.extractedItem;
+    if (item?.text) {
+      wizardTextEditor.setContent(item.text.html);
+      // fix: you had `.toLowerCase` without calling it
+      const a = item.text.align
+        ? String(item.text.align).toLowerCase()
+        : "right";
+      wizardTextEditor.setAlignment(a);
+    } else {
+      wizardTextEditor.setContent("");
+      wizardTextEditor.setAlignment("right");
+    }
+
+    const countInput = document.getElementById("wizard-similar-count");
+    if (countInput) countInput.value = wizardState.count;
+
+    updateWizardPreview();
+  }
+
+  if (wizardState.step === 4) {
+    updateGeneratePrompt();
+  }
+
+  if (wizardState.step === 5) {
+    document.getElementById("generateResponseInput").value = "";
+    document.getElementById("generatePreviewContainer").classList.add("hidden");
+    document.getElementById("addGeneratedBtn").disabled = true;
+    wizardState.generatedItems = [];
+  }
+}
+
+function renderGeneratedPreview(items, containerId, emptyId) {
+  const container = document.getElementById(containerId);
+  const empty = document.getElementById(emptyId);
+
+  container.innerHTML = "";
+  if (items.length === 0) {
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+
+  items.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className =
+      "relative bg-surface border border-border-light rounded-custom p-3 text-sm";
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className =
+      "absolute top-2 left-2 w-6 h-6 bg-error-light text-error rounded-full flex items-center justify-center text-sm opacity-70 hover:opacity-100 border-0 cursor-pointer";
+    deleteBtn.innerHTML = "&times;";
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      removeGeneratedItem(index);
+    };
+
+    card.appendChild(deleteBtn);
+
+    const header = document.createElement("div");
+    header.className =
+      "text-xs text-muted mb-1 pb-1 border-b border-border-light flex items-center gap-1";
+    header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${toPersianDigits(index + 1)}`;
+    card.appendChild(header);
+
+    const content = document.createElement("div");
+    content.className = "text-secondary";
+    content.innerHTML = item.text.html;
+    card.appendChild(content);
+
+    container.appendChild(card);
+  });
+
+  renderMathInContainer(container);
 }
 
 function previewGeneratedItems() {
@@ -2776,12 +2669,14 @@ function previewGeneratedItems() {
       image: null,
       showText: true,
     }));
+
     wizardState.generatedItems = items;
     renderGeneratedPreview(
       items,
       "generateItemsPreview",
       "generateEmptyPreview",
     );
+
     document
       .getElementById("generatePreviewContainer")
       .classList.remove("hidden");
@@ -2793,9 +2688,11 @@ function previewGeneratedItems() {
 
 function addGeneratedItemsToRange() {
   if (!wizardState.generatedItems.length) return;
+
   wizardState.generatedItems.forEach((item) =>
     addItemToRange(wizardState.rangeId, item),
   );
+
   showToast(
     `${toPersianDigits(wizardState.generatedItems.length)} آیتم به مبحث اضافه شد`,
   );
@@ -2804,6 +2701,7 @@ function addGeneratedItemsToRange() {
 
 function removeGeneratedItem(index) {
   wizardState.generatedItems.splice(index, 1);
+
   if (wizardState.generatedItems.length === 0) {
     document.getElementById("generatePreviewContainer").classList.add("hidden");
     document.getElementById("addGeneratedBtn").disabled = true;
@@ -2816,53 +2714,114 @@ function removeGeneratedItem(index) {
   }
 }
 
-function renderGeneratedPreview(items, containerId, emptyId) {
-  const container = document.getElementById(containerId);
-  const empty = document.getElementById(emptyId);
-  container.innerHTML = "";
-  if (items.length === 0) {
-    empty.classList.remove("hidden");
-    return;
-  }
-  empty.classList.add("hidden");
-  items.forEach((item, index) => {
-    const card = document.createElement("div");
-    card.className =
-      "relative bg-surface border border-border-light rounded-custom p-3 text-sm";
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className =
-      "absolute top-2 left-2 w-6 h-6 bg-error-light text-error rounded-full flex items-center justify-center text-sm opacity-70 hover:opacity-100 border-0 cursor-pointer";
-    deleteBtn.innerHTML = "&times;";
-    deleteBtn.onclick = (e) => {
-      e.stopPropagation();
-      removeGeneratedItem(index);
-    };
-    card.appendChild(deleteBtn);
-    const header = document.createElement("div");
-    header.className =
-      "text-xs text-muted mb-1 pb-1 border-b border-border-light flex items-center gap-1";
-    header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${toPersianDigits(index + 1)}`;
-    card.appendChild(header);
-    const content = document.createElement("div");
-    content.className = "text-secondary";
-    content.innerHTML = item.text.html;
-    card.appendChild(content);
-    container.appendChild(card);
-  });
-  renderMathInContainer(container);
-}
-
 function updateWizardPreviewFromEditor() {
   if (!wizardState.extractedItem) return;
+
   const html = wizardTextEditor.getContent();
   if (!wizardState.extractedItem.text) {
     wizardState.extractedItem.text = { html, align: "RIGHT" };
   } else {
     wizardState.extractedItem.text.html = html;
     const align = wizardTextEditor.getAlignment();
-    if (align) wizardState.extractedItem.text.align = align.toUpperCase();
+    if (align)
+      wizardState.extractedItem.text.align = String(align).toUpperCase();
   }
   updateWizardPreview();
+}
+
+function openWizard(mode, rangeId, sourceItem = null) {
+  wizardState.mode = mode;
+  wizardState.rangeId = rangeId;
+  wizardState.isOpen = true;
+
+  wizardState.generatedItems = [];
+  wizardState.extractedItem = null;
+  wizardState.sourceItem = sourceItem;
+
+  const startStep = mode === "extract" ? 1 : 4;
+  wizardState.step = startStep;
+
+  wizardState.count = window.appState?.namesCount || 5;
+
+  aiWizardModal.open();
+  aiWizardModal.goToStep(startStep, { silent: true });
+
+  updateStepIndicators();
+  updateStepContent();
+}
+
+function closeWizard() {
+  aiWizardModal.close();
+
+  wizardState.isOpen = false;
+  wizardState.mode = "extract";
+  wizardState.step = 1;
+  wizardState.rangeId = null;
+  wizardState.extractedItem = null;
+  wizardState.sourceItem = null;
+  wizardState.generatedItems = [];
+  wizardState.count = 5;
+
+  const ex = document.getElementById("extractResponseInput");
+  const gen = document.getElementById("generateResponseInput");
+  if (ex) ex.value = "";
+  if (gen) gen.value = "";
+
+  document.getElementById("generatePreviewContainer")?.classList.add("hidden");
+}
+
+function initAiWizardModal() {
+  aiWizardModal = new Modal("#modal-ai", {
+    title: "دستیار هوش مصنوعی",
+    closeOnEscape: false,
+    closeOnOverlayClick: false,
+    wizard: {
+      enabled: true,
+      startStep: 1,
+      loop: false,
+      labels: {
+        next: "بعدی",
+        prev: "قبلی",
+        finish: "پایان",
+      },
+      onStepChange: (stepNo) => {
+        wizardState.step = stepNo;
+        updateStepIndicators();
+        updateStepContent();
+      },
+    },
+    onClose: () => {
+      if (wizardState.isOpen) closeWizard();
+    },
+  });
+
+  aiWizardModal.nextStep = function () {
+    const step = wizardState.step;
+
+    if (step === 2 && !validateStep2()) return;
+    if (step === 3 && !validateStep3()) return;
+
+    if (step === 5) {
+      closeWizard();
+      return;
+    }
+
+    this.goToStep(step + 1);
+  };
+
+  aiWizardModal.prevStep = function () {
+    const step = wizardState.step;
+    const prev = step - 1;
+    if (prev < 1) return;
+
+    if (step === 4 && prev === 3 && wizardState.extractedItem) {
+      wizardState.mode = "extract";
+      this.goToStep(3);
+      return;
+    }
+
+    this.goToStep(prev);
+  };
 }
 
 function initWizardEvents() {
@@ -2873,6 +2832,7 @@ function initWizardEvents() {
         document.getElementById("extractPromptDisplay").textContent,
       );
     });
+
   document
     .getElementById("copyGeneratePromptBtn")
     ?.addEventListener("click", () => {
@@ -2880,34 +2840,29 @@ function initWizardEvents() {
         document.getElementById("generatePromptDisplay").textContent,
       );
     });
-  document
-    .getElementById("processExtractBtn")
-    ?.addEventListener("click", () => pasteToTextarea("extractResponseInput"));
 
   document
-    .getElementById("pasteGenerateBtn")
-    ?.addEventListener("click", () => pasteToTextarea("generateResponseInput"));
+    .getElementById("processExtractBtn")
+    ?.addEventListener("click", () => {
+      pasteToTextarea("extractResponseInput");
+    });
+
+  document.getElementById("pasteGenerateBtn")?.addEventListener("click", () => {
+    pasteToTextarea("generateResponseInput");
+  });
 
   document
     .getElementById("previewGenerateBtn")
     ?.addEventListener("click", previewGeneratedItems);
-
   document
     .getElementById("addGeneratedBtn")
     ?.addEventListener("click", addGeneratedItemsToRange);
-
-  document.getElementById("wizardPrevBtn")?.addEventListener("click", prevStep);
-  document.getElementById("wizardNextBtn")?.addEventListener("click", nextStep);
-  document
-    .querySelectorAll(".modal-ai .modal-close-btn")
-    .forEach((btn) => btn.addEventListener("click", closeWizard));
 }
 
+// -------------------- Attach to range button --------------------
 function setupAiRangeButton(rangeElement, rangeId) {
   rangeElement.querySelectorAll(".ai-range").forEach((btn) => {
-    btn.replaceWith(btn.cloneNode(true));
-    const newBtn = rangeElement.querySelector(".ai-range");
-    newBtn.addEventListener("click", (e) => {
+    btn.addEventListener("click", (e) => {
       e.stopPropagation();
       openWizard("extract", rangeId);
     });
@@ -3520,6 +3475,7 @@ initializeFileUpload();
 initializeHamburgerMenu();
 initPreviewImageToolbar();
 
+initAiWizardModal();
 initWizardEvents();
 setupInputScrollOnFocus();
 setupCropModalEvents();
