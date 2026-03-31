@@ -1759,6 +1759,8 @@ function createPrintSettingsUI() {
 
   fontSelect.value = appState.font;
   fontSizeSelect.value = appState.fontSize;
+  appState.inputMode =
+    appState.names && appState.names.length > 0 ? "names" : "count";
 
   const syncCountInputValue = () => {
     if (!countInput) return;
@@ -1770,25 +1772,13 @@ function createPrintSettingsUI() {
 
   const applyMode = (mode) => {
     appState.inputMode = mode;
-    if (mode === "count") {
-      if (textarea) textarea.disabled = true;
-      if (countInput) countInput.disabled = false;
-    } else {
-      if (textarea) textarea.disabled = false;
-      if (countInput) countInput.disabled = true;
-    }
-
     namesDerived.textContent = `تعداد استخراج‌شده: ${toPersianDigits(appState.names.length || 0)}`;
     syncCountInputValue();
   };
 
   if (countInput) {
     countInput.addEventListener("input", (e) => {
-      if (appState.inputMode !== "count") return;
-
-      const raw = String(e.target.value || "").replace(/[^\d]/g, "");
-      const val = Math.max(1, parseInt(raw || "1", 10));
-      e.target.value = String(val);
+      appState.namesCount = parseInt(e.target.value || "1");
     });
   }
 
@@ -1802,6 +1792,8 @@ function createPrintSettingsUI() {
         .filter(Boolean);
 
       namesDerived.textContent = `تعداد استخراج‌شده: ${appState.names.length || 0}`;
+      if (appState.names.length > 0)
+        appState.namesCount = appState.names.length;
       syncCountInputValue();
     });
   }
@@ -1838,8 +1830,6 @@ function createPrintSettingsUI() {
     if (hasGeneratedTable) window.print();
     else showToast("برگه‌ای برای چاپ وجود ندارد!", "error");
   });
-
-  console.log(appState);
 
   applyMode(appState.inputMode);
   syncCountInputValue();
@@ -2123,7 +2113,7 @@ async function handleGenerateClick(e) {
       showToast("لطفاً تعداد معتبر وارد کنید.", "error");
       return;
     }
-  } else if (appState.inputMode === "name") {
+  } else if (appState.inputMode === "names") {
     if (!appState.names || appState.names.length < 1) {
       showToast(
         "حداقل یک نام وارد کنید یا حالت را روی «بدون نام» بگذارید.",
@@ -3517,14 +3507,17 @@ function setupInputScrollOnFocus() {
 
 // ========== Initialization ==========
 
-getPrintArea().style.fontFamily = appState.font;
-printSettingsUI = createPrintSettingsUI();
-placePrintSettingsUI();
+(async () => {
+  await checkAndRestoreFromDB();
+  printSettingsUI = createPrintSettingsUI();
+  placePrintSettingsUI();
+  getPrintArea().style.fontFamily = appState.font;
+})();
+
 initializeDesktopButtons();
 initializeMobileButtons();
 initializeFileUpload();
 initializeHamburgerMenu();
-checkAndRestoreFromDB();
 initPreviewImageToolbar();
 
 initWizardEvents();
