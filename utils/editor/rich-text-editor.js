@@ -89,11 +89,6 @@
   // ========== selection ==========
   let savedRange = null;
 
-  function saveSelection() {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
-  }
-
   function isRangeInsideEditor(range, editor) {
     if (!range) return false;
     const c = range.commonAncestorContainer;
@@ -132,8 +127,7 @@
     }
   }
 
-  // ========== block/line model (برای اینکه "کل خط" align بگیرد) ==========
-  // هر خط را داخل یک بلاک (div.editor-line) نگه می‌داریم.
+  // ========== block/line model ==========
   function isLineBlock(el) {
     return (
       el &&
@@ -157,28 +151,22 @@
     while (el && el !== editor) {
       if (isLineBlock(el)) return el;
       const tag = el.tagName?.toLowerCase();
-      if (tag === "div" || tag === "p" || tag === "li") return el; // fallback
+      if (tag === "div" || tag === "p" || tag === "li") return el;
       el = el.parentElement;
     }
     return null;
   }
 
-  // اگر محتوای ادیتور مستقیم textNode یا span و... بود، آن را به خطوط div.editor-line نرمال می‌کنیم.
   function normalizeEditorLines(editor) {
-    // اگر خالی است، یک خط خالی بساز
     if (!editor.firstChild) {
       editor.appendChild(createEmptyLine());
       return;
     }
 
-    // اگر همه بچه‌ها line هستند، کاری نکن
     const children = Array.from(editor.childNodes);
     const allLines = children.every((n) => n.nodeType === 1 && isLineBlock(n));
     if (allLines) return;
 
-    // محتوا را به lineها تبدیل کن:
-    // - هر <div>/<p>/<li> موجود را به عنوان یک line نگه می‌داریم (با افزودن کلاس editor-line)
-    // - بقیه نودها را داخل یک line جدید جمع می‌کنیم
     const frag = document.createDocumentFragment();
     let currentLine = document.createElement("div");
     currentLine.className = "editor-line";
@@ -192,38 +180,31 @@
     }
 
     children.forEach((node) => {
-      // خطوط موجود
       if (
         node.nodeType === 1 &&
         ["div", "p", "li"].includes(node.tagName.toLowerCase())
       ) {
         flushLineIfNeeded();
-        // تبدیل به editor-line
         if (!node.classList.contains("editor-line"))
           node.classList.add("editor-line");
         frag.appendChild(node);
         return;
       }
 
-      // اگر br بین خطوط بود
       if (node.nodeType === 1 && node.tagName.toLowerCase() === "br") {
-        // پایان خط
         if (!currentLine.childNodes.length)
           currentLine.appendChild(document.createElement("br"));
         flushLineIfNeeded();
         return;
       }
 
-      // سایر نودها داخل خط فعلی
       currentLine.appendChild(node);
     });
 
     flushLineIfNeeded();
-
     editor.innerHTML = "";
     editor.appendChild(frag);
 
-    // اگر هنوز خالی شد
     if (!editor.firstChild) editor.appendChild(createEmptyLine());
   }
 
@@ -231,6 +212,7 @@
     restoreSelectionOrMoveToEnd(editor);
     const sel = window.getSelection();
     const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+
     if (!range) {
       normalizeEditorLines(editor);
       placeCaretAtEnd(editor);
@@ -240,11 +222,8 @@
     normalizeEditorLines(editor);
     let block = getClosestBlock(range.startContainer, editor);
 
-    // اگر هنوز بلاک پیدا نشد (مثلاً selection روی خود editor بود)
     if (!block) {
-      // اگر ادیتور خطی ندارد، بساز
       if (!editor.firstChild) editor.appendChild(createEmptyLine());
-      // سعی کن caret را به اولین/آخرین خط منتقل کنی
       block =
         editor.lastChild && isLineBlock(editor.lastChild)
           ? editor.lastChild
@@ -253,7 +232,6 @@
         block = createEmptyLine();
         editor.appendChild(block);
       }
-      // caret داخل block
       const r = document.createRange();
       r.selectNodeContents(block);
       r.collapse(false);
@@ -267,27 +245,21 @@
 
   function splitLineOnEnter(editor) {
     const line = ensureSelectionInLine(editor);
-
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
 
     const range = sel.getRangeAt(0);
 
-    // محتوا بعد از caret را به خط جدید منتقل کن
     const afterRange = range.cloneRange();
     afterRange.setEndAfter(line);
-    const tail = afterRange.extractContents(); // از caret تا انتهای line
+    const tail = afterRange.extractContents();
 
-    // خط جدید
     const newLine = document.createElement("div");
     newLine.className = "editor-line";
-    if (tail && tail.childNodes && tail.childNodes.length) {
+    if (tail && tail.childNodes && tail.childNodes.length)
       newLine.appendChild(tail);
-    } else {
-      newLine.appendChild(document.createElement("br"));
-    }
+    else newLine.appendChild(document.createElement("br"));
 
-    // اگر خط فعلی خالی شد، br بگذار
     if (
       !line.textContent &&
       !line.querySelector("span, img, br, .katex, .math-inline")
@@ -296,11 +268,9 @@
       line.appendChild(document.createElement("br"));
     }
 
-    // درج خط جدید بعد از خط فعلی
     if (line.nextSibling) editor.insertBefore(newLine, line.nextSibling);
     else editor.appendChild(newLine);
 
-    // caret ابتدای خط جدید
     const r = document.createRange();
     r.selectNodeContents(newLine);
     r.collapse(true);
@@ -313,39 +283,32 @@
   function setMathSpanData(span, latex) {
     span.setAttribute("data-latex", latex);
     span.innerHTML = `
-      <span data-latex="${latex}" class="math-inline-cover pointer-events-auto w-full h-full z-[2] absolute top-0 left-0"></span>
-      <span class="z-[1] pointer-events-none">$${latex}$</span>
+      <span data-latex="${escapeAttr(latex)}" class="math-inline-cover"></span>
+      <span class="math-inline-tex">$${escapeHtml(latex)}$</span>
     `;
   }
 
   function createMathSpan(latex) {
     const span = document.createElement("span");
-    // نکته مهم: inline-block (نه inline-flex) تا text-align روی خط درست و قابل پیش‌بینی کار کند
-    span.className =
-      "math-inline inline-block cursor-pointer hover:bg-gray-100 p-1";
+    span.className = "math-inline";
     span.setAttribute("contenteditable", false);
-    span.style.position = "relative";
     setMathSpanData(span, latex);
     return span;
   }
 
   function insertMathSpanAtSelection(editor, latex) {
-    // تضمین اینکه داخل یک "خط" هستیم
     const line = ensureSelectionInLine(editor);
-
     const sel = window.getSelection();
     const range = sel.rangeCount ? sel.getRangeAt(0) : null;
 
     const span = createMathSpan(latex);
     renderMathInContainer(span);
 
-    // spacer برای اینکه بعد از فرمول بتوان تایپ کرد
-    const spacer = document.createTextNode("​");
+    const spacer = document.createTextNode("​"); // ZWSP
 
     if (range) {
       range.deleteContents();
 
-      // اگر caret عملاً بیرون line باشد، caret را انتهای line ببریم
       if (!line.contains(range.startContainer)) {
         const r2 = document.createRange();
         r2.selectNodeContents(line);
@@ -359,7 +322,6 @@
       r.insertNode(spacer);
       r.insertNode(span);
 
-      // caret بعد از spacer
       r.setStartAfter(spacer);
       r.setEndAfter(spacer);
       sel.removeAllRanges();
@@ -376,13 +338,14 @@
 
   // ========== Math Rendering ==========
   function convertDigitsToPersianInsideContainer(container) {
+    if (typeof toPersianDigits !== "function") return;
+
     const walker = document.createTreeWalker(
       container,
       NodeFilter.SHOW_TEXT,
       null,
       false,
     );
-
     let node;
     while ((node = walker.nextNode())) {
       if (/\d/.test(node.nodeValue))
@@ -421,75 +384,48 @@
   function createMathEditorModal({ onClose = () => {}, onSave = () => {} }) {
     const modal = document.createElement("div");
     modal.id = "latex-modal";
-    modal.className =
-      "fixed inset-0 z-[1000] flex items-end sm:items-center justify-center " +
-      "bg-black/50 backdrop-blur-sm p-0 sm:p-4 invisible opacity-0 transition-all";
+    modal.className = "rte-modal";
+    modal.setAttribute("dir", "rtl");
 
     modal.innerHTML = `
-      <div class="bg-white w-full sm:max-w-3xl sm:rounded-xl rounded-t-2xl shadow-xl flex flex-col overflow-hidden"
-          dir="rtl"
-          style="max-height: min(92vh, 920px);">
-
-        <div class="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b bg-white sticky top-0 z-10">
-          <h2 class="text-base sm:text-lg font-semibold" id="latex-modal-title">افزودن فرمول</h2>
-
-          <button type="button" id="latex-close-btn"
-            class="h-9 w-9 grid place-items-center rounded-lg hover:bg-gray-100 active:bg-gray-200 transition"
-            aria-label="بستن">
-            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+      <div class="rte-modal-card">
+        <div class="rte-modal-header">
+          <div class="rte-modal-title" id="latex-modal-title">افزودن فرمول</div>
+          <button type="button" class="rte-icon-btn" id="latex-close-btn" aria-label="بستن">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
 
-        <div class="px-4 sm:px-6 py-4 flex flex-col gap-4 overflow-auto">
-          <div class="flex gap-2 flex-wrap items-center" id="latex-toolbars"></div>
+        <div class="rte-modal-body">
+          <div class="rte-tools" id="latex-toolbars"></div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <div class="flex flex-col gap-2">
-              <label for="latex-input" class="text-sm font-medium">فرمول : </label>
-              <textarea id="latex-input"
-                class="w-full border border-gray-300 rounded-lg p-3 text-sm min-h-[120px] lg:min-h-[160px] resize-none
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
-                dir="ltr" spellcheck="false"
+          <div class="rte-modal-grid">
+            <div class="rte-field">
+              <label for="latex-input">فرمول</label>
+              <textarea id="latex-input" class="rte-textarea ltr" dir="ltr" spellcheck="false"
                 placeholder="مثلاً: \\frac{a}{b} + \\sqrt{x}"></textarea>
 
-              <div class="flex items-center justify-between gap-2 text-[11px] text-gray-500">
-                <span>پیش‌نمایش به صورت خودکار به‌روزرسانی می‌شود</span>
-                <button type="button" id="latex-clear-btn"
-                  class="px-2 py-1 rounded-md hover:bg-gray-100 active:bg-gray-200 transition text-gray-700">
-                  پاک کردن
-                </button>
+              <div class="rte-hintbar">
+                <span>پیش‌نمایش به‌صورت خودکار به‌روزرسانی می‌شود</span>
+                <button type="button" class="rte-linklike" id="latex-clear-btn">پاک کردن</button>
               </div>
             </div>
 
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center justify-between">
-                <div class="text-sm font-medium">پیش‌نمایش</div>
-              </div>
-
-              <div id="latex-preview"
-                class="min-h-[120px] lg:min-h-[160px] border border-gray-300 rounded-lg p-3 bg-gray-50 overflow-auto text-center text-lg
-                      flex items-center justify-center">
-                <span class="text-gray-400 text-sm">هنوز چیزی وارد نشده</span>
+            <div class="rte-field">
+              <label>پیش‌نمایش</label>
+              <div id="latex-preview" class="rte-preview">
+                <span class="rte-empty">هنوز چیزی وارد نشده</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="px-4 sm:px-6 py-3 border-t bg-white sticky bottom-0">
-          <div class="flex gap-2 justify-end">
-            <button type="button" id="latex-cancel-btn"
-              class="px-4 py-2 text-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 transition">
-              انصراف
-            </button>
-            <button type="button" id="latex-save-btn"
-              class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition">
-              ذخیره
-            </button>
-          </div>
+        <div class="rte-modal-footer">
+          <button type="button" class="rte-btn-ghost" id="latex-cancel-btn">انصراف</button>
+          <button type="button" class="rte-btn-solid" id="latex-save-btn">ذخیره</button>
         </div>
-
       </div>
     `;
 
@@ -512,33 +448,27 @@
       const buttonText = toolsArr[0]?.label ? toolsArr[0].label : group.title;
 
       return `
-        <div class="relative" data-group="${group.key}">
-          <button type="button"
-            class="toolbar-btn px-3 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 transition
-                  text-[12px] font-medium flex items-center gap-2"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            aria-controls="dropdown-${group.key}">
-            <span class="font-mono text-[12px]">${escapeHtml(buttonText)}</span>
-            <svg class="w-4 h-4 shrink-0 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <div class="rte-dd-wrap" data-group="${escapeAttr(group.key)}">
+          <button type="button" class="rte-dd-btn" aria-haspopup="menu" aria-expanded="false"
+            aria-controls="dropdown-${escapeAttr(group.key)}">
+            <span class="ltr" dir="ltr" style="font-family: var(--rte-mono); font-size:12px; color: var(--rte-text-2);">
+              ${escapeHtml(buttonText)}
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
             </svg>
           </button>
 
-          <div id="dropdown-${group.key}" role="menu"
-            class="dropdown hidden absolute right-0 mt-2 z-20 bg-white border border-gray-200 rounded-xl shadow-lg
-                  min-w-[220px] max-w-[90vw] max-h-72 overflow-auto p-2">
-            <div class="text-[11px] text-gray-500 px-2 py-1">${escapeHtml(group.title)}</div>
+          <div id="dropdown-${escapeAttr(group.key)}" role="menu" class="rte-dd-menu">
+            <div class="rte-dd-title">${escapeHtml(group.title)}</div>
             ${toolsArr
               .map(
                 (tool) => `
-                  <button type="button"
-                    class="w-full text-right px-2 py-2 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition
-                          flex items-center justify-between gap-3"
+                  <button type="button" class="rte-dd-item"
                     data-snippet="${escapeAttr(tool.snippet)}"
                     title="${escapeAttr(tool.title || "")}">
-                    <span class="text-[12px] text-gray-800">${escapeHtml(tool.title || tool.label)}</span>
-                    <span class="font-mono text-[12px] text-gray-600 ltr" dir="ltr">${escapeHtml(tool.label)}</span>
+                    <span class="t1">${escapeHtml(tool.title || tool.label)}</span>
+                    <span class="t2">${escapeHtml(tool.label)}</span>
                   </button>
                 `,
               )
@@ -552,19 +482,17 @@
 
     function setDropdownOpen(key, open) {
       openDropdownKey = open ? key : null;
-
       toolbars.querySelectorAll("[data-group]").forEach((wrap) => {
         const k = wrap.getAttribute("data-group");
-        const btn = wrap.querySelector(".toolbar-btn");
-        const dd = wrap.querySelector(".dropdown");
+        const btn = wrap.querySelector(".rte-dd-btn");
+        const dd = wrap.querySelector(".rte-dd-menu");
         const isOpen = openDropdownKey === k;
-
-        dd.classList.toggle("hidden", !isOpen);
+        dd.classList.toggle("is-open", isOpen);
         btn.setAttribute("aria-expanded", String(isOpen));
       });
     }
 
-    toolbars.querySelectorAll(".toolbar-btn").forEach((btn) => {
+    toolbars.querySelectorAll(".rte-dd-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -587,7 +515,7 @@
     });
 
     document.addEventListener("click", (e) => {
-      if (!modal.classList.contains("invisible")) {
+      if (modal.classList.contains("is-open")) {
         if (!toolbars.contains(e.target)) setDropdownOpen(null, false);
       }
     });
@@ -605,7 +533,7 @@
     function updatePreview() {
       const latex = (input.value || "").trim();
       if (!latex) {
-        preview.innerHTML = `<span class="text-gray-400 text-sm">هنوز چیزی وارد نشده</span>`;
+        preview.innerHTML = `<span class="rte-empty">هنوز چیزی وارد نشده</span>`;
         return;
       }
       preview.textContent = `$${latex}$`;
@@ -619,17 +547,17 @@
       input.value = initialValue || "";
       setDropdownOpen(null, false);
 
-      modal.classList.remove("invisible", "opacity-0");
+      modal.classList.add("is-open");
       setTimeout(() => {
         input.focus();
         updatePreview();
-      }, 50);
+      }, 30);
     }
 
     function close() {
       setDropdownOpen(null, false);
       onClose();
-      modal.classList.add("invisible", "opacity-0");
+      modal.classList.remove("is-open");
     }
 
     cancelBtn.addEventListener("click", close);
@@ -640,7 +568,7 @@
     });
 
     document.addEventListener("keydown", (e) => {
-      if (modal.classList.contains("invisible")) return;
+      if (!modal.classList.contains("is-open")) return;
       if (e.key === "Escape") close();
     });
 
@@ -665,7 +593,7 @@
     let previewTimeout;
     input.addEventListener("input", () => {
       clearTimeout(previewTimeout);
-      previewTimeout = setTimeout(updatePreview, 200);
+      previewTimeout = setTimeout(updatePreview, 160);
     });
 
     return { element: modal, open, close };
@@ -707,51 +635,54 @@
       "align-justify": "justifyFull",
     };
 
-    let html =
-      '<div class="toolbar-scroll inline-flex items-center gap-1 md:contents">';
+    let html = `<div class="toolbar-scroll">`;
+
+    function btn(cmd, icon, title, label = "") {
+      return `
+        <button type="button" class="rte-btn" data-command="${escapeAttr(cmd)}" title="${escapeAttr(title)}">
+          <i class="bi bi-${escapeAttr(icon)}"></i>
+          ${label ? `<span class="rte-btn-label">${escapeHtml(label)}</span>` : ""}
+        </button>
+      `;
+    }
 
     if (features.some((f) => groups.style.includes(f))) {
-      html +=
-        '<div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light">';
+      html += `<div class="toolbar-group">`;
       groups.style.forEach((f) => {
-        if (features.includes(f)) {
-          const icon = icons[f];
-          const cmd = commands[f];
-          html += `<button type="button" class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center" data-command="${cmd}" title="${f}"><i class="bi bi-${icon}"></i></button>`;
-        }
+        if (features.includes(f)) html += btn(commands[f], icons[f], f);
       });
-      html += "</div>";
+      html += `</div>`;
     }
 
     if (features.some((f) => groups.align.includes(f))) {
-      html +=
-        '<div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light">';
+      html += `<div class="toolbar-group">`;
       groups.align.forEach((f) => {
-        if (features.includes(f)) {
-          const icon = icons[f];
-          const cmd = commands[f];
-          html += `<button type="button" class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center" data-command="${cmd}" title="${f}"><i class="bi bi-${icon}"></i></button>`;
-        }
+        if (features.includes(f)) html += btn(commands[f], icons[f], f);
       });
-      html += "</div>";
+      html += `</div>`;
     }
 
     if (features.includes("color")) {
       const colorId =
         "color-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
       html += `
-        <div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light">
-          <div class="toolbar-color-picker relative inline-flex items-center">
-            <input type="color" class="color-input absolute opacity-0 w-0 h-0" id="${colorId}" value="#333333">
-            <label for="${colorId}" class="color-label inline-flex items-center gap-1 px-3 h-9 rounded-circle bg-transparent text-secondary hover:bg-surface-darker cursor-pointer"><i class="bi bi-palette"></i> رنگ</label>
+        <div class="toolbar-group">
+          <div class="toolbar-color-picker" style="position:relative; display:inline-flex; align-items:center;">
+            <input type="color" class="color-input" id="${escapeAttr(colorId)}" value="#111827"
+              style="position:absolute; opacity:0; width:0; height:0;">
+            <label for="${escapeAttr(colorId)}" class="rte-color-label">
+              <span class="rte-color-dot" aria-hidden="true"></span>
+              <i class="bi bi-${icons.color}" style="font-size:18px;"></i>
+              <span>رنگ</span>
+            </label>
           </div>
         </div>`;
     }
 
     if (features.includes("fontSize")) {
       html += `
-        <div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light">
-          <select class="font-size-select h-9 px-3 border border-border-light bg-surface text-secondary text-sm cursor-pointer outline-none focus:border-primary" title="اندازه فونت">
+        <div class="toolbar-group">
+          <select class="font-size-select rte-select" title="اندازه فونت">
             <option value="12">۱۲</option>
             <option value="14">۱۴</option>
             <option value="16" selected>۱۶</option>
@@ -766,40 +697,36 @@
 
     if (features.includes("latex")) {
       html += `
-        <div class="toolbar-group inline-flex items-center gap-0.5 px-1 border-l border-border-light">
-          <button type="button"
-            class="toolbar-btn bg-transparent border-none rounded-circle px-3 py-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 flex items-center justify-center gap-1 latex-modal-open">
+        <div class="toolbar-group">
+          <button type="button" class="rte-btn latex-modal-open" title="افزودن فرمول">
             <i class="bi bi-function"></i>
-            <span class="text-sm"> <i class="bi bi-superscript"></i> افزودن فرمول </span>
+            <span class="rte-btn-label">افزودن فرمول</span>
           </button>
         </div>`;
     }
 
     if (features.includes("undo") || features.includes("redo")) {
-      html +=
-        '<div class="toolbar-group inline-flex items-center gap-0.5 px-1">';
+      html += `<div class="toolbar-group">`;
       if (features.includes("undo")) {
-        html += `<button type="button" class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center" data-action="undo" title="بازگشت"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+        html += `<button type="button" class="rte-btn" data-action="undo" title="بازگشت"><i class="bi bi-${icons.undo}"></i></button>`;
       }
       if (features.includes("redo")) {
-        html += `<button type="button" class="toolbar-btn bg-transparent border-none rounded-circle p-2 text-secondary hover:bg-surface-darker active:scale-95 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center" data-action="redo" title="انجام دوباره"><i class="bi bi-arrow-clockwise"></i></button>`;
+        html += `<button type="button" class="rte-btn" data-action="redo" title="انجام دوباره"><i class="bi bi-${icons.redo}"></i></button>`;
       }
-      html += "</div>";
+      html += `</div>`;
     }
 
-    html += "</div>";
+    html += `</div>`;
     return html;
   }
 
-  // ========== alignment (روی نزدیک‌ترین بلاک/خط اعمال شود) ==========
+  // ========== alignment ==========
   function applyAlign(editor, align) {
-    const block = ensureSelectionInLine(editor); // تضمین line
+    const block = ensureSelectionInLine(editor);
     if (block) {
       block.style.textAlign = align;
       return;
     }
-
-    // fallback
     const map = {
       left: "justifyLeft",
       center: "justifyCenter",
@@ -837,21 +764,18 @@
     container.innerHTML = "";
 
     const wrapper = document.createElement("div");
-    wrapper.className =
-      "rich-editor-wrapper relative w-full bg-surface border border-border-light mb-4";
+    wrapper.className = "rich-editor-wrapper";
     wrapper.setAttribute("dir", "rtl");
 
     const toolbar = document.createElement("div");
     toolbar.id = toolbarId;
-    toolbar.className =
-      "rich-editor-toolbar bg-surface-dark border-b border-border-light p-2 z-20 w-full overflow-x-auto whitespace-nowrap md:overflow-visible md:whitespace-normal md:flex md:flex-wrap md:items-center md:gap-2";
+    toolbar.className = "rich-editor-toolbar";
     toolbar.innerHTML = buildToolbarHTML(features);
     wrapper.appendChild(toolbar);
 
     const editor = document.createElement("div");
     editor.id = contentId;
-    editor.className =
-      "rich-editor-content h-[100px] overflow-y-auto p-4 leading-relaxed outline-none bg-surface";
+    editor.className = "rich-editor-content";
     editor.setAttribute("contenteditable", "true");
     editor.setAttribute("data-placeholder", placeholder);
     editor.innerHTML = initialContent;
@@ -859,15 +783,11 @@
 
     container.appendChild(wrapper);
 
-    // نرمال‌سازی خطی (برای اینکه align همیشه روی یک بلاک اعمال شود)
     normalizeEditorLines(editor);
-
-    // رندر KaTeX روی محتوای اولیه
     renderMathInContainer(editor);
 
     function getEditorHtml() {
       const clonedEditor = editor.cloneNode(true);
-
       const inlineNodes = clonedEditor.querySelectorAll(".math-inline");
       inlineNodes.forEach((node) => {
         const latex = node.getAttribute("data-latex") || node.textContent || "";
@@ -891,14 +811,12 @@
       });
     };
 
-    // commands (bold/italic/underline/strike + align)
+    // commands
     toolbar.querySelectorAll("[data-command]").forEach((btn) => {
       btn.addEventListener("mousedown", (e) => {
         e.preventDefault();
-
         const cmd = btn.dataset.command;
 
-        // Align ها را روی "خط" اعمال کن تا فرمول داخل خط هم درست تراز شود
         if (cmd === "justifyCenter") applyAlign(editor, "center");
         else if (cmd === "justifyRight") applyAlign(editor, "right");
         else if (cmd === "justifyLeft") applyAlign(editor, "left");
@@ -913,8 +831,14 @@
 
     // color
     const colorInput = toolbar.querySelector(".color-input");
+    const colorDot = toolbar.querySelector(".rte-color-dot");
     if (colorInput) {
+      const updateDot = () => {
+        if (colorDot) colorDot.style.background = colorInput.value || "#111827";
+      };
+      updateDot();
       colorInput.addEventListener("input", (e) => {
+        updateDot();
         document.execCommand("foreColor", false, e.target.value);
         editor.focus();
         handleContentChange();
@@ -974,10 +898,7 @@
           } else {
             insertMathSpanAtSelection(editor, latex);
           }
-
-          // بعد از درج/ویرایش، خطوط را نرمال نگه دار
           normalizeEditorLines(editor);
-
           handleContentChange();
           editor.focus();
         },
@@ -1019,7 +940,7 @@
       saveSelectionWithin(editor);
     }
 
-    // --- Enter behavior: همیشه خط جدید (div.editor-line) بساز تا align روی "کل خط" اعمال شود
+    // Enter -> new line block
     editor.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -1046,7 +967,6 @@
 
     editor.addEventListener("paste", function (event) {
       event.preventDefault();
-
       const cb = event.clipboardData;
       if (!cb) return;
 
@@ -1075,9 +995,7 @@
         renderMathInContainer(editor);
       },
       getContent: getEditorHtml,
-      setAlignment: (align) => {
-        applyAlign(editor, align);
-      },
+      setAlignment: (align) => applyAlign(editor, align),
       getAlignment: () => {
         const sel = window.getSelection();
         const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
