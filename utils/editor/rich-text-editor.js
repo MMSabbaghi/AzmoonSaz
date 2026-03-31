@@ -361,12 +361,9 @@
 
     const inlineNodes = container.querySelectorAll(".math-inline");
     inlineNodes.forEach((node) => {
-      if (!node.getAttribute("data-rendered")) {
-        const tex = node.getAttribute("data-latex") || node.textContent || "";
-        node.setAttribute("data-rendered", true);
-        node.className = "math-inline";
-        node.textContent = `$${tex}$`;
-      }
+      const tex = node.getAttribute("data-latex") || node.textContent || "";
+      node.classList.add("rendered");
+      node.textContent = `$${tex}$`;
     });
 
     try {
@@ -791,7 +788,6 @@
       const inlineNodes = clonedEditor.querySelectorAll(".math-inline");
       inlineNodes.forEach((node) => {
         const latex = node.getAttribute("data-latex") || node.textContent || "";
-        node.setAttribute("data-rendered", false);
         setMathSpanData(node, latex);
       });
       return clonedEditor.innerHTML;

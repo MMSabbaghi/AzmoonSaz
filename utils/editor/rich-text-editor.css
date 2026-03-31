@@ -209,6 +209,16 @@
   cursor: pointer;
 }
 
+.math-inline.rendered {
+  background-color: transparent;
+  cursor: initial;
+}
+
+.math-inline.rendered:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
 /* ====== Modal ====== */
 .rte-modal {
   position: fixed;
