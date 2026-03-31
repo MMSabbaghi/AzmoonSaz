@@ -33,15 +33,26 @@ class Modal {
     if (!this.root) throw new Error("Modal: modal root not found.");
 
     this.options = {
-      title: options.title ?? null, // اگر header بسازیم
+      title: options.title ?? null,
       closeOnEscape: options.closeOnEscape ?? true,
       closeOnOverlayClick: options.closeOnOverlayClick ?? true,
       showCloseButton: options.showCloseButton ?? true,
       initialFocusSelector: options.initialFocusSelector ?? null,
       onOpen: options.onOpen ?? (() => {}),
       onClose: options.onClose ?? (() => {}),
+
+      // ----- Mobile / Sheet -----
+      mobile: {
+        enabled: options.mobile?.enabled ?? "auto", // "auto" | true | false
+        breakpointPx: options.mobile?.breakpointPx ?? 640, // زیر این => sheet
+        swipeToClose: options.mobile?.swipeToClose ?? true,
+        swipeCloseThresholdPx: options.mobile?.swipeCloseThresholdPx ?? 110,
+        swipeVelocityToClose: options.mobile?.swipeVelocityToClose ?? 0.6, // px/ms
+        rubberBand: options.mobile?.rubberBand ?? 0.35, // مقاومت کشیدن رو به بالا
+      },
+
       wizard: {
-        enabled: options.wizard?.enabled ?? "auto", // "auto" | true | false
+        enabled: options.wizard?.enabled ?? "auto",
         startStep: options.wizard?.startStep ?? 1,
         loop: options.wizard?.loop ?? false,
         onStepChange: options.wizard?.onStepChange ?? (() => {}),
@@ -63,6 +74,7 @@ class Modal {
     this.headerEl = null;
     this.bodyEl = null;
     this.footerEl = null;
+    this.handleEl = null;
 
     this.stepEls = [];
     this.prevBtn = null;
@@ -71,11 +83,97 @@ class Modal {
     this._built = false;
     this._lastActiveEl = null;
 
+    // sheet state
+    this._isMobile = false;
+    this._dragging = false;
+    this._dragStartY = 0;
+    this._dragStartTime = 0;
+    this._lastY = 0;
+    this._lastTime = 0;
+    this._currentTranslateY = 0;
+    this._panelOpenTranslateY = 0; // usually 0
+    this._panelClosedTranslateY = 0; // computed based on height
+    this._raf = null;
+
     // bind handlers
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onOverlayClick = this._onOverlayClick.bind(this);
+    this._onResize = this._onResize.bind(this);
 
-    this.build(); // یکبار بساز
+    // pointer handlers (sheet)
+    this._onPointerDown = this._onPointerDown.bind(this);
+    this._onPointerMove = this._onPointerMove.bind(this);
+    this._onPointerUp = this._onPointerUp.bind(this);
+
+    this.build(); // build once
+  }
+
+  // ---------- Helpers ----------
+  _computeIsMobile() {
+    const mode = this.options.mobile.enabled;
+    if (mode === true) return true;
+    if (mode === false) return false;
+
+    // auto
+    return window.matchMedia(
+      `(max-width: ${this.options.mobile.breakpointPx - 1}px)`,
+    ).matches;
+  }
+
+  _applyPanelTransform(y, { withTransition = false } = {}) {
+    if (!this.panelEl) return;
+    if (withTransition) {
+      this.panelEl.style.transitionProperty = "transform, opacity";
+      this.panelEl.style.transitionDuration = "220ms";
+      this.panelEl.style.transitionTimingFunction =
+        "cubic-bezier(0.2, 0.8, 0.2, 1)";
+    } else {
+      this.panelEl.style.transitionProperty = "none";
+      this.panelEl.style.transitionDuration = "0ms";
+    }
+    this.panelEl.style.transform = `translate3d(0, ${y}px, 0)`;
+    this._currentTranslateY = y;
+  }
+
+  _syncSheetBounds() {
+    if (!this.panelEl) return;
+    // closed translate = panel height + safe extra
+    const rect = this.panelEl.getBoundingClientRect();
+    const h = rect.height || this.panelEl.scrollHeight || 0;
+    this._panelClosedTranslateY = Math.max(0, h + 24);
+    this._panelOpenTranslateY = 0;
+  }
+
+  _setOverlayOpacityByTranslate(y) {
+    if (!this.overlayEl) return;
+    // as y increases (closing), overlay fades out
+    const t = this._panelClosedTranslateY || 1;
+    const progress = Math.min(1, Math.max(0, y / t)); // 0 open -> 1 closed
+    const opacity = 1 - progress;
+    this.overlayEl.style.opacity = String(opacity);
+  }
+
+  _canStartDragFromEventTarget(target) {
+    if (!this.options.mobile.swipeToClose) return false;
+    if (!this._isMobile) return false;
+
+    // allow drag from handle always
+    if (
+      this.handleEl &&
+      (target === this.handleEl || this.handleEl.contains(target))
+    )
+      return true;
+
+    // if drag starts inside body, only allow if body is scrolled to top
+    if (this.bodyEl && this.bodyEl.contains(target)) {
+      const atTop = (this.bodyEl.scrollTop || 0) <= 0;
+      return atTop;
+    }
+
+    // header also ok (except when interacting with inputs maybe)
+    if (this.headerEl && this.headerEl.contains(target)) return true;
+
+    return false;
   }
 
   // ---------- Build ----------
@@ -90,8 +188,6 @@ class Modal {
     this.root.classList.add(
       "fixed",
       "inset-0",
-      "items-center",
-      "justify-center",
       "p-4",
       "sm:p-6",
       "transition-opacity",
@@ -103,7 +199,7 @@ class Modal {
     const bodyAnchor = this.root.querySelector("[data-modal-body]");
     const footerAnchor = this.root.querySelector("[data-modal-footer]");
 
-    // اگر body وجود ندارد => طبق خواسته شما، هیچ ساختاری نساز (فقط root را آماده می‌کنیم)
+    // If no body anchor, do not force structure
     if (!bodyAnchor) {
       this._built = true;
       return;
@@ -128,6 +224,7 @@ class Modal {
       "transition-opacity",
       "duration-200",
     ].join(" ");
+    this.overlayEl.style.opacity = "0";
 
     // Create panel wrapper (modal content)
     this.panelEl =
@@ -137,10 +234,10 @@ class Modal {
     if (!this.panelEl) {
       this.panelEl = document.createElement("div");
       this.panelEl.setAttribute("data-modal-panel", "");
-      // body & footer will be moved into panel
       this.root.appendChild(this.panelEl);
     }
 
+    // Base panel classes (desktop default). We'll switch for mobile dynamically on open/resize.
     this.panelEl.className = [
       "relative",
       "z-10",
@@ -164,13 +261,10 @@ class Modal {
       "duration-200",
       "scale-95",
       "opacity-0",
-      // موبایل: نزدیک به فول‌اسکرین و چسبیده‌تر
       "sm:max-h-[85vh]",
     ].join(" ");
 
     // Move body/footer anchors into panel in a clean layout
-    // Header (optional auto)
-    // اگر خودتان هدر گذاشته باشید دست نمی‌زنیم؛ اگر نباشد و title داده باشید، هدر می‌سازیم.
     const existingHeader =
       this.root.querySelector("[data-modal-header]") ||
       this.panelEl.querySelector("[data-modal-header]");
@@ -224,6 +318,34 @@ class Modal {
       this.panelEl.appendChild(this.headerEl);
     }
 
+    // Mobile handle (we show/hide dynamically)
+    this.handleEl = this.root.querySelector("[data-modal-handle]");
+    if (!this.handleEl) {
+      this.handleEl = document.createElement("div");
+      this.handleEl.setAttribute("data-modal-handle", "");
+      this.handleEl.className = [
+        "hidden",
+        "sm:hidden",
+        "w-full",
+        "pt-3",
+        "pb-2",
+        "flex",
+        "items-center",
+        "justify-center",
+      ].join(" ");
+      const bar = document.createElement("div");
+      bar.className =
+        "h-1.5 w-12 rounded-full bg-zinc-300/80 dark:bg-zinc-700/80";
+      this.handleEl.appendChild(bar);
+
+      // insert handle at top of panel (before header if exists)
+      if (this.headerEl && this.headerEl.parentElement === this.panelEl) {
+        this.panelEl.insertBefore(this.handleEl, this.headerEl);
+      } else {
+        this.panelEl.prepend(this.handleEl);
+      }
+    }
+
     // Body
     this.bodyEl = bodyAnchor;
     this.bodyEl.classList.add(
@@ -231,8 +353,11 @@ class Modal {
       "sm:px-6",
       "py-4",
       "overflow-y-auto",
-      "min-h-0", // مهم برای flex column + scroll
+      "min-h-0",
     );
+    // Improve mobile scroll feel
+    this.bodyEl.style.webkitOverflowScrolling = "touch";
+    this.bodyEl.style.overscrollBehavior = "contain";
 
     // Footer
     this.footerEl = footerAnchor || null;
@@ -250,9 +375,6 @@ class Modal {
       );
     }
 
-    // Ensure correct order inside panel:
-    // header (optional) -> body -> footer (optional)
-    // Remove from current place then append
     const ensureInsidePanel = (el) => {
       if (!el) return;
       if (el.parentElement !== this.panelEl) {
@@ -271,7 +393,6 @@ class Modal {
       (wizardAuto && this.stepEls.length > 0);
 
     if (wizardEnabled) {
-      // طبق خواسته شما: در حالت ویزارد باید حتماً data-step وجود داشته باشد
       if (this.stepEls.length === 0) {
         throw new Error(
           "Modal: wizard enabled but no [data-step] found inside [data-modal-body].",
@@ -289,18 +410,23 @@ class Modal {
       this.overlayEl.addEventListener("click", this._onOverlayClick);
     }
 
-    // Close buttons inside content (اگر خودتان دکمه گذاشته باشید)
+    // Close buttons inside content
     this.root
       .querySelectorAll("[data-modal-close], .modal-close-btn")
       .forEach((btn) => {
         btn.addEventListener("click", () => this.close());
       });
 
+    // Pointer events for mobile swipe
+    // (We attach once; we decide to react only when mobile+open+top modal)
+    this.panelEl.addEventListener("pointerdown", this._onPointerDown, {
+      passive: false,
+    });
+
     this._built = true;
   }
 
   _setupWizardUI() {
-    // Footer: اگر وجود ندارد بساز، و اگر وجود دارد و خالی است/یا می‌خواهید کنترل شود، پرش می‌کنیم
     if (!this.footerEl) {
       this.footerEl = document.createElement("div");
       this.footerEl.setAttribute("data-modal-footer", "");
@@ -318,7 +444,6 @@ class Modal {
       this.panelEl.appendChild(this.footerEl);
     }
 
-    // اگر فوتر قبلاً توسط شما پر شده، دست نمی‌زنیم مگر اینکه دکمه‌های wizard موجود نباشند
     let prev = this.footerEl.querySelector("[data-wizard-prev]");
     let next = this.footerEl.querySelector("[data-wizard-next]");
 
@@ -383,7 +508,6 @@ class Modal {
     this.prevBtn.addEventListener("click", () => this.prevStep());
     this.nextBtn.addEventListener("click", () => this.nextStep());
 
-    // Init steps styles
     this.stepEls.forEach((step) => {
       step.classList.add(
         "transition-all",
@@ -392,6 +516,62 @@ class Modal {
         "will-change-transform",
       );
     });
+  }
+
+  // ---------- Layout mode switching ----------
+  _applyLayoutMode() {
+    this._isMobile = this._computeIsMobile();
+
+    if (!this.panelEl || !this.root) return;
+
+    // Root alignment
+    if (this._isMobile) {
+      this.root.classList.remove("items-center", "justify-center");
+      this.root.classList.add("flex", "items-end", "justify-center");
+      this.root.style.padding = "0px"; // sheet -> no padding around
+    } else {
+      this.root.classList.remove("items-end");
+      this.root.classList.add("flex", "items-center", "justify-center");
+      this.root.style.padding = ""; // keep tailwind p-4/sm:p-6
+    }
+
+    // Panel look
+    if (this._isMobile) {
+      // show handle
+      this.handleEl?.classList.remove("hidden");
+
+      // sheet style
+      this.panelEl.style.willChange = "transform";
+      this.panelEl.style.borderBottomLeftRadius = "0px";
+      this.panelEl.style.borderBottomRightRadius = "0px";
+
+      // Tailwind-class-safe adjustments: just add some extra via classList
+      this.panelEl.classList.add("w-full");
+      this.panelEl.style.maxWidth = "100%";
+      this.panelEl.style.maxHeight = "92vh";
+      this.panelEl.style.margin = "0";
+      this.panelEl.style.borderLeftWidth = "0";
+      this.panelEl.style.borderRightWidth = "0";
+      this.panelEl.style.borderBottomWidth = "0";
+    } else {
+      this.handleEl?.classList.add("hidden");
+
+      // reset sheet inline styles
+      this.panelEl.style.willChange = "";
+      this.panelEl.style.transform = "";
+      this.panelEl.style.transitionProperty = "";
+      this.panelEl.style.transitionDuration = "";
+      this.panelEl.style.transitionTimingFunction = "";
+      this.panelEl.style.maxWidth = "";
+      this.panelEl.style.maxHeight = "";
+      this.panelEl.style.margin = "";
+      this.panelEl.style.borderLeftWidth = "";
+      this.panelEl.style.borderRightWidth = "";
+      this.panelEl.style.borderBottomWidth = "";
+      this.panelEl.style.borderBottomLeftRadius = "";
+      this.panelEl.style.borderBottomRightRadius = "";
+      this.overlayEl.style.opacity = "";
+    }
   }
 
   // ---------- Open / Close ----------
@@ -405,25 +585,55 @@ class Modal {
 
     // show
     this.root.style.display = "flex";
-    // force reflow
     void this.root.offsetHeight;
 
     this.isOpen = true;
     Modal._openStack.push(this);
     Modal._lockBody();
 
+    // layout mode
+    this._applyLayoutMode();
+
     // animate in
     this.root.classList.remove("opacity-0");
     this.root.classList.add("opacity-100");
 
-    if (this.overlayEl) this.overlayEl.classList.add("opacity-100");
-    if (this.panelEl) {
-      this.panelEl.classList.remove("opacity-0", "scale-95");
-      this.panelEl.classList.add("opacity-100", "scale-100");
+    // overlay in
+    if (this.overlayEl) {
+      this.overlayEl.classList.add("opacity-100");
+      this.overlayEl.style.opacity = "1";
     }
 
-    // keydown only once per instance open
+    // panel in
+    if (this.panelEl) {
+      if (this._isMobile) {
+        // start from bottom
+        this.panelEl.classList.remove("opacity-0", "scale-95");
+        this.panelEl.classList.add("opacity-100");
+        this.panelEl.style.opacity = "1";
+
+        this._syncSheetBounds();
+        this._applyPanelTransform(this._panelClosedTranslateY, {
+          withTransition: false,
+        });
+        this._setOverlayOpacityByTranslate(this._panelClosedTranslateY);
+
+        // next frame animate to open
+        requestAnimationFrame(() => {
+          this._syncSheetBounds();
+          this._applyPanelTransform(this._panelOpenTranslateY, {
+            withTransition: true,
+          });
+          this._setOverlayOpacityByTranslate(this._panelOpenTranslateY);
+        });
+      } else {
+        this.panelEl.classList.remove("opacity-0", "scale-95");
+        this.panelEl.classList.add("opacity-100", "scale-100");
+      }
+    }
+
     document.addEventListener("keydown", this._onKeyDown);
+    window.addEventListener("resize", this._onResize, { passive: true });
 
     // focus
     setTimeout(() => {
@@ -444,28 +654,35 @@ class Modal {
   close() {
     if (!this.isOpen) return;
 
-    // فقط بالایی با ESC/close بسته شود (رفتار منطقی در stack)
     const top = Modal.getTopInstance();
-    if (top && top !== this) {
-      // اگر خواستید می‌توانید اجازه بدهید هر کدام بسته شود؛
-      // اما معمولاً فقط top باید تعامل بگیرد.
-      this.root.style.zIndex = String(
-        Modal._baseZ + (Modal._openStack.length - 1) * 10,
-      );
-    }
+    if (top && top !== this) return; // فقط top بسته شود
 
     this.isOpen = false;
 
     // animate out
     this.root.classList.remove("opacity-100");
     this.root.classList.add("opacity-0");
-    if (this.overlayEl) this.overlayEl.classList.remove("opacity-100");
+
+    if (this.overlayEl) {
+      this.overlayEl.classList.remove("opacity-100");
+      this.overlayEl.style.opacity = "0";
+    }
+
     if (this.panelEl) {
-      this.panelEl.classList.remove("opacity-100", "scale-100");
-      this.panelEl.classList.add("opacity-0", "scale-95");
+      if (this._isMobile) {
+        this._syncSheetBounds();
+        this._applyPanelTransform(this._panelClosedTranslateY, {
+          withTransition: true,
+        });
+        this._setOverlayOpacityByTranslate(this._panelClosedTranslateY);
+      } else {
+        this.panelEl.classList.remove("opacity-100", "scale-100");
+        this.panelEl.classList.add("opacity-0", "scale-95");
+      }
     }
 
     document.removeEventListener("keydown", this._onKeyDown);
+    window.removeEventListener("resize", this._onResize);
 
     // remove from stack
     const idx = Modal._openStack.lastIndexOf(this);
@@ -474,10 +691,9 @@ class Modal {
 
     setTimeout(() => {
       this.root.style.display = "none";
-      // restore focus
       this._lastActiveEl?.focus?.();
       this.options.onClose(this);
-    }, 200);
+    }, 220);
   }
 
   // ---------- Wizard API ----------
@@ -488,15 +704,12 @@ class Modal {
       const n = Number(el.getAttribute("data-step"));
       return n === Number(stepNumber);
     });
-
     if (idx === -1) return;
 
     this.currentStepIndex = idx;
 
     this.stepEls.forEach((el, i) => {
       const active = i === idx;
-
-      // hide/show with animation-friendly classes
       if (active) {
         el.classList.remove(
           "hidden",
@@ -539,12 +752,7 @@ class Modal {
   nextStep() {
     if (!this.isWizard) return;
     const isLast = this.currentStepIndex === this.stepEls.length - 1;
-
-    if (isLast) {
-      // Finish behavior: default close
-      this.close();
-      return;
-    }
+    if (isLast) return this.close();
 
     const nextEl = this.stepEls[this.currentStepIndex + 1];
     const nextNo = Number(nextEl.getAttribute("data-step"));
@@ -573,16 +781,14 @@ class Modal {
   // ---------- Events ----------
   _onOverlayClick(e) {
     if (!this.isOpen) return;
+    if (Modal.getTopInstance() !== this) return;
     if (e.target !== this.overlayEl) return;
     this.close();
   }
 
   _onKeyDown(e) {
     if (!this.isOpen) return;
-
-    // فقط top modal با esc بسته شود
-    const top = Modal.getTopInstance();
-    if (top !== this) return;
+    if (Modal.getTopInstance() !== this) return;
 
     if (this.options.closeOnEscape && e.key === "Escape") {
       e.preventDefault();
@@ -590,11 +796,133 @@ class Modal {
       return;
     }
 
-    // (اختیاری) کلیدهای ناوبری ویزارد
     if (this.isWizard) {
       if (e.key === "ArrowRight") this.nextStep();
       if (e.key === "ArrowLeft") this.prevStep();
     }
+  }
+
+  _onResize() {
+    if (!this.isOpen) return;
+
+    const wasMobile = this._isMobile;
+    this._applyLayoutMode();
+
+    // if still mobile, update bounds
+    if (this._isMobile) {
+      this._syncSheetBounds();
+      // keep it open
+      this._applyPanelTransform(this._panelOpenTranslateY, {
+        withTransition: false,
+      });
+      this._setOverlayOpacityByTranslate(this._panelOpenTranslateY);
+    } else if (wasMobile && !this._isMobile) {
+      // switching to desktop: restore panel classes animation state
+      if (this.panelEl) {
+        this.panelEl.classList.remove("scale-95", "opacity-0");
+        this.panelEl.classList.add("scale-100", "opacity-100");
+      }
+      if (this.overlayEl) this.overlayEl.style.opacity = "1";
+    }
+  }
+
+  // ---------- Mobile sheet swipe ----------
+  _onPointerDown(e) {
+    if (!this.isOpen) return;
+    if (Modal.getTopInstance() !== this) return;
+    if (!this._isMobile) return;
+    if (e.button != null && e.button !== 0) return; // only left click/touch
+
+    const target = e.target;
+    if (!this._canStartDragFromEventTarget(target)) return;
+
+    // avoid dragging when interacting with inputs unless from handle
+    const tag = (target?.tagName || "").toLowerCase();
+    const isFormEl = ["input", "textarea", "select", "button"].includes(tag);
+    if (isFormEl && !(this.handleEl && this.handleEl.contains(target))) return;
+
+    this._dragging = true;
+    this._dragStartY = e.clientY;
+    this._dragStartTime = performance.now();
+    this._lastY = e.clientY;
+    this._lastTime = this._dragStartTime;
+
+    this._syncSheetBounds();
+    this.panelEl.setPointerCapture?.(e.pointerId);
+
+    // remove transitions while dragging
+    this._applyPanelTransform(this._currentTranslateY, {
+      withTransition: false,
+    });
+
+    document.addEventListener("pointermove", this._onPointerMove, {
+      passive: false,
+    });
+    document.addEventListener("pointerup", this._onPointerUp, {
+      passive: true,
+    });
+    document.addEventListener("pointercancel", this._onPointerUp, {
+      passive: true,
+    });
+  }
+
+  _onPointerMove(e) {
+    if (!this._dragging) return;
+    if (!this._isMobile) return;
+
+    // prevent page scroll while dragging
+    e.preventDefault();
+
+    const dy = e.clientY - this._dragStartY;
+
+    // Allow downward drag freely; upward drag with rubber band
+    let nextY = this._panelOpenTranslateY + dy;
+    if (nextY < 0) {
+      nextY = nextY * this.options.mobile.rubberBand;
+    }
+
+    // clamp
+    nextY = Math.min(this._panelClosedTranslateY, nextY);
+
+    // smooth via rAF
+    if (this._raf) cancelAnimationFrame(this._raf);
+    this._raf = requestAnimationFrame(() => {
+      this._applyPanelTransform(nextY, { withTransition: false });
+      this._setOverlayOpacityByTranslate(nextY);
+    });
+
+    this._lastY = e.clientY;
+    this._lastTime = performance.now();
+  }
+
+  _onPointerUp(e) {
+    if (!this._dragging) return;
+
+    this._dragging = false;
+
+    document.removeEventListener("pointermove", this._onPointerMove);
+    document.removeEventListener("pointerup", this._onPointerUp);
+    document.removeEventListener("pointercancel", this._onPointerUp);
+
+    const endTime = performance.now();
+    const totalDy = (e.clientY ?? this._lastY) - this._dragStartY;
+    const dt = Math.max(1, endTime - this._dragStartTime);
+    const velocity = totalDy / dt; // px/ms (positive is down)
+
+    const shouldClose =
+      totalDy > this.options.mobile.swipeCloseThresholdPx ||
+      velocity > this.options.mobile.swipeVelocityToClose;
+
+    if (shouldClose) {
+      this.close();
+      return;
+    }
+
+    // snap back open
+    this._applyPanelTransform(this._panelOpenTranslateY, {
+      withTransition: true,
+    });
+    this._setOverlayOpacityByTranslate(this._panelOpenTranslateY);
   }
 }
 
