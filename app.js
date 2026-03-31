@@ -1044,7 +1044,7 @@ function getMobileRangeHTML(rangeData) {
 
           <div class="mt-2 flex gap-2 text-xs">
             <span class="px-2 py-1 rounded-custom bg-surface-dark border border-border-light/60 text-secondary">
-              تعداد: <span class="font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
+              تعداد برای هر نفر: <span class="font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
             </span>
             <span class="px-2 py-1 rounded-custom bg-surface-dark border border-border-light/60 text-secondary">
               نمره: <span class="font-semibold text-primary">${toPersianDigits(rangeData.score || 0)}</span>
@@ -1091,7 +1091,7 @@ function getMobileRangeHTML(rangeData) {
 
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-xs text-muted mb-1">تعداد</label>
+              <label class="block text-xs text-muted mb-1">تعداد برای هر نفر</label>
               <input value="${rangeData.count}" data-number-input="true" data-float="false"
                      class="range-count w-full border border-border-light rounded-custom p-2 bg-transparent text-primary text-center">
             </div>
@@ -1180,7 +1180,7 @@ function getDesktopRangeHTML(rangeData) {
               <div class="mt-2 flex flex-wrap items-center gap-2">
                 <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border border-border-light/60 bg-surface-darker text-xs text-secondary">
                   <i class="bi bi-hash text-muted"></i>
-                  تعداد
+                  تعداد سوال هر نفر
                   <span class="font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
                 </span>
 
@@ -1253,10 +1253,10 @@ function getDesktopRangeHTML(rangeData) {
                  placeholder="عنوان مبحث">
         </div>
         <div>
-          <label class="block text-xs text-muted mb-1">تعداد</label>
+          <label class="block text-xs text-muted mb-1">تعداد برای هر نفر </label>
           <input value="${rangeData.count}" data-number-input="true" data-float="false"
                  class="range-count w-full border border-border-light rounded-custom p-2 bg-surface text-primary"
-                 placeholder="تعداد">
+                 placeholder="تعداد سوال هر نفر از این مبحث">
         </div>
         <div>
           <label class="block text-xs text-muted mb-1">نمره</label>
