@@ -1,0 +1,10 @@
+.rich-editor-content .editor-line {
+  display: block;
+  width: 100%;
+  min-height: 1.2em;
+}
+
+.rich-editor-content .math-inline {
+  display: inline-block;
+  vertical-align: middle;
+}

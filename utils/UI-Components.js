@@ -1069,7 +1069,7 @@ class Dropdown {
         </button>
       </div>
 
-      <div class="max-h-[300px] p-2 overflow-y-auto [-webkit-overflow-scrolling:touch]" data-dd-body></div>
+      <div class="p-2 [-webkit-overflow-scrolling:touch]" data-dd-body></div>
     `;
 
     wrap.appendChild(backdrop);

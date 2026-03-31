@@ -1227,17 +1227,17 @@ function getDesktopRangeHTML(rangeData) {
           <div class="flex items-center rounded-2xl border border-border-light/60 bg-surface-darker p-1">
             <button data-tooltip="کپی آیتم ها"
                     class="copy-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition">
-              <i class="bi bi-copy text-[18px]"></i>
+              <i class="bi bi-copy"></i>
             </button>
 
             <button data-tooltip="چسباندن"
                     class="paste-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition">
-              <i class="bi bi-clipboard-plus text-[18px]"></i>
+              <i class="bi bi-clipboard-plus"></i>
             </button>
 
             <button data-tooltip="حذف مبحث"
                     class="remove-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-error hover:bg-surface-dark transition">
-              <i class="bi bi-trash3 text-[18px]"></i>
+              <i class="bi bi-trash3"></i>
             </button>
           </div>
         </div>
@@ -2338,6 +2338,8 @@ function openModalWithTempItem(rangeId) {
   updateModalImageUI();
   setupModalShowTextSwitch(temp, range);
   editModal.open();
+
+  console.log(editModal);
 }
 
 function setupModalShowTextSwitch(temp, range) {
@@ -3392,7 +3394,6 @@ const cropModal = new Modal("#cropModal", {
 function setupCropModalEvents() {
   const applyBtn = document.getElementById("applyCrop");
   const cancelBtn = document.getElementById("cancelCrop");
-  const cropModal = document.getElementById("cropModal");
 
   applyBtn.addEventListener("click", () => {
     if (!cropper || !selectedPreviewImage) return;
@@ -3413,7 +3414,7 @@ function setupCropModalEvents() {
   });
 
   // Cancel crop
-  cancelBtn.addEventListener("click", cropModal.close);
+  cancelBtn.addEventListener("click", () => cropModal.close());
 }
 
 function setupCropButton() {
@@ -3529,63 +3530,6 @@ function initializeHamburgerMenu() {
 }
 
 // ========== Mobile UX ==========
-function setupMobileSwipeToClose(modalElement) {
-  const content = modalElement.querySelector(".modal-content");
-  if (!content) return;
-
-  let startY = 0;
-  let currentY = 0;
-  let isDragging = false;
-  const threshold = 100;
-
-  const onTouchStart = (e) => {
-    if (!modalElement.classList.contains("modal--visible")) return;
-    if (content.scrollTop > 0) return;
-    if (e.touches.length > 1) return;
-    startY = e.touches[0].clientY;
-    isDragging = true;
-    content.style.transition = "none";
-  };
-
-  const onTouchMove = (e) => {
-    if (!isDragging) return;
-
-    const deltaY = e.touches[0].clientY - startY;
-    if (deltaY <= 0) {
-      isDragging = false;
-      return;
-    }
-
-    e.preventDefault();
-    currentY = deltaY;
-
-    const translateY = Math.min(deltaY, 200);
-    content.style.transform = `translateY(${translateY}px)`;
-    content.style.opacity = 1 - deltaY / 300;
-  };
-
-  const onTouchEnd = () => {
-    if (!isDragging) return;
-    content.style.transition = "transform 0.3s ease, opacity 0.3s ease";
-
-    if (currentY > threshold) {
-      closeModalElement(modalElement);
-    } else {
-      content.style.transform = "";
-      content.style.opacity = "";
-    }
-
-    isDragging = false;
-    startY = 0;
-    currentY = 0;
-  };
-
-  content.addEventListener("touchstart", onTouchStart, { passive: false });
-  content.addEventListener("touchmove", onTouchMove, { passive: false });
-  content.addEventListener("touchend", onTouchEnd);
-  content.addEventListener("touchcancel", onTouchEnd);
-}
-
 function setupInputScrollOnFocus() {
   document.addEventListener("focusin", (e) => {
     const target = e.target;
