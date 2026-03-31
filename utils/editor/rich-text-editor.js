@@ -675,7 +675,7 @@
   function buildToolbarHTML(features) {
     const groups = {
       style: ["bold", "italic", "underline", "strike"],
-      align: ["align-left", "align-center", "align-right", "align-justify"],
+      align: ["align-right", "align-center", "align-left", "align-justify"],
       color: ["color"],
       fontSize: ["fontSize"],
       undoRedo: ["undo", "redo"],
