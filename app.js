@@ -498,6 +498,7 @@ const rawState = {
   names: [],
   namesCount: 1,
   font: "'BNazanin', sans-serif",
+  fontSize: "16",
   modal: {
     isOpen: false,
     rangeId: null,
@@ -1583,106 +1584,322 @@ document.getElementById("addRange").onclick = () => {
 };
 
 // ========== Names Section ==========
-let namesUI = null;
+let printSettingsUI = null;
 let hasGeneratedTable = false;
 
-function createNamesUI() {
-  const container = document.createElement("div");
-  container.className = "names-section w-full";
+function createPrintSettingsUI() {
+  const container = document.createElement("section");
+  container.className =
+    "print-settings w-full bg-surface shadow-sm md:shadow-none";
 
   container.innerHTML = `
-    <div class="flex items-center gap-2 flex-wrap">
-      <div>
-        <label class="text-secondary">تعداد:</label>
-        <input type="text" class="names-count-input border border-border-light rounded-custom p-2 w-10 md:w-20" value="${appState.names.length || appState.namesCount}" data-number-input="true" ${appState.names.length ? "disabled" : ""}>
+    <div class="p-2 md:p-2.5">
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-center">
+        <div class="min-w-0 settings-area"></div>
+
+        <div class="flex gap-2 md:justify-end actions-area mb-auto">
+          <button class="preview-btn max-md:w-full btn px-3 py-2 h-10 whitespace-nowrap">
+            <i class="bi bi-eye"></i>
+            پیش‌نمایش
+          </button>
+          <button class="print-btn max-md:w-full btn btn-secondary px-3 py-2 h-10 whitespace-nowrap">
+            <i class="bi bi-printer"></i>
+            چاپ
+          </button>
+        </div>
       </div>
+    </div>
+  `;
+
+  const settingsArea = container.querySelector(".settings-area");
+
+  /* ---------------- Panels ---------------- */
+
+  // Leaf panels
+  const panelCount = document.createElement("div");
+  panelCount.className = "tab-panel panel-count hidden my-2";
+  panelCount.innerHTML = `
+    <div class="flex flex-col gap-2">
+      <div class="text-[12px] md:text-[13px] text-muted leading-6">
+        در این حالت فقط <b class="text-primary">تعداد</b> برگه‌ها را وارد کنید.
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="text-secondary text-xs md:text-[12px] whitespace-nowrap">تعداد</label>
+        <input
+          type="text"
+          inputmode="numeric"
+          class="names-count-input h-10 w-28 px-3 rounded-custom border border-border-light bg-surface text-primary text-sm
+                 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          value=""
+          data-number-input="true"
+        />
+        <div class="text-[12px] text-muted">حداقل مقدار: ۱</div>
+      </div>
+    </div>
+  `;
+
+  const panelNames = document.createElement("div");
+  panelNames.className = "tab-panel panel-names hidden my-2";
+
+  const namesContent = document.createElement("div");
+  namesContent.innerHTML = `
+    <div class="text-[12px] md:text-[13px] text-muted leading-6 mb-2">
+      هر نام را در <b class="text-primary">یک خط جدا</b> بنویسید. تعداد به‌صورت خودکار محاسبه می‌شود.
+    </div>
+
+    <textarea
+      class="names-textarea w-full min-h-[110px] md:min-h-[120px]
+             border border-border-light rounded-custom p-2 text-sm bg-surface text-primary
+             focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder-muted"
+      rows="6"
+      placeholder="مثال:
+علی رضایی
+مریم محمدی"
+    >${(appState.names || []).join("\n")}</textarea>
+
+    <div class="mt-2 text-[12px] text-muted names-derived"></div>
+  `;
+
+  const textarea = namesContent.querySelector(".names-textarea");
+  const namesDerived = namesContent.querySelector(".names-derived");
+
+  const acc = new Accordion({
+    title: "اسامی دانش‌آموزان",
+    iconClass: "bi bi-person-lines-fill",
+    open: true,
+    badgeText: "",
+    content: namesContent,
+  });
+
+  panelNames.appendChild(acc.el);
+
+  // Font panel (leaf)
+  const panelFont = document.createElement("div");
+  panelFont.className = "tab-panel panel-font hidden";
+  panelFont.innerHTML = `
+    <div class="flex flex-wrap items-center gap-3">
       <div class="flex items-center gap-2">
-        <label class="text-secondary">فونت:</label>
-        <select class="font-selector border border-border-light rounded-custom p-2 text-sm bg-surface text-primary">
+        <label class="text-secondary text-xs md:text-[12px] whitespace-nowrap">فونت</label>
+        <select
+          class="font-selector h-10 px-3 rounded-custom border border-border-light bg-surface text-primary text-sm
+                 focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
           <option value="'Vazirmatn', sans-serif">وزیرمتن</option>
           <option value="'Shabnam', sans-serif">شبنم</option>
           <option value="'BNazanin', sans-serif">نازنین</option>
         </select>
       </div>
-      <div class="names-switch flex gap-1">
-        <label class="text-secondary">نمایش نام:</label>
-        <div class="switch relative w-[42px] h-[24px] bg-surface-darker rounded-custom cursor-pointer transition-all duration-300 ease-out">
-          <div class="knob absolute top-[2px] left-[3px] w-[20px] h-[20px] bg-surface rounded-custom transition-all duration-500 shadow-md"></div>
-        </div>
+
+      <div class="flex items-center gap-2">
+        <label class="text-secondary text-xs md:text-[12px] whitespace-nowrap">سایز</label>
+        <select
+          class="font-size-selector h-10 px-3 rounded-custom border border-border-light bg-surface text-primary text-sm
+                 focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="12px">۱۲</option>
+          <option value="13px">۱۳</option>
+          <option value="14px">۱۴</option>
+          <option value="15px">۱۵</option>
+          <option value="16px">۱۶</option>
+          <option value="18px">۱۸</option>
+          <option value="20px">۲۰</option>
+        </select>
       </div>
-      <div class="flex gap-2 md:mr-auto w-full md:w-fit">
-      <button class="generate-btn btn px-4 py-2 w-full md:w-fit"><i class="bi bi-clipboard2-check"></i> تولید آزمون</button>
-      <button class="print-btn btn btn-secondary px-4 py-2 w-full md:w-fit"><i class="bi bi-printer"></i> چاپ خروجی</button>
+
+      <div class="text-[12px] text-muted leading-6">
+        این تنظیمات روی <b class="text-primary">پیش‌نمایش/چاپ</b> اعمال می‌شود.
       </div>
-    </div>  
-    <div class="names-textarea-container overflow-hidden max-h-0 opacity-0 blur-sm -translate-y-3 transition-all duration-500 ease-out">
-      <textarea class="names-textarea mt-1 w-full h-15 border border-border-light rounded-custom p-3 text-sm focus:outline-none placeholder-muted" rows="5" placeholder="نام دانش‌آموزان هر کدام در یک خط">${appState.names.join("\n")}</textarea>
     </div>
   `;
-  const fontSelect = container.querySelector(".font-selector");
-  fontSelect.value = appState.font;
+
+  /* ---------------- Build Nested Tabs ---------------- */
+
+  const tabs = new Tabs({
+    containerClass: "flex flex-col min-w-0",
+    headerClass: "flex items-center max-md:justify-between gap-8 min-w-0",
+    titleText: "تنظیمات چاپ : ",
+    titleIconClass: "bi bi-gear text-secondary",
+    titleClass:
+      "flex items-center gap-2 text-sm font-medium text-primary min-w-0",
+    buttonBaseClass:
+      "settings-tab flex-1 md:flex-none text-center text-xs px-3 py-2 rounded-custom cursor-pointer transition-colors flex items-center justify-center gap-2 min-w-0",
+    buttonActiveClass: "bg-primary text-white",
+    buttonInactiveClass: "bg-transparent text-secondary",
+    panelWrapClass: "min-w-0",
+    backButtonClass:
+      "px-2 py-2 rounded-custom text-secondary text-xs hover:bg-surface-2 transition hidden",
+    backButtonText: "",
+    backIconClass: "bi bi-arrow-right",
+    initial: null,
+    tabs: [
+      {
+        id: "main",
+        title: "تعداد / اسامی",
+        iconClass: "bi bi-people",
+        children: [
+          {
+            id: "count",
+            title: "بدون نام",
+            iconClass: "bi bi-123",
+            panelEl: panelCount,
+          },
+          {
+            id: "names",
+            title: "با نام",
+            iconClass: "bi bi-card-text",
+            panelEl: panelNames,
+          },
+        ],
+      },
+      {
+        id: "font",
+        title: "فونت",
+        iconClass: "bi bi-fonts",
+        panelEl: panelFont,
+      },
+    ],
+  });
+
+  settingsArea.appendChild(tabs.el);
+
+  /* ---------------- Queries & initial values ---------------- */
 
   const countInput = container.querySelector(".names-count-input");
-  countInput.addEventListener("input", (e) => {
-    const val = parseInt(e.target.value) || 1;
-    appState.namesCount = val;
-    if (!appState.names.length) {
-      document.querySelectorAll(".names-count-input").forEach((other) => {
-        if (other !== e.target) other.value = val;
-      });
+  const fontSelect = container.querySelector(".font-selector");
+  const fontSizeSelect = container.querySelector(".font-size-selector");
+
+  fontSelect.value = appState.font;
+  fontSizeSelect.value = appState.fontSize;
+
+  // badge
+  const updateBadge = () => {
+    if (!acc || typeof acc.setBadge !== "function") return;
+    if (appState.inputMode === "names") {
+      acc.setBadge(
+        appState.names.length
+          ? `${toPersianDigits(appState.names.length)}`
+          : "خالی",
+      );
+    } else {
+      acc.setBadge(`${appState.namesCount}`);
     }
-  });
+  };
+
+  const syncCountInputValue = () => {
+    if (!countInput) return;
+    countInput.value =
+      appState.inputMode === "names"
+        ? String(appState.names.length || 0)
+        : String(appState.namesCount);
+  };
+
+  const applyMode = (mode) => {
+    appState.inputMode = mode;
+    if (mode === "count") {
+      if (acc?.close) acc.close();
+      if (textarea) textarea.disabled = true;
+      if (countInput) countInput.disabled = false;
+    } else {
+      if (acc?.open) acc.open();
+      if (textarea) textarea.disabled = false;
+      if (countInput) countInput.disabled = true;
+    }
+
+    namesDerived.textContent = `تعداد استخراج‌شده: ${toPersianDigits(appState.names.length || 0)}`;
+    syncCountInputValue();
+    updateBadge();
+  };
+
+  if (countInput) {
+    countInput.addEventListener("input", (e) => {
+      if (appState.inputMode !== "count") return;
+
+      const raw = String(e.target.value || "").replace(/[^\d]/g, "");
+      const val = Math.max(1, parseInt(raw || "1", 10));
+      e.target.value = String(val);
+      updateBadge();
+    });
+  }
+
+  if (textarea) {
+    textarea.addEventListener("input", (e) => {
+      if (appState.inputMode !== "names") return;
+
+      appState.names = e.target.value
+        .split("\n")
+        .map((x) => x.trim())
+        .filter(Boolean);
+
+      namesDerived.textContent = `تعداد استخراج‌شده: ${appState.names.length || 0}`;
+      syncCountInputValue();
+      updateBadge();
+    });
+  }
+
+  tabs.onChange = (id) => {
+    if (id === "count" || id === "names") applyMode(id);
+  };
 
   fontSelect.addEventListener("change", (e) => {
     appState.font = e.target.value;
-    getPrintArea().style.fontFamily = appState.font;
+    const area = getPrintArea();
+    if (area) area.style.fontFamily = appState.font;
+
     document.querySelectorAll(".font-selector").forEach((other) => {
       if (other !== e.target) other.value = appState.font;
     });
   });
 
-  const textarea = container.querySelector(".names-textarea");
-  textarea.addEventListener("input", (e) => {
-    appState.names = e.target.value
-      .split("\n")
-      .filter((name) => name.trim() !== "");
-    document.querySelectorAll(".names-count-input").forEach((input) => {
-      input.value = appState.names.length || appState.namesCount;
-      input.disabled = appState.names.length > 0;
+  fontSizeSelect.addEventListener("change", (e) => {
+    appState.fontSize = e.target.value;
+    const area = getPrintArea();
+    if (area) area.style.fontSize = appState.fontSize;
+
+    document.querySelectorAll(".font-size-selector").forEach((other) => {
+      if (other !== e.target) other.value = appState.fontSize;
     });
   });
 
-  const switchContainer = container.querySelector(".names-switch");
-  const textareaContainer = container.querySelector(
-    ".names-textarea-container",
-  );
-  handleSwitchElement({
-    container: switchContainer,
-    onChange: (isActive) => {
-      setElementState({
-        target: textareaContainer,
-        stateClasses: {
-          on: ["max-h-60", "opacity-100", "blur-0", "translate-y-0"],
-          off: ["max-h-0", "opacity-0", "blur-sm", "-translate-y-3"],
-        },
-        isActive,
-      });
-    },
+  container.querySelector(".preview-btn").addEventListener("click", (e) => {
+    if (appState.inputMode === "count") {
+      if (!appState.namesCount || appState.namesCount < 1) {
+        showToast("لطفاً تعداد معتبر وارد کنید.", "error");
+        return;
+      }
+    } else {
+      if (!appState.names || appState.names.length < 1) {
+        showToast(
+          "حداقل یک نام وارد کنید یا حالت را روی «بدون نام» بگذارید.",
+          "error",
+        );
+        return;
+      }
+    }
+
+    handleGenerateClick(e);
   });
 
-  container
-    .querySelector(".generate-btn")
-    .addEventListener("click", handleGenerateClick);
   container.querySelector(".print-btn").addEventListener("click", () => {
     if (hasGeneratedTable) window.print();
-    else showToast("برگه ای برای چاپ وجود ندارد!", "error");
+    else showToast("برگه‌ای برای چاپ وجود ندارد!", "error");
   });
+
+  applyMode(appState.inputMode);
+  updateBadge();
+  syncCountInputValue();
+
+  const area = getPrintArea();
+  if (area) {
+    area.style.fontFamily = appState.font;
+    area.style.fontSize = appState.fontSize;
+  }
 
   return container;
 }
 
-function placeNamesUI() {
-  if (!namesUI) return;
+function placePrintSettingsUI() {
+  if (!printSettingsUI) return;
 
   const mobile = isMobile();
   const desktopContainer = document.getElementById("sticky");
@@ -1694,20 +1911,20 @@ function placeNamesUI() {
       mobileContainer.id = "mobile-bottom-bar";
       document.body.appendChild(mobileContainer);
     }
-    if (!mobileContainer.contains(namesUI)) {
-      mobileContainer.appendChild(namesUI);
+    if (!mobileContainer.contains(printSettingsUI)) {
+      mobileContainer.appendChild(printSettingsUI);
     }
-    if (desktopContainer.contains(namesUI)) {
-      desktopContainer.removeChild(namesUI);
+    if (desktopContainer.contains(printSettingsUI)) {
+      desktopContainer.removeChild(printSettingsUI);
     }
     document.body.style.paddingBottom = mobileContainer.offsetHeight + "px";
     updateToTopPosition();
   } else {
-    if (!desktopContainer.contains(namesUI)) {
-      desktopContainer.appendChild(namesUI);
+    if (!desktopContainer.contains(printSettingsUI)) {
+      desktopContainer.appendChild(printSettingsUI);
     }
-    if (mobileContainer && mobileContainer.contains(namesUI)) {
-      mobileContainer.removeChild(namesUI);
+    if (mobileContainer && mobileContainer.contains(printSettingsUI)) {
+      mobileContainer.removeChild(printSettingsUI);
     }
     document.body.style.paddingBottom = "";
   }
@@ -1879,7 +2096,7 @@ function getStudentNames() {
     names: validNames.length
       ? validNames
       : generateAnonymousStudentNames(appState.namesCount),
-    showNames: validNames.length > 0,
+    showNames: appState.inputMode !== "count",
   };
 }
 
@@ -3371,8 +3588,8 @@ function setupInputScrollOnFocus() {
 // ========== Initialization ==========
 
 getPrintArea().style.fontFamily = appState.font;
-namesUI = createNamesUI();
-placeNamesUI();
+printSettingsUI = createPrintSettingsUI();
+placePrintSettingsUI();
 initializeDesktopButtons();
 initializeMobileButtons();
 initializeFileUpload();
@@ -3442,7 +3659,7 @@ window.addEventListener("resize", () => {
     el.draggable = !isNowMobile;
   });
 
-  placeNamesUI();
+  placePrintSettingsUI();
   adjustMobilePadding();
   updateToTopPosition();
 });
