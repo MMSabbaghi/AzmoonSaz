@@ -12,7 +12,7 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            z-index: 1001;
+            z-index: 2001;
             pointer-events: none;
             max-width: 300px;
           }
