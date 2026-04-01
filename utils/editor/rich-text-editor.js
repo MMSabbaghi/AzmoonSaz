@@ -15,7 +15,13 @@
       key: "basic",
       tools: [
         { label: "\\frac{a}{b}", snippet: "\\frac{a}{b}", title: "کسر" },
+        {
+          label: "\\dfrac{a}{b}",
+          snippet: "\\dfrac{a}{b}",
+          title: "کسر نمایشی (Display)",
+        },
         { label: "a^{n}", snippet: "^{n}", title: "توان" },
+        { label: "a_{n}", snippet: "_{n}", title: "اندیس" },
         { label: "\\sqrt{a}", snippet: "\\sqrt{a}", title: "رادیکال" },
         {
           label: "\\sqrt[n]{a}",
@@ -23,17 +29,48 @@
           title: "رادیکال با فرجه",
         },
         { label: "|a|", snippet: "|a|", title: "قدر مطلق" },
+        {
+          label: "\\left( \\right)",
+          snippet: "\\left(  \\right)",
+          title: "پرانتز خودکار",
+        },
+        {
+          label: "\\left[ \\right]",
+          snippet: "\\left[  \\right]",
+          title: "براکت خودکار",
+        },
+        {
+          label: "\\left\\{ \\right\\}",
+          snippet: "\\left\\{  \\right\\}",
+          title: "آکولاد خودکار",
+        },
+        {
+          label: "\\overline{a}",
+          snippet: "\\overline{a}",
+          title: "خط روی عبارت",
+        },
+        {
+          label: "\\underline{a}",
+          snippet: "\\underline{a}",
+          title: "خط زیر عبارت",
+        },
+        { label: "\\pm", snippet: "\\pm", title: "بعلاوه/منها" },
+        { label: "\\mp", snippet: "\\mp", title: "منها/بعلاوه" },
       ],
     },
+
     {
-      title: "عملگرها",
+      title: "عملگرها و روابط",
       key: "operators",
       tools: [
         { label: "\\times", snippet: "\\times", title: "علامت ضرب" },
         { label: "\\div", snippet: "\\div", title: "علامت تقسیم" },
-        { label: "\\geq", snippet: "\\geq", title: "بزرگتر مساوی" },
         { label: "\\leq", snippet: "\\leq", title: "کوچکتر مساوی" },
-        { label: "\\cong", snippet: "\\cong", title: "علامت همنهشتی" },
+        { label: "\\geq", snippet: "\\geq", title: "بزرگتر مساوی" },
+        { label: "\\sim", snippet: "\\sim", title: "مشابهت" },
+        { label: "\\cong", snippet: "\\cong", title: "همنهشتی" },
+        { label: "\\equiv", snippet: "\\equiv", title: "هم‌ارزی" },
+        { label: "\\propto", snippet: "\\propto", title: "متناسب با" },
       ],
     },
     {
@@ -41,8 +78,14 @@
       key: "sets",
       tools: [
         { label: "\\in", snippet: "\\in", title: "عضویت در مجموعه" },
+        { label: "\\notin", snippet: "\\notin", title: "عدم عضویت" },
         { label: "\\subseteq", snippet: "\\subseteq", title: "زیرمجموعه" },
+        { label: "\\subset", snippet: "\\nsubseteq", title: "عدم زیر مجموعه" },
+
         { label: "\\emptyset", snippet: "\\emptyset", title: "مجموعه تهی" },
+        { label: "\\cup", snippet: "\\cup", title: "اجتماع" },
+        { label: "\\cap", snippet: "\\cap", title: "اشتراک" },
+
         { label: "\\mathbb{N}", snippet: "\\mathbb{N}", title: "اعداد طبیعی" },
         { label: "\\mathbb{Z}", snippet: "\\mathbb{Z}", title: "اعداد صحیح" },
         {
@@ -50,19 +93,84 @@
           snippet: "\\mathbb{W}",
           title: "طبیعی صفر و بالاتر",
         },
-        { label: "\\mathbb{R}", snippet: "\\mathbb{R}", title: "اعداد حقیقی" },
         { label: "\\mathbb{Q}", snippet: "\\mathbb{Q}", title: "اعداد گویا" },
-        { label: "\\cup", snippet: "\\cup", title: "اجتماع" },
-        { label: "\\cap", snippet: "\\cap", title: "اشتراک" },
+        { label: "\\mathbb{R}", snippet: "\\mathbb{R}", title: "اعداد حقیقی" },
+        { label: "\\forall", snippet: "\\forall", title: "برای همه" },
+        { label: "\\exists", snippet: "\\exists", title: "وجود دارد" },
+        { label: "\\nexists", snippet: "\\nexists", title: "وجود ندارد" },
       ],
     },
+
     {
-      title: "متفرقه",
-      key: "misc",
+      title: "منطق و نمادگذاری",
+      key: "logic",
       tools: [
-        { label: "\\pi", snippet: "\\pi", title: "عدد پی" },
-        { label: "(x, y)", snippet: "(x, y)", title: "مختصات" },
-        { label: "\\bar{x}", snippet: "\\bar{x}", title: "نماد بار" },
+        { label: "\\implies", snippet: "\\implies", title: "⇒ (implies)" },
+        { label: "\\land", snippet: "\\land", title: "و (AND)" },
+        { label: "\\lor", snippet: "\\lor", title: "یا (OR)" },
+        { label: "\\lnot", snippet: "\\lnot", title: "نقیض (NOT)" },
+        {
+          label: "\\Rightarrow",
+          snippet: "\\Rightarrow",
+          title: "نتیجه می‌دهد",
+        },
+        {
+          label: "\\Leftarrow",
+          snippet: "\\Leftarrow",
+          title: "از آن نتیجه می‌شود",
+        },
+        {
+          label: "\\Leftrightarrow",
+          snippet: "\\Leftrightarrow",
+          title: "اگر و تنها اگر",
+        },
+        { label: "\\iff", snippet: "\\iff", title: "⇔ (iff)" },
+        { label: "\\therefore", snippet: "\\therefore", title: "بنابراین" },
+        { label: "\\because", snippet: "\\because", title: "زیرا" },
+      ],
+    },
+
+    {
+      title: "حسابان عمومی",
+      key: "calculus",
+      tools: [
+        { label: "\\lim_{x\\to a}", snippet: "\\lim_{x\\to a}", title: "حد" },
+        { label: "\\to", snippet: "\\to", title: "میل می‌کند به" },
+        { label: "\\infty", snippet: "\\infty", title: "بی‌نهایت" },
+        {
+          label: "\\log_{a} b",
+          snippet: "\\log_{a} b",
+          title: "لگاریتم با پایه",
+        },
+        { label: "\\ln", snippet: "\\ln", title: "لگاریتم طبیعی" },
+        { label: "e^{x}", snippet: "e^{x}", title: "نمایی" },
+      ],
+    },
+
+    {
+      title: "ماتریس و دستگاه‌ها",
+      key: "matrices",
+      tools: [
+        {
+          label: "\\begin{matrix} ... \\end{matrix}",
+          snippet: "\\begin{matrix}\n a & b \\\\\n c & d\n\\end{matrix}",
+          title: "ماتریس ساده",
+        },
+        {
+          label: "\\begin{pmatrix} ... \\end{pmatrix}",
+          snippet: "\\begin{pmatrix}\n a & b \\\\\n c & d\n\\end{pmatrix}",
+          title: "ماتریس با پرانتز",
+        },
+        {
+          label: "\\begin{bmatrix} ... \\end{bmatrix}",
+          snippet: "\\begin{bmatrix}\n a & b \\\\\n c & d\n\\end{bmatrix}",
+          title: "ماتریس با براکت",
+        },
+        {
+          label: "\\begin{vmatrix} ... \\end{vmatrix}",
+          snippet: "\\begin{vmatrix}\n a & b \\\\\n c & d\n\\end{vmatrix}",
+          title: "دترمینان",
+        },
         {
           label: "\\begin{cases} ... \\end{cases}",
           snippet:
@@ -72,6 +180,79 @@
             "\\end{cases}",
           title: "دستگاه معادلات",
         },
+      ],
+    },
+    {
+      title: "یونانی‌ها",
+      key: "greek",
+      tools: [
+        { label: "\\alpha", snippet: "\\alpha", title: "آلفا" },
+        { label: "\\beta", snippet: "\\beta", title: "بتا" },
+        { label: "\\gamma", snippet: "\\gamma", title: "گاما" },
+        { label: "\\delta", snippet: "\\delta", title: "دلتا" },
+        { label: "\\epsilon", snippet: "\\epsilon", title: "اپسیلون" },
+        {
+          label: "\\varepsilon",
+          snippet: "\\varepsilon",
+          title: "اپسیلون (فرم دیگر)",
+        },
+        { label: "\\theta", snippet: "\\theta", title: "تتا" },
+        { label: "\\vartheta", snippet: "\\vartheta", title: "تتا (فرم دیگر)" },
+        { label: "\\lambda", snippet: "\\lambda", title: "لامبدا" },
+        { label: "\\mu", snippet: "\\mu", title: "مو" },
+        { label: "\\nu", snippet: "\\nu", title: "نو" },
+        { label: "\\pi", snippet: "\\pi", title: "پی" },
+        { label: "\\varpi", snippet: "\\varpi", title: "پی (فرم دیگر)" },
+        { label: "\\rho", snippet: "\\rho", title: "رو" },
+        { label: "\\sigma", snippet: "\\sigma", title: "سیگما" },
+        { label: "\\Sigma", snippet: "\\Sigma", title: "سیگما بزرگ" },
+        { label: "\\tau", snippet: "\\tau", title: "تاو" },
+        { label: "\\phi", snippet: "\\phi", title: "فی" },
+        { label: "\\varphi", snippet: "\\varphi", title: "فی (فرم دیگر)" },
+        { label: "\\omega", snippet: "\\omega", title: "اُمگا" },
+        { label: "\\Omega", snippet: "\\Omega", title: "اُمگا بزرگ" },
+        { label: "\\Delta", snippet: "\\Delta", title: "دلتا بزرگ" },
+      ],
+    },
+
+    {
+      title: "هندسه",
+      key: "geometry",
+      tools: [
+        { label: "\\angle ABC", snippet: "\\angle ABC", title: "زاویه" },
+        { label: "\\triangle ABC", snippet: "\\triangle ABC", title: "مثلث" },
+        {
+          label: "\\overline{AB}",
+          snippet: "\\overline{AB}",
+          title: "پاره‌خط",
+        },
+        { label: "\\parallel", snippet: "\\parallel", title: "موازی" },
+        { label: "\\perp", snippet: "\\perp", title: "عمود" },
+        { label: "\\circ", snippet: "^{\\circ}", title: "درجه" },
+        { label: "\\vec{v}", snippet: "\\vec{v}", title: "بردار" },
+      ],
+    },
+
+    {
+      title: "متفرقه",
+      key: "misc",
+      tools: [
+        { label: "(x, y)", snippet: "(x, y)", title: "مختصات" },
+        { label: "f(x)", snippet: "f(x)", title: "تابع" },
+        { label: "\\bar{x}", snippet: "\\bar{x}", title: "نماد بار" },
+        { label: "\\hat{x}", snippet: "\\hat{x}", title: "نماد کلاه" },
+        { label: "\\tilde{x}", snippet: "\\tilde{x}", title: "نماد تیلدا" },
+        {
+          label: "\\mathrm{a}",
+          snippet: "\\mathrm{a}",
+          title: "حروف رومن (متن داخل فرمول)",
+        },
+        {
+          label: "\\text{متن}",
+          snippet: "\\text{متن}",
+          title: "متن داخل فرمول",
+        },
+        { label: "\\boxed{x}", snippet: "\\boxed{x}", title: "کادر دور عبارت" },
       ],
     },
   ];
