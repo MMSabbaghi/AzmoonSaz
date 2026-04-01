@@ -2197,6 +2197,7 @@ async function handleGenerateClick(e) {
 const editModal = new Modal("#modal-edit", {
   title: "ویرایشگر سوال",
   initialFocusSelector: "#save-modal-btn",
+  closeOnOverlayClick: false,
 });
 
 // ---- DOM refs  ----
@@ -3552,7 +3553,6 @@ const editModalEditor = createRichTextEditor(modalPlaceholder, {
     "bold",
     "italic",
     "underline",
-    "strike",
     "align-left",
     "align-center",
     "align-right",
