@@ -518,3 +518,61 @@
   border: 2px solid transparent;
   background-clip: content-box;
 }
+
+.rich-editor-wrapper {
+  position: relative;
+}
+
+.rte-placeholder {
+  position: absolute;
+  inset-inline-start: 14px;
+  inset-inline-end: 14px;
+  top: 58px;
+  color: #9ca3af;
+  pointer-events: auto;
+  user-select: none;
+  font-size: 14px;
+  line-height: 1.95;
+  display: none;
+}
+
+.rich-editor-content:focus ~ .rte-placeholder {
+  opacity: 0.85;
+}
+
+.rte-dd-menu {
+  position: fixed;
+  margin-top: 0;
+  inset-inline-end: auto;
+  z-index: 2000;
+}
+
+.rte-dd-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+}
+
+.rte-dd-item {
+  justify-content: center;
+  text-align: center;
+  padding: 10px 8px;
+}
+
+.rte-dd-item .t2 {
+  font-family: var(--rte-mono);
+  font-size: 12px;
+  color: var(--rte-text-2);
+  direction: ltr;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+  .rte-dd-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

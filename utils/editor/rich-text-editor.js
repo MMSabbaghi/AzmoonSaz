@@ -1,10 +1,12 @@
 (function (global) {
   // ========== helpers ==========
+  const ZWSP = "​";
+
   const MATH_RENDER_DELIMITERS = [
     { left: "$$", right: "$$", display: true },
     { left: "$", right: "$", display: false },
-    { left: "\$$", right: "\$$", display: false },
-    { left: "\$$", right: "\$$", display: true },
+    { left: "\\$$", right: "\\$$", display: false },
+    { left: "\\$$", right: "\\$$", display: true },
   ];
 
   const LATEX_TOOL_GROUPS = [
@@ -84,6 +86,25 @@
   }
   function escapeAttr(str) {
     return escapeHtml(str).replaceAll("\n", "&#10;");
+  }
+
+  function stripZwsp(s) {
+    return String(s ?? "").replaceAll(ZWSP, "");
+  }
+
+  function isEditorEmpty(editor) {
+    if (!editor) return true;
+
+    // اگر فرمول داریم => خالی نیست
+    if (editor.querySelector(".math-inline")) return false;
+
+    // متن را بدون ZWSP و whitespace بررسی کنیم
+    const text = stripZwsp(editor.textContent || "").replace(/\s+/g, "");
+    if (text.length > 0) return false;
+
+    // اگر تنها ساختارهای line/br باشند هم خالی حساب شود
+    // (textContent در این حالت معمولاً خالی است)
+    return true;
   }
 
   // ========== selection ==========
@@ -296,15 +317,56 @@
     return span;
   }
 
+  function lineIsEffectivelyEmpty(line) {
+    if (!line) return true;
+    // اگر فقط br دارد یا فقط whitespace/ZWSP دارد
+    const hasMath = !!line.querySelector(".math-inline");
+    if (hasMath) return false;
+
+    const text = stripZwsp(line.textContent || "").replace(/\s+/g, "");
+    if (text.length > 0) return false;
+
+    // اگر فقط یک br یا هیچ
+    const nonEmptyEls = Array.from(line.childNodes).filter((n) => {
+      if (n.nodeType === 3) {
+        const t = stripZwsp(n.nodeValue || "").replace(/\s+/g, "");
+        return t.length > 0;
+      }
+      if (n.nodeType === 1) {
+        const tag = n.tagName.toLowerCase();
+        if (tag === "br") return false;
+        if (tag === "span" && n.classList.contains("math-inline")) return true;
+        // عناصر دیگر را غیرخالی فرض کن
+        return true;
+      }
+      return false;
+    });
+
+    return nonEmptyEls.length === 0;
+  }
+
+  function clearLineBrIfEmpty(line) {
+    if (!line) return;
+    if (lineIsEffectivelyEmpty(line)) {
+      line.innerHTML = "";
+    } else {
+      // اگر علاوه بر محتوا br اضافه‌ای باشد، حذفش کن (اختیاری)
+      // اینجا دخالت نمی‌کنیم مگر لازم شود
+    }
+  }
+
   function insertMathSpanAtSelection(editor, latex) {
     const line = ensureSelectionInLine(editor);
     const sel = window.getSelection();
     const range = sel.rangeCount ? sel.getRangeAt(0) : null;
 
+    // === Fix #1: وقتی خط خالی است، br را قبل از درج پاک کن تا یک خط اضافی ایجاد نشود
+    clearLineBrIfEmpty(line);
+
     const span = createMathSpan(latex);
     renderMathInContainer(span);
 
-    const spacer = document.createTextNode("​"); // ZWSP
+    const spacer = document.createTextNode(ZWSP);
 
     if (range) {
       range.deleteContents();
@@ -437,11 +499,14 @@
     let currentMathNode = null;
     let openDropdownKey = null;
 
+    // === Fix #6: دراپ‌داون Grid سه‌تایی + حذف title هر ابزار (نمایش فقط فرمول)
     toolbars.innerHTML = LATEX_TOOL_GROUPS.map((group) => {
       const toolsArr = group.tools?.map((tool) => ({
         ...tool,
         label: `$${tool.label}$`,
       }));
+
+      // متن دکمه (اولین فرمول)
       const buttonText = toolsArr[0]?.label ? toolsArr[0].label : group.title;
 
       return `
@@ -458,24 +523,74 @@
 
           <div id="dropdown-${escapeAttr(group.key)}" role="menu" class="rte-dd-menu">
             <div class="rte-dd-title">${escapeHtml(group.title)}</div>
-            ${toolsArr
-              .map(
-                (tool) => `
-                  <button type="button" class="rte-dd-item"
-                    data-snippet="${escapeAttr(tool.snippet)}"
-                    title="${escapeAttr(tool.title || "")}">
-                    <span class="t1">${escapeHtml(tool.title || tool.label)}</span>
-                    <span class="t2">${escapeHtml(tool.label)}</span>
-                  </button>
-                `,
-              )
-              .join("")}
+            <div class="rte-dd-grid">
+              ${toolsArr
+                .map(
+                  (tool) => `
+                    <button type="button" class="rte-dd-item"
+                      data-snippet="${escapeAttr(tool.snippet)}"
+                      aria-label="${escapeAttr(tool.title || "")}">
+                      <span class="t2">${escapeHtml(tool.label)}</span>
+                    </button>
+                  `,
+                )
+                .join("")}
+            </div>
           </div>
         </div>
       `;
     }).join("");
 
     renderMathInContainer(toolbars);
+
+    // === Fix #4: جلوگیری از hidden شدن منو کنار لبه‌های مدال
+    // منوها position:fixed هستند و هنگام باز شدن کنار دکمه قرار می‌گیرند
+    function positionDropdownMenu(wrap) {
+      const btn = wrap.querySelector(".rte-dd-btn");
+      const dd = wrap.querySelector(".rte-dd-menu");
+      if (!btn || !dd) return;
+
+      const rect = btn.getBoundingClientRect();
+      const gap = 8;
+
+      // پیش‌فرض: زیر دکمه
+      let top = rect.bottom + gap;
+      let left = rect.left;
+
+      dd.style.position = "fixed";
+      dd.style.top = top + "px";
+      dd.style.left = left + "px";
+      dd.style.right = "auto";
+
+      // بعد از نمایش، اندازه را چک کن تا از viewport بیرون نزند
+      // (نیاز به یک tick)
+      requestAnimationFrame(() => {
+        const ddRect = dd.getBoundingClientRect();
+
+        // اگر از راست زد بیرون، به اندازه شیفت بده
+        if (ddRect.right > window.innerWidth - 8) {
+          const shift = ddRect.right - (window.innerWidth - 8);
+          dd.style.left = Math.max(8, ddRect.left - shift) + "px";
+        }
+
+        // اگر از چپ زد بیرون
+        const ddRect2 = dd.getBoundingClientRect();
+        if (ddRect2.left < 8) dd.style.left = "8px";
+
+        // اگر پایین زد بیرون، بالا باز کن
+        const ddRect3 = dd.getBoundingClientRect();
+        if (ddRect3.bottom > window.innerHeight - 8) {
+          const aboveTop = rect.top - gap - ddRect3.height;
+          if (aboveTop >= 8) dd.style.top = aboveTop + "px";
+          else {
+            // اگر جا نیست، max-height بده
+            dd.style.maxHeight =
+              Math.max(120, window.innerHeight - rect.bottom - 16) + "px";
+            dd.style.top = top + "px";
+          }
+        }
+      });
+    }
 
     function setDropdownOpen(key, open) {
       openDropdownKey = open ? key : null;
@@ -484,8 +599,11 @@
         const btn = wrap.querySelector(".rte-dd-btn");
         const dd = wrap.querySelector(".rte-dd-menu");
         const isOpen = openDropdownKey === k;
+
         dd.classList.toggle("is-open", isOpen);
         btn.setAttribute("aria-expanded", String(isOpen));
+
+        if (isOpen) positionDropdownMenu(wrap);
       });
     }
 
@@ -511,10 +629,18 @@
       });
     });
 
-    document.addEventListener("click", (e) => {
-      if (modal.classList.contains("is-open")) {
-        if (!toolbars.contains(e.target)) setDropdownOpen(null, false);
-      }
+    function closeDropdownIfClickedOutside(e) {
+      if (!modal.classList.contains("is-open")) return;
+      if (!toolbars.contains(e.target)) setDropdownOpen(null, false);
+    }
+    document.addEventListener("click", closeDropdownIfClickedOutside);
+
+    window.addEventListener("resize", () => {
+      if (!openDropdownKey) return;
+      const wrap = toolbars.querySelector(
+        `[data-group="${CSS.escape(openDropdownKey)}"]`,
+      );
+      if (wrap) positionDropdownMenu(wrap);
     });
 
     function insertSnippetIntoTextarea(textarea, snippet) {
@@ -593,7 +719,14 @@
       previewTimeout = setTimeout(updatePreview, 160);
     });
 
-    return { element: modal, open, close };
+    return {
+      element: modal,
+      open,
+      close,
+      destroy: () => {
+        document.removeEventListener("click", closeDropdownIfClickedOutside);
+      },
+    };
   }
 
   // ========== toolbar html ==========
@@ -770,11 +903,16 @@
     toolbar.innerHTML = buildToolbarHTML(features);
     wrapper.appendChild(toolbar);
 
+    // === Fix #2/#3: Placeholder overlay (هم وقتی ساختاری مثل br هست هم کار می‌کند)
+    const placeholderEl = document.createElement("div");
+    placeholderEl.className = "rte-placeholder";
+    placeholderEl.textContent = placeholder || "";
+    wrapper.appendChild(placeholderEl);
+
     const editor = document.createElement("div");
     editor.id = contentId;
     editor.className = "rich-editor-content";
     editor.setAttribute("contenteditable", "true");
-    editor.setAttribute("data-placeholder", placeholder);
     editor.innerHTML = initialContent;
     wrapper.appendChild(editor);
 
@@ -783,17 +921,37 @@
     normalizeEditorLines(editor);
     renderMathInContainer(editor);
 
+    function updatePlaceholder() {
+      if (!placeholder) {
+        placeholderEl.style.display = "none";
+        return;
+      }
+      placeholderEl.style.display = isEditorEmpty(editor) ? "block" : "none";
+    }
+
+    updatePlaceholder();
+
     function getEditorHtml() {
+      // === Fix #5: اگر ادیتور خالی است رشته خالی بده
+      if (isEditorEmpty(editor)) return "";
+
       const clonedEditor = editor.cloneNode(true);
       const inlineNodes = clonedEditor.querySelectorAll(".math-inline");
       inlineNodes.forEach((node) => {
         const latex = node.getAttribute("data-latex") || node.textContent || "";
         setMathSpanData(node, latex);
       });
+
+      // اگر خروجی فقط خطوط خالی بود باز هم ""
+      const tmp = document.createElement("div");
+      tmp.innerHTML = clonedEditor.innerHTML;
+      if (isEditorEmpty(tmp)) return "";
+
       return clonedEditor.innerHTML;
     }
 
     function handleContentChange() {
+      updatePlaceholder();
       if (!onContentChange) return;
       onContentChange(getEditorHtml());
     }
@@ -885,8 +1043,9 @@
     });
 
     // latex modal
+    let mathEditorModal = null;
     if (features.includes("latex")) {
-      const mathEditorModal = createMathEditorModal({
+      mathEditorModal = createMathEditorModal({
         onSave: (latex, mathNode) => {
           if (mathNode) {
             setMathSpanData(mathNode, latex);
@@ -980,15 +1139,26 @@
       if (text) {
         document.execCommand("insertText", false, text);
         normalizeEditorLines(editor);
+        handleContentChange();
       }
     });
+
+    placeholderEl.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      editor.focus();
+      placeCaretAtEnd(editor);
+    });
+
+    // initial state
+    updatePlaceholder();
 
     return {
       getEditorElement: () => editor,
       setContent: (html) => {
-        editor.innerHTML = html;
+        editor.innerHTML = html || "";
         normalizeEditorLines(editor);
         renderMathInContainer(editor);
+        updatePlaceholder();
       },
       getContent: getEditorHtml,
       setAlignment: (align) => applyAlign(editor, align),
@@ -999,6 +1169,14 @@
           ? getClosestBlock(range.startContainer, editor)
           : null;
         return block?.style?.textAlign || "";
+      },
+      destroy: () => {
+        if (mathEditorModal?.element?.parentNode) {
+          mathEditorModal.element.parentNode.removeChild(
+            mathEditorModal.element,
+          );
+        }
+        mathEditorModal?.destroy?.();
       },
     };
   }
