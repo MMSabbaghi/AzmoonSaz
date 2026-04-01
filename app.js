@@ -3255,7 +3255,7 @@ function exportData() {
     },
     input: {
       placeholder: "مثال: آزمون ریاضی",
-      required: false,
+      required: true,
     },
     saveLastInput: true,
     confirmText: "ذخیره",
