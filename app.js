@@ -772,7 +772,7 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
       on_confirm: () => {
         animateRemoveItem(container, () => {
           removeItemFromState(rangeId, item.id);
-          updateRangeItemCountBadge(rangeDiv);
+          updateRangeBadges(rangeId, rangeDiv);
         });
       },
     });
@@ -789,10 +789,16 @@ function createItemThumbnailElement(item, rangeDiv, rangeId) {
   return container;
 }
 
-function updateRangeItemCountBadge(rangeDiv) {
-  const itemsCount = rangeDiv.querySelector(".items-preview").children.length;
-  rangeDiv.querySelector(".range-total").textContent =
-    toPersianDigits(itemsCount);
+function updateRangeBadges(rangeId, rangeDiv) {
+  const range = findRangeById(rangeId);
+  function setBadge($, val) {
+    const badge = rangeDiv.querySelector($);
+    if (badge) badge.textContent = toPersianDigits(val || 0);
+  }
+  setBadge(".count-badge", range.count);
+  setBadge(".total-badge", range.items.length);
+  setBadge(".range-total", range.items.length);
+  setBadge(".score-badge", range.score);
 }
 
 // ========== Lable DropDown ==========
@@ -1045,10 +1051,10 @@ function getMobileRangeHTML(rangeData) {
 
           <div class="mt-2 flex gap-2 text-xs">
             <span class="px-2 py-1 rounded-custom bg-surface-dark border border-border-light/60 text-secondary">
-              تعداد برای هر نفر: <span class="font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
+              تعداد برای هر نفر: <span class="count-badge font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
             </span>
             <span class="px-2 py-1 rounded-custom bg-surface-dark border border-border-light/60 text-secondary">
-              نمره: <span class="font-semibold text-primary">${toPersianDigits(rangeData.score || 0)}</span>
+              نمره: <span class="score-badge font-semibold text-primary">${toPersianDigits(rangeData.score || 0)}</span>
             </span>
           </div>
         </div>
@@ -1182,19 +1188,19 @@ function getDesktopRangeHTML(rangeData) {
                 <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border border-border-light/60 bg-surface-darker text-xs text-secondary">
                   <i class="bi bi-hash text-muted"></i>
                   تعداد سوال هر نفر
-                  <span class="font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
+                  <span class="count-badge font-semibold text-primary">${toPersianDigits(rangeData.count || 0)}</span>
                 </span>
 
                 <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border border-border-light/60 bg-surface-darker text-xs text-secondary">
                   <i class="bi bi-award text-muted"></i>
                   نمره
-                  <span class="font-semibold text-primary">${toPersianDigits(rangeData.score || 0)}</span>
+                  <span class="score-badge font-semibold text-primary">${toPersianDigits(rangeData.score || 0)}</span>
                 </span>
 
                 <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border border-border-light/60 bg-surface-darker text-xs text-secondary">
                   <i class="bi bi-grid-3x3-gap text-muted"></i>
                   سوالات
-                  <span class="font-semibold text-primary">${toPersianDigits(rangeData.items.length || 0)}</span>
+                  <span class="total-badge font-semibold text-primary">${toPersianDigits(rangeData.items.length || 0)}</span>
                 </span>
               </div>
             </div>
@@ -1320,12 +1326,14 @@ function setupRangeInputs(rangeElement, rangeId) {
     el.addEventListener("input", (e) => {
       const val = parseInt(e.target.value) || 0;
       updateRangeInState(rangeId, { count: val });
+      updateRangeBadges(rangeId, rangeElement);
     });
   });
 
   rangeElement.querySelectorAll(".range-score").forEach((el) => {
     el.addEventListener("input", (e) => {
       updateRangeInState(rangeId, { score: e.target.value });
+      updateRangeBadges(rangeId, rangeElement);
     });
   });
 
@@ -1545,7 +1553,7 @@ function addItemToRange(rangeId, item) {
   const rangeDiv = document.getElementById(rangeId);
   if (rangeDiv) {
     renderRangeItems(rangeDiv, rangeId);
-    updateRangeItemCountBadge(rangeDiv);
+    updateRangeBadges(rangeId, rangeDiv);
   }
 }
 
@@ -1642,9 +1650,12 @@ function createPrintSettingsUI() {
   panelNames.className = "tab-panel panel-names my-2";
 
   panelNames.innerHTML = `
-    <div class="text-[12px] md:text-[13px] text-muted leading-6 mb-2">
-      هر نام را در <b class="text-primary">یک خط جدا</b> بنویسید. تعداد به‌صورت خودکار محاسبه می‌شود.
-    </div>
+  <div class="flex items-center justify-between">  
+  <div class="text-[12px] md:text-[13px] text-muted leading-6 mb-2">
+      هر نام را در <b class="text-primary"> یک خط جدا</b> بنویسید..
+      </div>
+    <div class="text-[12px] text-muted names-derived"></div>
+  </div>
 
     <textarea
       class="names-textarea w-full min-h-[110px] md:min-h-[120px]
@@ -1655,8 +1666,6 @@ function createPrintSettingsUI() {
 علی رضایی
 مریم محمدی"
     >${(appState.names || []).join("\n")}</textarea>
-
-    <div class="mt-2 text-[12px] text-muted names-derived"></div>
   `;
 
   const textarea = panelNames.querySelector(".names-textarea");
@@ -1791,7 +1800,7 @@ function createPrintSettingsUI() {
         .map((x) => x.trim())
         .filter(Boolean);
 
-      namesDerived.textContent = `تعداد استخراج‌شده: ${appState.names.length || 0}`;
+      namesDerived.textContent = `تعداد استخراج‌شده: ${toPersianDigits(appState.names.length || 0)}`;
       if (appState.names.length > 0)
         appState.namesCount = appState.names.length;
       syncCountInputValue();
