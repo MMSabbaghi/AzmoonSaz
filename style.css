@@ -68,8 +68,8 @@ input:focus {
 }
 .btn-outline {
   background: transparent;
-  border: 1px solid var(--primary);
-  color: var(--primary);
+  border: 1px solid var(--surface-darker);
+  color: var(--text-secondary);
 }
 
 .btn-dashed {

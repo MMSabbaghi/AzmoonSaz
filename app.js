@@ -825,25 +825,28 @@ function openLabelDropdown({
   const render = () => {
     const activeId = getActiveLabelId();
 
-    const addandclearRow = `
-    <div class="flex items-center gap-1">
-      <button class="btn btn-outline w-full text-right rounded-[12px] px-2.5 py-2.5 flex items-center gap-2"
-              data-action="add-label">
-        <i class="bi bi-plus-lg"></i>
-        <span class="text-[13px] font-bold">افزودن برچسب</span>
-      </button>
-    <button class="btn btn-outline btn-dashed w-full text-right rounded-[12px] px-2.5 py-2.5 flex items-center gap-2"
-            data-action="clear-label">
-      <i class="bi bi-x-lg"></i>
-      <span class="text-[13px] font-bold">بدون برچسب</span>
-    </button>
-    </div>
-    `;
+    const addBtn = `
+   <button class="btn btn-outline w-full text-right rounded-[12px] px-2.5 py-2.5 flex items-center gap-2"
+           data-action="add-label">
+     <i class="bi bi-plus-lg"></i>
+     <span class="text-[13px] font-bold">افزودن برچسب</span>
+   </button>
+   `;
 
-    const rows = range.labels
-      .map((l) => {
-        const isActive = l.id === activeId;
-        return `
+    const clearBtn = `
+   <button class="btn btn-outline btn-dashed w-full text-right rounded-[12px] px-2.5 py-2.5 flex items-center gap-2"
+           data-action="clear-label">
+     <i class="bi bi-x-lg"></i>
+     <span class="text-[13px] font-bold">بدون برچسب</span>
+   </button>`;
+
+    const hasLabel = !!range.labels.length;
+    let rows;
+    if (hasLabel) {
+      rows = range.labels
+        .map((l) => {
+          const isActive = l.id === activeId;
+          return `
         <div class="w-full rounded-[12px] px-2.5 py-2.5 flex items-center justify-between gap-2
                     hover:bg-surface-dark border border-transparent hover:border-border-light"
              data-row-label-id="${l.id}">
@@ -869,10 +872,24 @@ function openLabelDropdown({
           </div>
         </div>
       `;
-      })
-      .join("");
+        })
+        .join("");
+    } else {
+      rows = `
+      <div class="flex flex-col gap-1 items-center justify-center text-muted">
+      <i class="bi bi-inbox text-6xl"></i>
+      <span class="text-sm"> برچسبی ثبت نشده! </span>
+      </div>
+      `;
+    }
 
-    return addandclearRow + rows;
+    return `
+    <div class="flex items-center gap-1">
+        ${addBtn}
+        ${hasLabel ? clearBtn : ""}
+    </div>
+    ${rows}
+    `;
   };
 
   labelsDropdown.open({
