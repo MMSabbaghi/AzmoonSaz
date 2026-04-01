@@ -3228,7 +3228,6 @@ function processImportedFile(fileContent) {
 }
 
 function exportData() {
-  const defaultFilename = "";
   showConfirm({
     msg: "نام فایل را وارد کنید:",
     on_confirm: (fileName) => {
@@ -3256,9 +3255,9 @@ function exportData() {
     },
     input: {
       placeholder: "مثال: آزمون ریاضی",
-      value: defaultFilename,
       required: false,
     },
+    saveLastInput: true,
     confirmText: "ذخیره",
     cancelText: "انصراف",
   });
