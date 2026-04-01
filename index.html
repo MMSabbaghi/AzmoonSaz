@@ -464,14 +464,18 @@
     class="fixed top-0 left-0 w-full h-full flex justify-center items-center z-50 hidden bg-overlay backdrop-blur-[8px]">
     <div class="bg-white rounded-custom px-4 py-6 shadow-lg flex flex-col gap-4 w-[270px]">
       <img class="h-[45px]" src="./images/logo.svg" alt="آزمون ساز">
-      <div class="flex items-center gap-1">
-        <div class="relative w-full h-4 bg-background rounded-custom overflow-hidden">
-          <div class="progress-bar bg-primary-gradient h-full rounded-custom transition-all duration-300 w-0">
+      <div class="overlay-content">
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center gap-1">
+            <div class="relative w-full h-4 bg-background rounded-custom overflow-hidden">
+              <div class="progress-bar bg-primary-gradient h-full rounded-custom transition-all duration-300 w-0">
+              </div>
+            </div>
+            <span class="progress-percent bg-secondary-gradient text-white rounded-custom text-xs px-2 ">0%</span>
           </div>
+          <p class="text-center text-gray-700">در حال بارگذاری...</p>
         </div>
-        <span class="progress-percent bg-secondary-gradient text-white rounded-custom text-xs px-2 ">0%</span>
       </div>
-      <p class="text-center text-gray-700">در حال بارگذاری...</p>
     </div>
   </div>
 

@@ -318,25 +318,6 @@ input[type="range"]::-moz-range-track {
     max-height: 100px;
   }
 
-  /* Modal*/
-  .modal {
-    align-items: flex-end;
-  }
-  .modal-content {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0;
-    border-radius: var(--radius) var(--radius) 0 0;
-    transform: translateY(100%);
-    transition:
-      transform 0.3s ease-out,
-      opacity 0.3s ease-out;
-    padding: 16px !important;
-  }
-  .modal--visible .modal-content {
-    transform: translateY(0);
-  }
-
   /* محتوای داخلی مودال ویرایش */
   .toolbar-btn {
     min-width: 44px;
@@ -439,5 +420,22 @@ input[type="range"]::-moz-range-track {
   textarea,
   [contenteditable="true"] {
     scroll-margin: 20px;
+  }
+}
+
+/* ========== Spinner========== */
+.spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 10px auto;
+  border-radius: 50%;
+  border: 4px solid var(--surface);
+  border-top-color: var(--primary);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }

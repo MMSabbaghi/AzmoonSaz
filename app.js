@@ -1994,33 +1994,40 @@ function createQuestionRowHtmlMulti(qNum, range) {
     </tr>`;
 }
 
-function buildQuizData(names, ranges) {
-  return new Promise((resolve) => {
-    const finalData = Object.fromEntries(names.map((n) => [n, []]));
+async function buildQuizData(names, ranges) {
+  const finalData = Object.fromEntries(names.map((n) => [n, []]));
 
-    ranges.forEach((r) => {
-      const items = Array.isArray(r.items) ? r.items : [];
+  const YIELD_EVERY = 10;
+  let ops = 0;
 
-      names.forEach((student) => {
-        const picked = pickRandomItemsUniqueLabels(items, r.count);
+  for (const r of ranges) {
+    const items = Array.isArray(r.items) ? r.items : [];
 
-        if (!picked) {
-          throw new Error(
-            `مبحث «${r.rangeName || "بدون عنوان"}»: تعداد درخواستی (${r.count}) بیشتر از ظرفیت یکتا بر اساس برچسب‌هاست.`,
-          );
-        }
+    for (const student of names) {
+      const picked = pickRandomItemsUniqueLabels(items, r.count);
 
-        finalData[student].push({
-          rangeName: r.rangeName,
-          items: picked,
-          score: r.score,
-          desc: r.desc,
-        });
+      if (!picked) {
+        throw new Error(
+          `مبحث «${r.rangeName || "بدون عنوان"}»: تعداد درخواستی (${r.count}) بیشتر از ظرفیت یکتا بر اساس برچسب‌هاست.`,
+        );
+      }
+
+      finalData[student].push({
+        rangeName: r.rangeName,
+        items: picked,
+        score: r.score,
+        desc: r.desc,
       });
-    });
 
-    resolve(finalData);
-  });
+      // yield دوره‌ای برای جلوگیری از فریز
+      ops++;
+      if (ops % YIELD_EVERY === 0) {
+        await nextFrame();
+      }
+    }
+  }
+
+  return finalData;
 }
 
 function renderItemForQuiz(item, rangeDesc) {
@@ -2103,12 +2110,12 @@ async function buildQuizHtml(validRanges) {
   return names
     .map(
       (student) => `
-    <tr>
-      <td class="questions">
-        ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
-      </td>
-    </tr>
-  `,
+        <tr>
+          <td class="questions">
+            ${createStudentTableHtml(quizData[student], showNames ? student : ``)}
+          </td>
+        </tr>
+      `,
     )
     .join("");
 }
@@ -2133,6 +2140,29 @@ function hideQuizHtml() {
   `;
 }
 
+// ========== generate btn ==========
+const loadingOverlayEl = document.getElementById("overlay");
+
+function showLoadingOverlay() {
+  if (!loadingOverlayEl) return;
+  loadingOverlayEl.querySelector(".overlay-content").innerHTML = `
+    <div class="flex flex-col gap-4 text-center">
+      <div class="spinner"></div>
+      <div class="text-center text-gray-700">در حال ساخت برگه ها...</div>
+    </div>
+  `;
+  loadingOverlayEl.classList.remove("hidden");
+}
+
+function hideLoadingOverlay() {
+  if (!loadingOverlayEl) return;
+  loadingOverlayEl.classList.add("hidden");
+}
+
+function nextFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 async function handleGenerateClick(e) {
   if (appState.inputMode === "count") {
     if (!appState.namesCount || appState.namesCount < 1) {
@@ -2148,13 +2178,21 @@ async function handleGenerateClick(e) {
       return;
     }
   }
-  hasGeneratedTable = await generateQuizHtml();
-  if (hasGeneratedTable) {
-    e.target.scrollIntoView({ behavior: "smooth" });
-    renderMathInContainer(printArea);
+
+  showLoadingOverlay("در حال ساخت سوال‌ها...");
+  await nextFrame();
+
+  try {
+    hasGeneratedTable = await generateQuizHtml();
+
+    if (hasGeneratedTable) {
+      e.target.scrollIntoView({ behavior: "smooth" });
+      renderMathInContainer(printArea);
+    }
+  } finally {
+    hideLoadingOverlay();
   }
 }
-
 // ========== Edit modal ==========
 const editModal = new Modal("#modal-edit", {
   title: "ویرایشگر سوال",
