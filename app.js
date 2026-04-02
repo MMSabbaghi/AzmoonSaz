@@ -1141,17 +1141,11 @@ function getMobileRangeHTML(rangeData) {
       <button class="toggle-meta flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
       <i class="bi bi-gear text-lg"></i> <span> تنظیمات</span>
       </button>
-      <button class="ai-range flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
-      <i class="bi bi-openai text-lg"></i> <span>هوش مصنوعی</span>
-      </button>
-      </div>
-      
-      <div class="flex gap-2 mt-2">
       <button class="add-text-item flex-1 flex items-center justify-center gap-2 bg-surface-dark hover:bg-surface-darker text-secondary rounded-custom py-2.5 text-sm font-medium transition-all active:scale-[0.98]">
         <i class="bi bi-plus-lg text-lg"></i> <span>افزودن سوال</span>
       </button>
       </div>
-
+      
       <!-- Preview -->
       <div class="preview-section border-t border-border-light pt-3 mt-3">
         <button class="toggle-items-btn flex gap-2 items-center w-full bg-surface-dark hover:bg-surface-darker rounded-custom px-4 py-2.5 transition-all ${rangeData.itemsCollapsed ? "collapsed" : ""}">
@@ -1238,11 +1232,6 @@ function getDesktopRangeHTML(rangeData) {
             <button class="toggle-meta inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition"
                     data-tooltip="تنظیمات">
               <i class="bi bi-gear text-base"></i>
-            </button>
-
-            <button class="ai-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition"
-                    data-tooltip="هوش مصنوعی">
-              <i class="bi bi-openai text-base"></i>
             </button>
           </div>
 
@@ -1361,7 +1350,6 @@ function setupRangeInputs(rangeElement, rangeId) {
 
 function setupRangeButtons(rangeElement, rangeId) {
   setupRemoveRangeButton(rangeElement, rangeId);
-  setupAiRangeButton(rangeElement, rangeId);
   setupCopyRangeButton(rangeElement, rangeId);
   setupPasteRangeButton(rangeElement, rangeId);
   setupMoveButtons(rangeElement, rangeId);
@@ -2497,83 +2485,369 @@ removeImageBtn.addEventListener("click", () => {
   });
 });
 
-// ========== AI Wizard ==========
+// ========== AI Wizard (New - Global, 3 steps, multi ranges) ==========
 const wizardState = {
   isOpen: false,
-  mode: "extract", // "extract" | "generate"
   step: 1,
-  rangeId: null,
-  extractedItem: null,
-  sourceItem: null,
-  generatedItems: [],
-  count: 5,
+  selectedRangeIds: new Set(),
+  countPerRange: 5,
+  promptRanges: [], // [{ rangeId, rangeName, desc, samples: [html...] }]
+  generatedByRange: [], // [{ rangeId, rangeName, items: [Item] }]
 };
 
 let aiWizardModal = null;
 
-function validateStep2() {
-  const raw = document.getElementById("extractResponseInput").value.trim();
-  if (!raw) {
-    showToast("لطفاً پاسخ را وارد کنید", "error");
-    return false;
-  }
-  try {
-    const data = extractJSON(raw);
-    if (!data.items?.length) throw new Error("آیتمی یافت نشد");
-    wizardState.extractedItem = {
-      id: createRandomId("item"),
-      text: { ...data.items[0].text },
-      image: null,
-      showText: true,
-    };
-    return true;
-  } catch (err) {
-    showToast(err.message, "error");
-    return false;
-  }
+function getTextOnlyItems(range) {
+  const items = Array.isArray(range?.items) ? range.items : [];
+  return items.filter((it) => !!it?.text?.html && !it?.image);
 }
 
-function validateStep3() {
-  const html = wizardTextEditor.getContent();
-  if (!html.trim()) {
-    showToast("لطفاً متن سوال را وارد کنید", "error");
+function isRangeEligible(range) {
+  return getTextOnlyItems(range).length > 0;
+}
+
+function renderWizardRangesList() {
+  const listEl = document.getElementById("aiRangesList");
+  if (!listEl) return;
+
+  const ranges = Array.isArray(appState?.ranges) ? appState.ranges : [];
+
+  listEl.innerHTML = "";
+
+  let eligibleCount = 0;
+  let disabledCount = 0;
+
+  ranges.forEach((r) => {
+    const textOnlyCount = getTextOnlyItems(r).length;
+    const eligible = textOnlyCount > 0;
+
+    if (eligible) eligibleCount++;
+    else disabledCount++;
+
+    const id = r.id;
+    const checked = wizardState.selectedRangeIds.has(id);
+
+    const card = document.createElement("label");
+    card.className = [
+      "flex items-start gap-3 p-3 rounded-custom border",
+      eligible
+        ? "bg-surface border-border-light cursor-pointer hover:bg-surface-darker"
+        : "bg-surface/60 border-border-light/50 opacity-60 cursor-not-allowed",
+    ].join(" ");
+
+    card.innerHTML = `
+      <input type="checkbox"
+             class="mt-1"
+             data-role="range-checkbox"
+             data-range-id="${id}"
+             ${eligible ? "" : "disabled"}
+             ${checked ? "checked" : ""} />
+
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between gap-2">
+          <div class="font-semibold text-primary truncate">${sanitizeText(r.rangeName || "بدون عنوان")}</div>
+          <span class="text-xs text-muted whitespace-nowrap">
+            آیتم متنی قابل استفاده: ${toPersianDigits(textOnlyCount)}
+          </span>
+        </div>
+
+        ${r.desc ? `<div class="text-xs text-secondary mt-1 line-clamp-2">${sanitizeText(r.desc)}</div>` : ""}
+      </div>
+    `;
+
+    listEl.appendChild(card);
+  });
+
+  // bind change events
+  listEl.querySelectorAll('[data-role="range-checkbox"]').forEach((cb) => {
+    cb.addEventListener("change", (e) => {
+      const rangeId = e.target.dataset.rangeId;
+      if (!rangeId) return;
+      if (e.target.checked) wizardState.selectedRangeIds.add(rangeId);
+      else wizardState.selectedRangeIds.delete(rangeId);
+    });
+  });
+}
+
+/** Select all eligible */
+function selectAllEligibleRanges() {
+  wizardState.selectedRangeIds.clear();
+  (appState?.ranges || []).forEach((r) => {
+    if (isRangeEligible(r)) wizardState.selectedRangeIds.add(r.id);
+  });
+  renderWizardRangesList();
+}
+
+/** Clear selections */
+function clearAllRangesSelection() {
+  wizardState.selectedRangeIds.clear();
+  renderWizardRangesList();
+}
+
+/** Step1 validation + build promptRanges */
+function validateStep1_andBuildPromptRanges() {
+  const countInput = document.getElementById("aiSimilarCountPerRange");
+  wizardState.countPerRange = countInput
+    ? parseInt(countInput.value, 10) || 5
+    : 5;
+
+  const selected = [...wizardState.selectedRangeIds];
+  if (!selected.length) {
+    showToast("حداقل یک مبحث را انتخاب کنید.", "error");
     return false;
   }
-  if (!wizardState.extractedItem) {
-    wizardState.extractedItem = {
-      id: createRandomId("item"),
-      text: null,
-      image: null,
-      showText: true,
-    };
+
+  const promptRanges = [];
+  for (const rangeId of selected) {
+    const range = findRangeById(rangeId);
+    if (!range) continue;
+
+    const samples = getTextOnlyItems(range).map((it) => it.text.html);
+
+    if (!samples.length) continue;
+
+    promptRanges.push({
+      rangeId,
+      rangeName: range.rangeName || "بدون عنوان",
+      desc: range.desc || "",
+      samples,
+    });
   }
 
-  if (!wizardState.extractedItem.text) {
-    wizardState.extractedItem.text = { html, align: "RIGHT" };
-  } else {
-    wizardState.extractedItem.text.html = html;
-    const align = wizardTextEditor.getAlignment();
-    if (align)
-      wizardState.extractedItem.text.align = String(align).toUpperCase();
+  if (!promptRanges.length) {
+    showToast("هیچ مبحثِ قابل استفاده‌ای انتخاب نشده است.", "error");
+    return false;
   }
 
-  const countInput = document.getElementById("wizard-similar-count");
-  wizardState.count = countInput ? parseInt(countInput.value, 10) || 5 : 5;
-
-  wizardState.mode = "generate";
-  wizardState.sourceItem = wizardState.extractedItem;
-
+  wizardState.promptRanges = promptRanges;
   return true;
 }
 
-function detectQuestionType(text) {
-  if (text.includes("؟") && text.includes("1.") && text.includes("2."))
-    return "multiple_choice";
-  if (text.includes("صحیح") || text.includes("غلط")) return "true_false";
-  if (text.includes("........")) return "fill_blank";
-  return "descriptive";
+/** Step2: generate prompt */
+function updateGeneratePromptStep2() {
+  const el = document.getElementById("generatePromptDisplay");
+  if (!el) return;
+
+  const prompt = getAIPrompt({
+    ranges: wizardState.promptRanges,
+    countPerRange: wizardState.countPerRange,
+  });
+
+  el.textContent = prompt;
 }
 
+/** Parse AI response: expects { ranges: [ { rangeName, items:[{type,text}] } ] } */
+function extractWizardRangesJSON(raw) {
+  if (!raw || typeof raw !== "string") throw new Error("ورودی خالی است");
+
+  let cleaned = raw.trim();
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) cleaned = codeBlockMatch[1].trim();
+
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace === -1 || lastBrace === -1)
+    throw new Error("ساختار JSON پیدا نشد");
+
+  const candidate = cleaned.substring(firstBrace, lastBrace + 1);
+
+  let parsed;
+  try {
+    parsed = JSON.parse(candidate);
+  } catch {
+    throw new Error("JSON نامعتبر است");
+  }
+
+  if (!parsed?.ranges || !Array.isArray(parsed.ranges)) {
+    throw new Error("ساختار JSON باید شامل فیلد ranges (آرایه) باشد");
+  }
+
+  // validate items
+  parsed.ranges.forEach((r, idx) => {
+    if (!r || typeof r !== "object")
+      throw new Error(`ranges[${idx}] نامعتبر است`);
+    if (!Array.isArray(r.items))
+      throw new Error(`ranges[${idx}].items باید آرایه باشد`);
+    r.items = r.items
+      .filter(
+        (it) => it && typeof it.text === "string" && it.text.trim() !== "",
+      )
+      .map((it) => ({
+        type: it.type || "descriptive",
+        text: it.text,
+      }));
+  });
+
+  return parsed;
+}
+
+/** Render preview separated by ranges */
+function renderGeneratedPreviewByRanges(generatedByRange) {
+  const wrap = document.getElementById("generateRangesPreview");
+  const container = document.getElementById("generatePreviewContainer");
+  const empty = document.getElementById("generateEmptyPreview");
+
+  if (!wrap || !container || !empty) return;
+
+  wrap.innerHTML = "";
+
+  const anyItem = generatedByRange.some((g) => g.items?.length);
+  if (!anyItem) {
+    empty.classList.remove("hidden");
+    container.classList.remove("hidden");
+    return;
+  }
+
+  empty.classList.add("hidden");
+  container.classList.remove("hidden");
+
+  generatedByRange.forEach((g) => {
+    const card = document.createElement("div");
+    card.className = "bg-surface border border-border-light rounded-custom p-3";
+
+    const header = document.createElement("div");
+    header.className =
+      "flex items-center justify-between gap-2 mb-2 pb-2 border-b border-border-light";
+    header.innerHTML = `
+      <div class="font-semibold text-primary truncate">
+        ${sanitizeText(g.rangeName || "بدون عنوان")}
+      </div>
+      <div class="text-xs text-muted whitespace-nowrap">
+        تعداد: ${toPersianDigits(g.items.length || 0)}
+      </div>
+    `;
+    card.appendChild(header);
+
+    const grid = document.createElement("div");
+    grid.className = "grid grid-cols-1 gap-2";
+
+    (g.items || []).forEach((item, index) => {
+      const row = document.createElement("div");
+      row.className =
+        "relative bg-surface-dark border border-border-light rounded-custom p-2 text-sm";
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className =
+        "absolute top-2 left-2 w-6 h-6 bg-error-light text-error rounded-full flex items-center justify-center text-sm opacity-70 hover:opacity-100 border-0 cursor-pointer";
+      del.innerHTML = "&times;";
+      del.onclick = () => {
+        // حذف از همان مبحث
+        g.items.splice(index, 1);
+        // اگر این مبحث خالی شد هم مشکلی نیست
+        renderGeneratedPreviewByRanges(generatedByRange);
+
+        // دکمه افزودن اگر کلاً هیچ آیتمی نماند disable شود
+        const stillAny = generatedByRange.some((x) => x.items?.length);
+        document.getElementById("addGeneratedBtn").disabled = !stillAny;
+      };
+
+      row.appendChild(del);
+
+      const meta = document.createElement("div");
+      meta.className = "text-xs text-muted mb-1";
+      meta.textContent = `آیتم ${toPersianDigits(index + 1)}`;
+      row.appendChild(meta);
+
+      const content = document.createElement("div");
+      content.className = "text-secondary";
+      content.innerHTML = item.text.html || "";
+      row.appendChild(content);
+
+      grid.appendChild(row);
+    });
+
+    card.appendChild(grid);
+    wrap.appendChild(card);
+  });
+
+  renderMathInContainer(wrap);
+}
+
+/** Step3: preview button handler */
+function previewGeneratedItemsStep3() {
+  const raw =
+    document.getElementById("generateResponseInput")?.value?.trim() || "";
+  if (!raw) {
+    showToast("لطفاً پاسخ را وارد کنید", "error");
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = extractWizardRangesJSON(raw);
+  } catch (err) {
+    showToast(err.message, "error");
+    return;
+  }
+
+  // map rangeName -> rangeId (only among selected promptRanges)
+  const byName = new Map(
+    wizardState.promptRanges.map((r) => [
+      String(r.rangeName || "").trim(),
+      r.rangeId,
+    ]),
+  );
+
+  const generatedByRange = [];
+
+  parsed.ranges.forEach((r) => {
+    const rangeName = String(r.rangeName || "").trim();
+    const rangeId = byName.get(rangeName) || null;
+
+    // اگر rangeName ناشناخته باشد، اجازه می‌دهیم ولی add نخواهد شد مگر match شود.
+    const items = (r.items || []).map((it) => ({
+      id: createRandomId("item"),
+      text: {
+        // همان قالبی که برنامه شما می‌خواهد: html + align
+        html: it.text,
+        align: "RIGHT",
+      },
+      image: null,
+      showText: true,
+      labelId: null,
+    }));
+
+    generatedByRange.push({ rangeId, rangeName, items });
+  });
+
+  wizardState.generatedByRange = generatedByRange;
+
+  renderGeneratedPreviewByRanges(generatedByRange);
+
+  // enable add if there is at least one item AND at least one rangeId matched
+  const canAdd = generatedByRange.some(
+    (g) => g.rangeId && g.items && g.items.length > 0,
+  );
+
+  document.getElementById("addGeneratedBtn").disabled = !canAdd;
+}
+
+/** Step3: add generated items to their ranges */
+function addGeneratedItemsToRanges() {
+  const groups = wizardState.generatedByRange || [];
+  const addable = groups.filter(
+    (g) => !!g.rangeId && (g.items?.length || 0) > 0,
+  );
+
+  if (!addable.length) {
+    showToast(
+      "آیتم قابل افزودن وجود ندارد (نام مبحث‌ها با انتخاب‌ها تطابق ندارد).",
+      "error",
+    );
+    return;
+  }
+
+  addable.forEach((g) => {
+    g.items.forEach((it) => addItemToRange(g.rangeId, it));
+  });
+
+  const total = addable.reduce((acc, g) => acc + (g.items?.length || 0), 0);
+  showToast(`${toPersianDigits(total)} آیتم به مبحث‌ها اضافه شد`);
+  closeWizard();
+}
+
+/** step indicator UI */
 function updateStepIndicators() {
   document
     .querySelectorAll("#modal-ai [data-step-indicator]")
@@ -2603,213 +2877,43 @@ function updateStepIndicators() {
     });
 }
 
-function updateWizardPreview() {
-  const tempItem = wizardState.extractedItem;
-  if (!tempItem) return;
-
-  const range = findRangeById(wizardState.rangeId);
-  const previewCell = document.getElementById("wizard-preview-cell");
-  const scoreCell = document.getElementById("wizard-preview-score");
-
-  const score =
-    range?.score > 0 ? `(${toPersianDigits(range.score)} نمره)` : "";
-  scoreCell.innerHTML = `${toPersianDigits(1)} <span class="font-normal text-xs">${score}</span>`;
-
-  previewCell.innerHTML = renderItemContent(tempItem, {
-    rangeDesc: range?.desc || "",
-  });
-  renderMathInContainer(previewCell);
-}
-
-function updateGeneratePrompt() {
-  if (!wizardState.sourceItem?.text) return;
-
-  const count = wizardState.count;
-  const type = detectQuestionType(wizardState.sourceItem.text.html);
-  const prompt = getAIPrompt({
-    task: "generate-similar",
-    sampleText: wizardState.sourceItem.text.html,
-    count,
-    type,
-  });
-
-  document.getElementById("generatePromptDisplay").textContent = prompt;
-}
-
 function updateStepContent() {
   if (wizardState.step === 1) {
-    document.getElementById("extractPromptDisplay").textContent = getAIPrompt({
-      task: "extract",
-    });
+    renderWizardRangesList();
+  }
+
+  if (wizardState.step === 2) {
+    updateGeneratePromptStep2();
   }
 
   if (wizardState.step === 3) {
-    const item = wizardState.extractedItem;
-    if (item?.text) {
-      wizardTextEditor.setContent(item.text.html);
-      // fix: you had `.toLowerCase` without calling it
-      const a = item.text.align
-        ? String(item.text.align).toLowerCase()
-        : "right";
-      wizardTextEditor.setAlignment(a);
-    } else {
-      wizardTextEditor.setContent("");
-      wizardTextEditor.setAlignment("right");
-    }
+    // reset step3 UI
+    const resp = document.getElementById("generateResponseInput");
+    const prev = document.getElementById("generatePreviewContainer");
+    const addBtn = document.getElementById("addGeneratedBtn");
+    const empty = document.getElementById("generateEmptyPreview");
+    const wrap = document.getElementById("generateRangesPreview");
 
-    const countInput = document.getElementById("wizard-similar-count");
-    if (countInput) countInput.value = wizardState.count;
+    if (resp) resp.value = "";
+    if (prev) prev.classList.add("hidden");
+    if (empty) empty.classList.add("hidden");
+    if (wrap) wrap.innerHTML = "";
+    if (addBtn) addBtn.disabled = true;
 
-    updateWizardPreview();
-  }
-
-  if (wizardState.step === 4) {
-    updateGeneratePrompt();
-  }
-
-  if (wizardState.step === 5) {
-    document.getElementById("generateResponseInput").value = "";
-    document.getElementById("generatePreviewContainer").classList.add("hidden");
-    document.getElementById("addGeneratedBtn").disabled = true;
-    wizardState.generatedItems = [];
+    wizardState.generatedByRange = [];
   }
 }
 
-function renderGeneratedPreview(items, containerId, emptyId) {
-  const container = document.getElementById(containerId);
-  const empty = document.getElementById(emptyId);
-
-  container.innerHTML = "";
-  if (items.length === 0) {
-    empty.classList.remove("hidden");
-    return;
-  }
-  empty.classList.add("hidden");
-
-  items.forEach((item, index) => {
-    const card = document.createElement("div");
-    card.className =
-      "relative bg-surface border border-border-light rounded-custom p-3 text-sm";
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className =
-      "absolute top-2 left-2 w-6 h-6 bg-error-light text-error rounded-full flex items-center justify-center text-sm opacity-70 hover:opacity-100 border-0 cursor-pointer";
-    deleteBtn.innerHTML = "&times;";
-    deleteBtn.onclick = (e) => {
-      e.stopPropagation();
-      removeGeneratedItem(index);
-    };
-
-    card.appendChild(deleteBtn);
-
-    const header = document.createElement("div");
-    header.className =
-      "text-xs text-muted mb-1 pb-1 border-b border-border-light flex items-center gap-1";
-    header.innerHTML = `<i class="bi bi-card-text"></i> آیتم ${toPersianDigits(index + 1)}`;
-    card.appendChild(header);
-
-    const content = document.createElement("div");
-    content.className = "text-secondary";
-    content.innerHTML = item.text.html;
-    card.appendChild(content);
-
-    container.appendChild(card);
-  });
-
-  renderMathInContainer(container);
-}
-
-function previewGeneratedItems() {
-  const raw = document.getElementById("generateResponseInput").value.trim();
-  if (!raw) {
-    showToast("لطفاً پاسخ را وارد کنید", "error");
-    return;
-  }
-  try {
-    const data = extractJSON(raw);
-    const items = data.items.map((item) => ({
-      id: createRandomId("item"),
-      text: { ...item.text },
-      image: null,
-      showText: true,
-    }));
-
-    wizardState.generatedItems = items;
-    renderGeneratedPreview(
-      items,
-      "generateItemsPreview",
-      "generateEmptyPreview",
-    );
-
-    document
-      .getElementById("generatePreviewContainer")
-      .classList.remove("hidden");
-    document.getElementById("addGeneratedBtn").disabled = false;
-  } catch (err) {
-    showToast(err.message, "error");
-  }
-}
-
-function addGeneratedItemsToRange() {
-  if (!wizardState.generatedItems.length) return;
-
-  wizardState.generatedItems.forEach((item) =>
-    addItemToRange(wizardState.rangeId, item),
-  );
-
-  showToast(
-    `${toPersianDigits(wizardState.generatedItems.length)} آیتم به مبحث اضافه شد`,
-  );
-  closeWizard();
-}
-
-function removeGeneratedItem(index) {
-  wizardState.generatedItems.splice(index, 1);
-
-  if (wizardState.generatedItems.length === 0) {
-    document.getElementById("generatePreviewContainer").classList.add("hidden");
-    document.getElementById("addGeneratedBtn").disabled = true;
-  } else {
-    renderGeneratedPreview(
-      wizardState.generatedItems,
-      "generateItemsPreview",
-      "generateEmptyPreview",
-    );
-  }
-}
-
-function updateWizardPreviewFromEditor() {
-  if (!wizardState.extractedItem) return;
-
-  const html = wizardTextEditor.getContent();
-  if (!wizardState.extractedItem.text) {
-    wizardState.extractedItem.text = { html, align: "RIGHT" };
-  } else {
-    wizardState.extractedItem.text.html = html;
-    const align = wizardTextEditor.getAlignment();
-    if (align)
-      wizardState.extractedItem.text.align = String(align).toUpperCase();
-  }
-  updateWizardPreview();
-}
-
-function openWizard(mode, rangeId, sourceItem = null) {
-  wizardState.mode = mode;
-  wizardState.rangeId = rangeId;
+function openWizard() {
   wizardState.isOpen = true;
-
-  wizardState.generatedItems = [];
-  wizardState.extractedItem = null;
-  wizardState.sourceItem = sourceItem;
-
-  const startStep = mode === "extract" ? 1 : 4;
-  wizardState.step = startStep;
-
-  wizardState.count = window.appState?.namesCount || 5;
+  wizardState.step = 1;
+  wizardState.selectedRangeIds = new Set();
+  wizardState.promptRanges = [];
+  wizardState.generatedByRange = [];
+  wizardState.countPerRange = 5;
 
   aiWizardModal.open();
-  aiWizardModal.goToStep(startStep, { silent: true });
+  aiWizardModal.goToStep(1, { silent: true });
 
   updateStepIndicators();
   updateStepContent();
@@ -2819,36 +2923,27 @@ function closeWizard() {
   aiWizardModal.close();
 
   wizardState.isOpen = false;
-  wizardState.mode = "extract";
   wizardState.step = 1;
-  wizardState.rangeId = null;
-  wizardState.extractedItem = null;
-  wizardState.sourceItem = null;
-  wizardState.generatedItems = [];
-  wizardState.count = 5;
+  wizardState.selectedRangeIds = new Set();
+  wizardState.promptRanges = [];
+  wizardState.generatedByRange = [];
+  wizardState.countPerRange = 5;
 
-  const ex = document.getElementById("extractResponseInput");
   const gen = document.getElementById("generateResponseInput");
-  if (ex) ex.value = "";
   if (gen) gen.value = "";
-
   document.getElementById("generatePreviewContainer")?.classList.add("hidden");
 }
 
 function initAiWizardModal() {
   aiWizardModal = new Modal("#modal-ai", {
-    title: "دستیار هوش مصنوعی",
+    title: "دستیار هوش مصنوعی (ساخت سوال مشابه)",
     closeOnEscape: false,
     closeOnOverlayClick: false,
     wizard: {
       enabled: true,
       startStep: 1,
       loop: false,
-      labels: {
-        next: "بعدی",
-        prev: "قبلی",
-        finish: "پایان",
-      },
+      labels: { next: "بعدی", prev: "قبلی", finish: "پایان" },
       onStepChange: (stepNo) => {
         wizardState.step = stepNo;
         updateStepIndicators();
@@ -2863,10 +2958,18 @@ function initAiWizardModal() {
   aiWizardModal.nextStep = function () {
     const step = wizardState.step;
 
-    if (step === 2 && !validateStep2()) return;
-    if (step === 3 && !validateStep3()) return;
+    if (step === 1) {
+      if (!validateStep1_andBuildPromptRanges()) return;
+      this.goToStep(2);
+      return;
+    }
 
-    if (step === 5) {
+    if (step === 2) {
+      this.goToStep(3);
+      return;
+    }
+
+    if (step === 3) {
       closeWizard();
       return;
     }
@@ -2878,60 +2981,48 @@ function initAiWizardModal() {
     const step = wizardState.step;
     const prev = step - 1;
     if (prev < 1) return;
-
-    if (step === 4 && prev === 3 && wizardState.extractedItem) {
-      wizardState.mode = "extract";
-      this.goToStep(3);
-      return;
-    }
-
     this.goToStep(prev);
   };
 }
 
 function initWizardEvents() {
+  // open wizard buttons (desktop + mobile)
   document
-    .getElementById("copyExtractPromptBtn")
-    ?.addEventListener("click", () => {
-      copyToClipboard(
-        document.getElementById("extractPromptDisplay").textContent,
-      );
-    });
+    .getElementById("globalAiWizardBtn")
+    ?.addEventListener("click", openWizard);
+  document
+    .getElementById("globalAiWizardBtnMobile")
+    ?.addEventListener("click", openWizard);
 
+  // step1 select/clear all
+  document
+    .getElementById("aiSelectAllRangesBtn")
+    ?.addEventListener("click", selectAllEligibleRanges);
+  document
+    .getElementById("aiClearAllRangesBtn")
+    ?.addEventListener("click", clearAllRangesSelection);
+
+  // copy prompt step2
   document
     .getElementById("copyGeneratePromptBtn")
     ?.addEventListener("click", () => {
       copyToClipboard(
-        document.getElementById("generatePromptDisplay").textContent,
+        document.getElementById("generatePromptDisplay")?.textContent || "",
       );
     });
 
-  document
-    .getElementById("processExtractBtn")
-    ?.addEventListener("click", () => {
-      pasteToTextarea("extractResponseInput");
-    });
-
+  // paste response step3
   document.getElementById("pasteGenerateBtn")?.addEventListener("click", () => {
     pasteToTextarea("generateResponseInput");
   });
 
+  // preview + add step3
   document
     .getElementById("previewGenerateBtn")
-    ?.addEventListener("click", previewGeneratedItems);
+    ?.addEventListener("click", previewGeneratedItemsStep3);
   document
     .getElementById("addGeneratedBtn")
-    ?.addEventListener("click", addGeneratedItemsToRange);
-}
-
-// -------------------- Attach to range button --------------------
-function setupAiRangeButton(rangeElement, rangeId) {
-  rangeElement.querySelectorAll(".ai-range").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openWizard("extract", rangeId);
-    });
-  });
+    ?.addEventListener("click", addGeneratedItemsToRanges);
 }
 
 // ========== Drag & Drop ==========
@@ -3565,29 +3656,6 @@ const editModalEditor = createRichTextEditor(modalPlaceholder, {
   contentId: "modal-text-editor",
   toolbarId: "modal-toolbar",
   onContentChange: updateTempItemFromTextEditor,
-});
-
-const wizardPlaceholder = document.getElementById(
-  "wizard-rich-editor-placeholder",
-);
-
-const wizardTextEditor = createRichTextEditor(wizardPlaceholder, {
-  features: [
-    "bold",
-    "italic",
-    "underline",
-    "strike",
-    "align-left",
-    "align-center",
-    "align-right",
-    "align-justify",
-    "undo",
-    "redo",
-  ],
-  placeholder: "متن سوال را ویرایش کنید...",
-  contentId: "wizard-text-editor",
-  toolbarId: "wizard-toolbar",
-  onContentChange: updateWizardPreviewFromEditor,
 });
 
 window.addEventListener("resize", () => {

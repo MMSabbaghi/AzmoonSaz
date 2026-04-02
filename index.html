@@ -17,6 +17,9 @@
 
       <!-- دکمه‌های دسکتاپ (فقط آیکون با tooltip) -->
       <div class="flex max-md:hidden gap-2 bg-surface">
+        <button id="globalAiWizardBtn" class="btn btn-outline px-4 py-2" data-tooltip="هوش مصنوعی (ساخت سوال مشابه)">
+          <i class="bi bi-openai"></i>
+        </button>
         <button id="newButton" class="btn btn-outline px-4 py-2" data-tooltip="شروع جدید">
           <i class="bi bi-folder-plus"></i>
         </button>
@@ -34,7 +37,10 @@
 
       <!-- دکمه همبرگری موبایل -->
       <div class="md:hidden">
-        <button id="saveToIndexedDBMobile" class="btn btn-outline p-2 text-xl border-none" data-tooltip="ذخیره">
+        <button id="globalAiWizardBtnMobile" class="btn btn-outline p-2 text-xl">
+          <i class="bi bi-openai"></i>
+        </button>
+        <button id="saveToIndexedDBMobile" class="btn btn-outline p-2 text-xl border-none">
           <i class="bi bi-floppy"></i>
         </button>
         <button id="hamburgerBtn" class="btn btn-outline p-2 text-xl border-none">
@@ -269,7 +275,6 @@
 
   <!-- ========== مودال ویزارد هوش مصنوعی ========== -->
   <div id="modal-ai">
-
     <div data-modal-body>
       <!-- Stepper -->
       <div class="stepper flex items-center justify-between mb-6 px-2" id="wizardStepper">
@@ -277,7 +282,7 @@
           <div
             class="step-circle w-8 h-8 mx-auto rounded-circle bg-surface-dark text-secondary flex items-center justify-center font-bold">
             ۱</div>
-          <span class="max-md:hidden text-xs mt-1 block">کپی پرامپت</span>
+          <span class="max-md:hidden text-xs mt-1 block">انتخاب مبحث‌ها</span>
         </div>
 
         <div class="step-line flex-1 h-0.5 bg-border-light"></div>
@@ -286,7 +291,7 @@
           <div
             class="step-circle w-8 h-8 mx-auto rounded-circle bg-surface-dark text-secondary flex items-center justify-center font-bold">
             ۲</div>
-          <span class="max-md:hidden text-xs mt-1 block">دریافت پاسخ</span>
+          <span class="max-md:hidden text-xs mt-1 block">پرامپت ساخت مشابه</span>
         </div>
 
         <div class="step-line flex-1 h-0.5 bg-border-light"></div>
@@ -295,99 +300,50 @@
           <div
             class="step-circle w-8 h-8 mx-auto rounded-circle bg-surface-dark text-secondary flex items-center justify-center font-bold">
             ۳</div>
-          <span class="max-md:hidden text-xs mt-1 block">ویرایش سوال</span>
-        </div>
-
-        <div class="step-line flex-1 h-0.5 bg-border-light"></div>
-
-        <div class="step-item flex-1 text-center" data-step-indicator="4">
-          <div
-            class="step-circle w-8 h-8 mx-auto rounded-circle bg-surface-dark text-secondary flex items-center justify-center font-bold">
-            ۴</div>
-          <span class="max-md:hidden text-xs mt-1 block">پرامپت مشابه</span>
-        </div>
-
-        <div class="step-line flex-1 h-0.5 bg-border-light"></div>
-
-        <div class="step-item flex-1 text-center" data-step-indicator="5">
-          <div
-            class="step-circle w-8 h-8 mx-auto rounded-circle bg-surface-dark text-secondary flex items-center justify-center font-bold">
-            ۵</div>
-          <span class="max-md:hidden text-xs mt-1 block">پیش‌نمایش</span>
+          <span class="max-md:hidden text-xs mt-1 block">پیش‌نمایش/افزودن</span>
         </div>
       </div>
 
-      <div class="steps-container relative min-h-[300px]">
-        <!-- Step 1 -->
+      <div class="steps-container relative min-h-[320px]">
+
+        <!-- Step 1: انتخاب مبحث‌ها -->
         <div class="step step-1" data-step="1">
           <div class="bg-primary-light/10 border-r-4 border-primary p-3 rounded-custom mb-4">
             <p class="text-sm text-secondary flex items-start gap-2">
               <i class="bi bi-info-circle-fill text-primary mt-0.5"></i>
-              این پرامپت را کپی کرده و همراه با تصویر سوال برای هوش مصنوعی ارسال کنید.
+              مبحث هایی را انتخاب کنید که می‌خواهید برای هرکدام سوالات مشابه تولید شود.
             </p>
           </div>
 
           <div class="bg-surface-dark p-3 rounded-custom">
-            <div class="flex items-center justify-between mb-2">
-              <label class="font-medium text-secondary">پرامپت استخراج</label>
-              <button id="copyExtractPromptBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1" type="button">
-                <i class="bi bi-clipboard"></i> کپی
-              </button>
-            </div>
-
-            <div id="extractPromptDisplay"
-              class="bg-surface border border-border-light rounded-custom p-3 font-mono text-sm text-secondary whitespace-pre-wrap max-h-40 overflow-y-auto">
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 2 -->
-        <div class="step step-2 hidden" data-step="2">
-          <div class="bg-surface-dark p-3 rounded-custom">
-            <div class="flex items-center justify-between mb-2">
-              <label class="font-medium text-secondary">پاسخ AI (JSON)</label>
-              <button id="processExtractBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1" type="button">
-                <i class="bi bi-clipboard"></i> چسباندن
-              </button>
-            </div>
-
-            <textarea id="extractResponseInput" rows="5"
-              class="w-full border border-border-light rounded-custom p-2 font-mono text-sm bg-surface"
-              placeholder='{ "items": [...] }'></textarea>
-
-            <p class="text-xs text-muted mt-2">پاسخ را به صورت JSON در اینجا بچسبانید.</p>
-          </div>
-        </div>
-
-        <!-- Step 3 -->
-        <div class="step step-3 hidden" data-step="3">
-          <div id="wizard-rich-editor-placeholder" class="rich-editor-placeholder"></div>
-
-          <div class="mb-4">
-            <div class="flex items-center justify-between mb-2">
-              <label class="font-medium text-secondary">پیش‌نمایش:</label>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div class="flex items-center gap-2">
-                <label class="text-sm font-medium text-secondary">تعداد سوالات مشابه:</label>
-                <input data-number-input="true" data-float="false" id="wizard-similar-count"
-                  class="w-20 border border-border-light rounded-custom p-2 text-center" min="1" max="20" value="5">
+                <button id="aiSelectAllRangesBtn" type="button" class="btn btn-outline px-3 py-2">
+                  <i class="bi bi-check2-square"></i> انتخاب همه
+                </button>
+                <button id="aiClearAllRangesBtn" type="button" class="btn btn-outline px-3 py-2">
+                  <i class="bi bi-square"></i> پاک کردن انتخاب‌ها
+                </button>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <label class="text-sm font-medium text-secondary whitespace-nowrap">تعداد مشابه برای مبحث:</label>
+                <input id="aiSimilarCountPerRange" data-number-input="true" data-float="false"
+                  class="w-20 border border-border-light rounded-custom p-2 text-center bg-surface" min="1" max="50"
+                  value="5">
               </div>
             </div>
 
-            <table class="w-full border-collapse bg-surface" style="border: 1px solid var(--text-primary);">
-              <tr>
-                <td style="border: 1px solid var(--text-primary);" class="w-10 text-center font-bold"
-                  id="wizard-preview-score">۱</td>
-                <td class="p-2 relative" id="wizard-preview-cell"></td>
-              </tr>
-            </table>
+            <div id="aiRangesList" class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto p-1">
+            </div>
           </div>
         </div>
 
-        <!-- Step 4 -->
-        <div class="step step-4 hidden" data-step="4">
+        <!-- Step 2: پرامپت -->
+        <div class="step step-2 hidden" data-step="2">
           <div class="bg-primary-light/10 border-r-4 border-primary p-3 rounded-custom mb-4">
             <p class="text-sm text-secondary">
-              پرامپت زیر را کپی کرده و برای هوش مصنوعی ارسال کنید تا سوالات مشابه تولید کند.
+              این پرامپت را کپی کرده و برای هوش مصنوعی ارسال کنید تا برای هر مبحث، سوالات مشابه تولید کند.
             </p>
           </div>
 
@@ -401,43 +357,49 @@
             </div>
 
             <div id="generatePromptDisplay"
-              class="bg-surface border border-border-light rounded-custom p-3 font-mono text-sm text-secondary whitespace-pre-wrap max-h-40 overflow-y-auto">
+              class="bg-surface border border-border-light rounded-custom p-3 font-mono text-sm text-secondary whitespace-pre-wrap max-h-48 overflow-y-auto">
             </div>
           </div>
         </div>
 
-        <!-- Step 5 -->
-        <div class="step step-5 hidden" data-step="5">
+        <!-- Step 3: پاسخ + پیش‌نمایش + افزودن -->
+        <div class="step step-3 hidden" data-step="3">
           <div class="bg-surface-dark p-3 rounded-custom">
             <div class="flex items-center justify-between mb-2">
-              <label class="font-medium text-secondary">پاسخ AI (آرایه‌ای از سوالات)</label>
+              <label class="font-medium text-secondary">پاسخ هوش مصنوعی</label>
               <button id="pasteGenerateBtn" class="btn btn-outline px-3 py-1 flex items-center gap-1" type="button">
                 <i class="bi bi-clipboard-plus"></i> چسباندن
               </button>
             </div>
 
-            <textarea id="generateResponseInput" rows="4"
+            <textarea id="generateResponseInput" rows="5"
               class="w-full border border-border-light rounded-custom p-2 font-mono text-sm bg-surface"
-              placeholder='{ "items": [...] }'></textarea>
+              placeholder='{ "ranges": [ { "rangeName": "...", "items": [ { "type": "...", "text": "..." } ] } ] }'></textarea>
 
             <div class="flex gap-2 mt-2">
               <button id="previewGenerateBtn" class="btn btn-outline flex-1" type="button">پیش‌نمایش</button>
               <button id="addGeneratedBtn" class="btn btn-primary flex-1" type="button" disabled>افزودن به
-                مبحث</button>
+                مبحث‌ها</button>
             </div>
           </div>
 
           <div id="generatePreviewContainer" class="border-t border-border-light pt-3 mt-3 hidden">
             <h3 class="font-medium text-secondary flex items-center gap-1 mb-2">
-              <i class="bi bi-card-list"></i> پیش‌نمایش آیتم‌ها
+              <i class="bi bi-card-list"></i> پیش‌نمایش آیتم‌ها (تفکیک‌شده بر اساس مبحث)
             </h3>
-            <div id="generateItemsPreview" class="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pb-2"></div>
-            <p id="generateEmptyPreview" class="text-sm text-muted text-center py-2 hidden">هیچ آیتمی برای نمایش وجود
-              ندارد.</p>
+
+            <div id="generateRangesPreview" class="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto pb-2">
+            </div>
+
+            <p id="generateEmptyPreview" class="text-sm text-muted text-center py-2 hidden">
+              هیچ آیتمی برای نمایش وجود ندارد.
+            </p>
           </div>
         </div>
+
       </div>
     </div>
+
     <div data-modal-footer class="flex items-center gap-2">
       <button data-wizard-prev type="button" class="btn btn-secondary px-6">قبلی</button>
       <button data-wizard-next type="button" class="btn mr-auto btn-primary px-6">بعدی</button>
