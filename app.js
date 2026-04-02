@@ -2286,7 +2286,7 @@ function openModalWithTempItem(rangeId) {
   if (!temp) return;
 
   updateModalLabelBtnUI();
-  setupModalEditorFromTemp(temp);
+  editModalEditor.setContent(temp.text.html || "");
   updateModalPreviewFromTemp();
   updateModalImageUI();
   setupModalShowTextSwitch(temp, range);
@@ -2301,17 +2301,6 @@ function setupModalShowTextSwitch(temp, range) {
     showText ? modalShowText.on() : modalShowText.off();
   }
 }
-
-function setupModalEditorFromTemp(temp) {
-  if (temp.text) {
-    editModalEditor.setContent(temp.text.html);
-    editModalEditor.setAlignment(temp.text.align.toLowerCase());
-  } else {
-    editModalEditor.setContent("");
-    editModalEditor.setAlignment("right");
-  }
-}
-
 // ---------- Image UI ----------
 function updateModalImageUI() {
   const hasImage = appState.modal.tempItem && appState.modal.tempItem.image;
