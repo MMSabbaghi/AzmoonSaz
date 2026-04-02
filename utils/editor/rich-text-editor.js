@@ -596,19 +596,11 @@
     }
   }
 
-  function renderMathInContainer(container) {
+  function renderMathWithPersianDigits(container) {
     if (typeof renderMathInElement === "undefined") {
       console.warn("KaTeX auto-render not available");
       return;
     }
-
-    const inlineNodes = container.querySelectorAll(".math-inline");
-    inlineNodes.forEach((node) => {
-      const tex = node.getAttribute("data-latex") || node.textContent || "";
-      node.classList.add("rendered");
-      node.textContent = `$${tex}$`;
-    });
-
     try {
       renderMathInElement(container, {
         delimiters: MATH_RENDER_DELIMITERS,
@@ -618,6 +610,16 @@
     } catch (e) {
       console.error("Math rendering error:", e);
     }
+  }
+
+  function renderMathInContainer(container) {
+    const inlineNodes = container.querySelectorAll(".math-inline");
+    inlineNodes.forEach((node) => {
+      const tex = node.getAttribute("data-latex") || node.textContent || "";
+      node.classList.add("rendered");
+      node.textContent = `$${tex}$`;
+    });
+    renderMathWithPersianDigits(container);
   }
 
   // ========== Modal ==========
@@ -1084,7 +1086,6 @@
     toolbar.innerHTML = buildToolbarHTML(features);
     wrapper.appendChild(toolbar);
 
-    // === Fix #2/#3: Placeholder overlay (هم وقتی ساختاری مثل br هست هم کار می‌کند)
     const placeholderEl = document.createElement("div");
     placeholderEl.className = "rte-placeholder";
     placeholderEl.textContent = placeholder || "";
@@ -1113,7 +1114,6 @@
     updatePlaceholder();
 
     function getEditorHtml() {
-      // === Fix #5: اگر ادیتور خالی است رشته خالی بده
       if (isEditorEmpty(editor)) return "";
 
       const clonedEditor = editor.cloneNode(true);
@@ -1123,7 +1123,6 @@
         setMathSpanData(node, latex);
       });
 
-      // اگر خروجی فقط خطوط خالی بود باز هم ""
       const tmp = document.createElement("div");
       tmp.innerHTML = clonedEditor.innerHTML;
       if (isEditorEmpty(tmp)) return "";
@@ -1338,7 +1337,7 @@
       setContent: (html) => {
         editor.innerHTML = html || "";
         normalizeEditorLines(editor);
-        renderMathInContainer(editor);
+        renderMathWithPersianDigits(editor);
         updatePlaceholder();
       },
       getContent: getEditorHtml,

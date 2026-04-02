@@ -9,6 +9,10 @@
   vertical-align: middle;
 }
 
+.rich-editor-content .math-inline-tex {
+  pointer-events: none;
+}
+
 /* ====== Design Tokens ====== */
 :root {
   --rte-bg: #ffffff;
