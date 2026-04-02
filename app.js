@@ -2595,12 +2595,7 @@ function validateStep1_andBuildPromptRanges() {
 
     if (!samples.length) continue;
 
-    promptRanges.push({
-      rangeId,
-      rangeName: range.rangeName || "بدون عنوان",
-      desc: range.desc || "",
-      samples,
-    });
+    promptRanges.push({ ...range, rangeId });
   }
 
   if (!promptRanges.length) {
@@ -2623,51 +2618,6 @@ function updateGeneratePromptStep2() {
   });
 
   el.textContent = prompt;
-}
-
-/** Parse AI response: expects { ranges: [ { rangeName, items:[{type,text}] } ] } */
-function extractWizardRangesJSON(raw) {
-  if (!raw || typeof raw !== "string") throw new Error("ورودی خالی است");
-
-  let cleaned = raw.trim();
-  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlockMatch) cleaned = codeBlockMatch[1].trim();
-
-  const firstBrace = cleaned.indexOf("{");
-  const lastBrace = cleaned.lastIndexOf("}");
-  if (firstBrace === -1 || lastBrace === -1)
-    throw new Error("ساختار JSON پیدا نشد");
-
-  const candidate = cleaned.substring(firstBrace, lastBrace + 1);
-
-  let parsed;
-  try {
-    parsed = JSON.parse(candidate);
-  } catch {
-    throw new Error("JSON نامعتبر است");
-  }
-
-  if (!parsed?.ranges || !Array.isArray(parsed.ranges)) {
-    throw new Error("ساختار JSON باید شامل فیلد ranges (آرایه) باشد");
-  }
-
-  // validate items
-  parsed.ranges.forEach((r, idx) => {
-    if (!r || typeof r !== "object")
-      throw new Error(`ranges[${idx}] نامعتبر است`);
-    if (!Array.isArray(r.items))
-      throw new Error(`ranges[${idx}].items باید آرایه باشد`);
-    r.items = r.items
-      .filter(
-        (it) => it && typeof it.text === "string" && it.text.trim() !== "",
-      )
-      .map((it) => ({
-        type: it.type || "descriptive",
-        text: it.text,
-      }));
-  });
-
-  return parsed;
 }
 
 /** Render preview separated by ranges */
@@ -2764,7 +2714,7 @@ function previewGeneratedItemsStep3() {
 
   let parsed;
   try {
-    parsed = extractWizardRangesJSON(raw);
+    parsed = extractJSON(raw);
   } catch (err) {
     showToast(err.message, "error");
     return;
@@ -2784,13 +2734,11 @@ function previewGeneratedItemsStep3() {
     const rangeName = String(r.rangeName || "").trim();
     const rangeId = byName.get(rangeName) || null;
 
-    // اگر rangeName ناشناخته باشد، اجازه می‌دهیم ولی add نخواهد شد مگر match شود.
     const items = (r.items || []).map((it) => ({
       id: createRandomId("item"),
       text: {
-        // همان قالبی که برنامه شما می‌خواهد: html + align
-        html: it.text,
-        align: "RIGHT",
+        html: it.text.html,
+        align: it.text.align,
       },
       image: null,
       showText: true,
@@ -2804,7 +2752,6 @@ function previewGeneratedItemsStep3() {
 
   renderGeneratedPreviewByRanges(generatedByRange);
 
-  // enable add if there is at least one item AND at least one rangeId matched
   const canAdd = generatedByRange.some(
     (g) => g.rangeId && g.items && g.items.length > 0,
   );

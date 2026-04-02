@@ -1,65 +1,46 @@
-// ========== AI Prompt Generator  ==========
+// ========== AI Prompt Generator (robust) ==========
 function getAIPrompt({ ranges, countPerRange }) {
-  const safeCount = Math.max(1, parseInt(countPerRange, 10) || 5);
-
-  /**
-   * ranges: Array<{
-   *   rangeId?: string,
-   *   rangeName: string,
-   *   desc?: string,
-   *   labels?: Array<{ id: string, name: string }>,
-   *   samples?: Array<{
-   *     html: string,        // sample HTML
-   *     labelId?: string     // optional label id of sample (if exists)
-   *   }>
-   * }>
-   */
+  const safeCount = Math.max(1, Number.parseInt(countPerRange, 10) || 5);
 
   const payload = (ranges || []).map((r) => ({
-    rangeName: r.rangeName || "بدون عنوان",
-    desc: r.desc || "",
-    labels: (r.labels || []).map((l) => ({ id: l.id, name: l.name })),
-    // keep only meaningful samples
-    samples: (r.samples || [])
-      .filter(
-        (s) =>
-          s && (typeof s === "string" ? s.trim() : String(s.html || "").trim()),
-      )
-      .map((s) =>
-        typeof s === "string"
-          ? { html: s }
-          : { html: s.html, labelId: s.labelId },
-      ),
+    rangeId: r?.rangeId ?? undefined,
+    rangeName: r?.rangeName || "بدون عنوان",
+    desc: r?.desc || "",
+    labels: (r?.labels || []).map((l) => ({ id: String(l.id), name: l.name })),
+    samples: (r?.samples || [])
+      .map((s) => {
+        if (typeof s === "string") return { html: s };
+        if (s && typeof s === "object")
+          return { html: s.html, labelId: s.labelId ?? undefined };
+        return null;
+      })
+      .filter((s) => typeof s?.html === "string" && s.html.trim().length > 0),
   }));
 
-  return `تو یک دستیار حرفه‌ای تولید محتوای آموزشی هستی که باید برای چند «رنج/مبحث» به‌صورت هم‌زمان سوال/تمرین مشابه تولید کنی.
+  console.log(payload);
 
-## هدف
-برای هر رنج، دقیقاً ${safeCount} آیتم جدید تولید کن که از نظر «سبک، قالب، سطح دشواری، نوع درخواست، و ساختار HTML» شبیه نمونه‌های همان رنج باشد.
-
-## محدودیت‌های محتوا (خیلی مهم)
-- فقط مجاز هستی «مقادیر/داده‌ها» را تغییر دهی (مثل عدد، نام‌ها، تاریخ، مکان، متغیرها، گزینه‌ها، عبارات، داده‌های مسئله).
-- سبک نوشتار، نوع سوال، و الگوی جمله‌بندی را مطابق نمونه‌ها نگه دار.
-- desc (توضیح ثابت رنج) را تغییر نده؛ فقط آیتم‌ها را تولید کن.
-- آیتم‌ها باید جدید باشند و تکراریِ نمونه‌ها نباشند.
-- محتوای تولیدی باید مناسب همان درس/موضوع باشد (ممکن است ریاضی، علوم، فارسی، زبان، تاریخ، ... باشد).
-
-## قانون لیبل‌ها (کلیدی)
-برای هر رنج، یک لیست از labels داده شده است. تو باید برای «هر آیتم» دقیقاً یک labelId انتخاب کنی که:
-1) حتماً یکی از ids موجود در labels همان رنج باشد (هیچ id جدیدی نساز).
-2) از نظر معنایی با آیتم هم‌خوان باشد.
-3) اگر نمونه‌ها labelId دارند، از همان الگو برای دسته‌بندی استفاده کن (یعنی تشخیص نوع سوال و انتساب به نزدیک‌ترین لیبل).
-
-اگر در یک رنج چند لیبل داریم، تلاش کن توزیع معقولی داشته باشد (همه آیتم‌ها یک لیبل نشوند)، مگر اینکه نمونه‌ها واضحاً فقط یک لیبل را پوشش می‌دهند.
-
-## قوانین فرمت و خروجی
-- خروجی فقط و فقط JSON معتبر باشد. هیچ توضیح، متن اضافی، یا مارک‌داون ننویس.
-- در text فقط HTML بده (مشابه نمونه‌ها). چیزی خارج از HTML اضافه نکن.
-- اگر محتوا ریاضی بود، فرمول‌ها را با $...$ (inline) یا $$...$$ (block) بنویس.
-- برای سایر درس‌ها هم HTML ساده و تمیز تولید کن (مثلاً <div class="editor-line">...</div>).
-
-## ساختار دقیق خروجی
-{
+  return [
+    "تو یک دستیار حرفه‌ای تولید محتوای آموزشی هستی.",
+    `برای هر رنج دقیقاً ${safeCount} آیتم جدید تولید کن که از نظر سبک/قالب/سطح/ساختار HTML شبیه نمونه‌های همان رنج باشد.`,
+    "",
+    "## محدودیت‌های محتوا (خیلی مهم)",
+    "- فقط مقادیر/داده‌ها را تغییر بده (عدد، نام، تاریخ، متغیر، گزینه‌ها، ...).",
+    "- ساختار HTML را مشابه نمونه‌ها نگه دار (کلاس‌ها/استایل‌ها/اسپن‌های math-inline و ...).",
+    "- آیتم‌ها تکراری نمونه‌ها نباشند.",
+    "- desc را تغییر نده (فقط آیتم‌ها را بساز).",
+    "",
+    "## قانون labelId",
+    "- اگر labels خالی نیست: برای هر آیتم دقیقاً یک labelId از همان labels[].id انتخاب کن (هیچ id جدید نساز).",
+    "- اگر labels خالی است: labelId برای همه آیتم‌ها دقیقاً null باشد.",
+    "",
+    "## فرمت خروجی (حیاتی)",
+    "- خروجی باید فقط JSON معتبر باشد (بدون هیچ متن اضافه، بدون Markdown، بدون ```).",
+    "- مقدار text فقط HTML باشد.",
+    "- image همیشه null، showText همیشه true.",
+    "- align اگر معلوم نبود RIGHT.",
+    "",
+    "ساختار خروجی دقیقاً:",
+    `{
   "ranges": [
     {
       "rangeName": "نام رنج",
@@ -69,83 +50,276 @@ function getAIPrompt({ ranges, countPerRange }) {
           "text": { "html": "HTML", "align": "RIGHT" },
           "image": null,
           "showText": true,
-          "labelId": "یکی از labels[].id"
+          "labelId": null
         }
       ]
     }
   ]
+}`,
+    "",
+    "ورودی رنج‌ها:",
+    JSON.stringify({ countPerRange: safeCount, ranges: payload }, null, 2),
+    "",
+    "فقط JSON معتبر خروجی بده.",
+  ].join("\n");
 }
 
-### قواعد ساختاری
-- برای هر رنج، تعداد items دقیقاً ${safeCount} باشد.
-- type را تا حد امکان دقیق تشخیص بده؛ اگر مطمئن نیستی "descriptive" بگذار.
-- فیلد labelId اجباری است و باید معتبر باشد.
-- فیلد align را مطابق نمونه‌ها (معمولاً "RIGHT") تنظیم کن.
-- image را null بگذار مگر اینکه نمونه‌ها الگوی دیگری نشان دهند.
-- showText را true بگذار مگر اینکه نمونه‌ها خلافش باشند.
-
-## ورودی رنج‌ها (به همراه نمونه‌ها و لیبل‌ها)
-${JSON.stringify({ countPerRange: safeCount, ranges: payload }, null, 2)}
-
-فقط JSON معتبر خروجی بده.`;
+// ========== Helpers==========
+function stripCodeFences(s) {
+  const m = String(s).match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  return (m ? m[1] : s).trim();
 }
 
-// ========== JSON Extraction & Validation ==========
-function safeParseJsonString(raw) {
-  try {
-    return JSON.parse('"' + raw + '"');
-  } catch (e) {
-    const fixed = raw.replace(/\\(?!["\\/bfnrtu])/g, "\\\\");
-    try {
-      return JSON.parse('"' + fixed + '"');
-    } catch (e2) {
-      return null;
+function replaceSmartQuotes(s) {
+  return s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+}
+
+function removeTrailingCommas(s) {
+  return s.replace(/,\s*([}$$])/g, "$1");
+}
+
+function extractFirstJsonValueString(input) {
+  if (typeof input !== "string") return null;
+
+  const text = stripCodeFences(input);
+
+  const startObj = text.indexOf("{");
+  const startArr = text.indexOf("[");
+  let start = -1;
+
+  if (startObj === -1 && startArr === -1) return null;
+  if (startObj === -1) start = startArr;
+  else if (startArr === -1) start = startObj;
+  else start = Math.min(startObj, startArr);
+
+  let inString = false;
+  let escaped = false;
+  let depthObj = 0;
+  let depthArr = 0;
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    } else {
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "{") depthObj++;
+      if (ch === "}") depthObj--;
+      if (ch === "[") depthArr++;
+      if (ch === "]") depthArr--;
+
+      if (depthObj === 0 && depthArr === 0 && i > start) {
+        return text.slice(start, i + 1).trim();
+      }
     }
+  }
+
+  return null;
+}
+
+function escapeRawNewlinesInsideStrings(s) {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+
+    if (!inString) {
+      if (ch === '"') inString = true;
+      out += ch;
+      continue;
+    }
+
+    // inString
+    if (escaped) {
+      escaped = false;
+      out += ch;
+      continue;
+    }
+
+    if (ch === "\\") {
+      escaped = true;
+      out += ch;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = false;
+      out += ch;
+      continue;
+    }
+
+    // newline raw
+    if (ch === "\n") {
+      out += "\\n";
+      continue;
+    }
+    if (ch === "\r") {
+      out += "\\r";
+      continue;
+    }
+
+    out += ch;
+  }
+
+  return out;
+}
+
+function tryParseJSONLenient(raw) {
+  if (typeof raw !== "string") return null;
+
+  const direct = raw.trim();
+  try {
+    return JSON.parse(direct);
+  } catch {}
+
+  const extracted = extractFirstJsonValueString(direct);
+  if (!extracted) return null;
+
+  const fixed = escapeRawNewlinesInsideStrings(
+    removeTrailingCommas(replaceSmartQuotes(extracted)),
+  );
+
+  try {
+    return JSON.parse(fixed);
+  } catch (e) {
+    return null;
   }
 }
 
-function extractJSON(str) {
-  if (!str || typeof str !== "string") {
+// ========== Normalization & Validation ==========
+function normalizeAlign(align) {
+  const a = String(align || "RIGHT").toUpperCase();
+  return a === "LEFT" || a === "CENTER" || a === "RIGHT" ? a : "RIGHT";
+}
+
+function guessAlignFromHtml(html) {
+  const s = String(html || "");
+  if (/text-align\s*:\s*left/i.test(s)) return "LEFT";
+  if (/text-align\s*:\s*center/i.test(s)) return "CENTER";
+  if (/text-align\s*:\s*right/i.test(s)) return "RIGHT";
+  return "RIGHT";
+}
+
+function ensureWrappedHtml({ html, type }) {
+  const safeHtml = String(html || "");
+  const style =
+    type === "descriptive"
+      ? "white-space: pre-wrap;"
+      : "white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;";
+
+  if (safeHtml.startsWith("<div style=")) return safeHtml;
+
+  return `<div style="${style}">${safeHtml}</div>`;
+}
+
+function normalizeAndValidate(parsed, { defaultAlign = "RIGHT" } = {}) {
+  let rangesRaw = null;
+
+  if (parsed && Array.isArray(parsed.ranges)) {
+    rangesRaw = parsed.ranges;
+  } else if (parsed && Array.isArray(parsed.items)) {
+    rangesRaw = [
+      { rangeName: parsed.rangeName || "بدون عنوان", items: parsed.items },
+    ];
+  } else {
+    return { ranges: [] };
+  }
+
+  const normalizedRanges = rangesRaw.map((r, idx) => {
+    const rangeName = String(r?.rangeName || `رنج ${idx + 1}`);
+    const itemsRaw = Array.isArray(r?.items) ? r.items : [];
+
+    const items = [];
+    for (const it of itemsRaw) {
+      if (!it || typeof it !== "object") continue;
+
+      const type =
+        typeof it.type === "string" && it.type.trim()
+          ? it.type.trim()
+          : "descriptive";
+
+      let html = "";
+      let align = defaultAlign;
+
+      if (typeof it.text === "string") {
+        html = it.text;
+        align = guessAlignFromHtml(html);
+      } else if (it.text && typeof it.text === "object") {
+        if (typeof it.text.html === "string") html = it.text.html;
+        else if (
+          it.text.html &&
+          typeof it.text.html === "object" &&
+          typeof it.text.html.html === "string"
+        ) {
+          html = it.text.html.html;
+        }
+
+        align = it.text.align ?? guessAlignFromHtml(html);
+      } else if (typeof it.html === "string") {
+        html = it.html;
+        align = guessAlignFromHtml(html);
+      } else {
+        continue;
+      }
+
+      if (!String(html).trim()) continue;
+
+      items.push({
+        type,
+        text: {
+          html: ensureWrappedHtml({ html, type }),
+          align: normalizeAlign(align),
+        },
+        image: null,
+        showText: true,
+        labelId: it.labelId === undefined ? null : it.labelId,
+      });
+    }
+
+    return { rangeName, items };
+  });
+
+  return { ranges: normalizedRanges };
+}
+
+// ========== Final extractJSON  ==========
+function extractJSON(raw) {
+  if (!raw || typeof raw !== "string") {
     throw new Error("ورودی خالی یا نامعتبر است");
   }
 
-  let cleaned = str.trim();
-  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlockMatch) cleaned = codeBlockMatch[1].trim();
-
-  const firstBrace = cleaned.indexOf("{");
-  const lastBrace = cleaned.lastIndexOf("}");
-  if (firstBrace === -1 || lastBrace === -1)
-    throw new Error("ساختار JSON پیدا نشد");
-
-  const candidate = cleaned.substring(firstBrace, lastBrace + 1);
-  let parsed;
-  try {
-    parsed = JSON.parse(candidate);
-  } catch (e) {
-    throw new Error("JSON نامعتبر است");
+  const parsed = tryParseJSONLenient(raw);
+  if (!parsed) {
+    const candidate = extractFirstJsonValueString(raw);
+    throw new Error(
+      "JSON نامعتبر است یا پیدا نشد. " +
+        (candidate
+          ? "یک کاندید پیدا شد ولی پارس نشد (احتمالاً JSON استاندارد نیست)."
+          : "هیچ بلاک JSON پیدا نشد."),
+    );
   }
 
-  if (!parsed.items || !Array.isArray(parsed.items))
-    throw new Error("ساختار items معتبر نیست");
+  const normalized = normalizeAndValidate(parsed);
 
-  const validItems = parsed.items
-    .filter((item) => item && item.text)
-    .map((item) => {
-      const type = item.type || "descriptive";
-      let style =
-        type === "descriptive"
-          ? "white-space: pre-wrap;"
-          : "white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;";
-      return {
-        type,
-        text: {
-          html: `<div style="${style}">${item.text}</div>`,
-          align: "RIGHT",
-        },
-      };
-    });
+  normalized.ranges = normalized.ranges
+    .map((r) => ({ ...r, items: Array.isArray(r.items) ? r.items : [] }))
+    .filter((r) => r.items.length > 0);
 
-  if (!validItems.length) throw new Error("هیچ سوال معتبری استخراج نشد");
-  return { items: validItems };
+  const total = normalized.ranges.reduce((sum, r) => sum + r.items.length, 0);
+  if (!total) {
+    throw new Error(
+      "هیچ آیتم معتبری پس از نرمال‌سازی باقی نماند (ساختار items/text احتمالاً غیرمنتظره است).",
+    );
+  }
+
+  return normalized;
 }
