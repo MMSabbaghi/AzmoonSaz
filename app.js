@@ -3558,6 +3558,8 @@ function setupInputScrollOnFocus() {
   printSettingsUI = createPrintSettingsUI();
   placePrintSettingsUI();
   getPrintArea().style.fontFamily = appState.font;
+  initAiWizardModal();
+  initWizardEvents();
 })();
 
 initializeDesktopButtons();
@@ -3566,8 +3568,6 @@ initializeFileUpload();
 initializeHamburgerMenu();
 initPreviewImageToolbar();
 
-initAiWizardModal();
-initWizardEvents();
 setupInputScrollOnFocus();
 setupCropModalEvents();
 

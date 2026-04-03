@@ -7,17 +7,10 @@ function getAIPrompt({ ranges, countPerRange }) {
     rangeName: r?.rangeName || "بدون عنوان",
     desc: r?.desc || "",
     labels: (r?.labels || []).map((l) => ({ id: String(l.id), name: l.name })),
-    samples: (r?.samples || [])
-      .map((s) => {
-        if (typeof s === "string") return { html: s };
-        if (s && typeof s === "object")
-          return { html: s.html, labelId: s.labelId ?? undefined };
-        return null;
-      })
-      .filter((s) => typeof s?.html === "string" && s.html.trim().length > 0),
+    samples: (r?.items || []).map(({ text, labelId }) => {
+      return { html: text.html, labelId: labelId ?? undefined };
+    }),
   }));
-
-  console.log(payload);
 
   return [
     "تو یک دستیار حرفه‌ای تولید محتوای آموزشی هستی.",
