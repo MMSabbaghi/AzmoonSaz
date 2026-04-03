@@ -202,18 +202,6 @@ function guessAlignFromHtml(html) {
   return "RIGHT";
 }
 
-function ensureWrappedHtml({ html, type }) {
-  const safeHtml = String(html || "");
-  const style =
-    type === "descriptive"
-      ? "white-space: pre-wrap;"
-      : "white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;";
-
-  if (safeHtml.startsWith("<div style=")) return safeHtml;
-
-  return `<div style="${style}">${safeHtml}</div>`;
-}
-
 function normalizeAndValidate(parsed, { defaultAlign = "RIGHT" } = {}) {
   let rangesRaw = null;
 
@@ -269,7 +257,7 @@ function normalizeAndValidate(parsed, { defaultAlign = "RIGHT" } = {}) {
       items.push({
         type,
         text: {
-          html: ensureWrappedHtml({ html, type }),
+          html: { html, type },
           align: normalizeAlign(align),
         },
         image: null,
