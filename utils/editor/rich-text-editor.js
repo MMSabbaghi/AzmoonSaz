@@ -283,8 +283,6 @@
     const text = stripZwsp(editor.textContent || "").replace(/\s+/g, "");
     if (text.length > 0) return false;
 
-    // اگر تنها ساختارهای line/br باشند هم خالی حساب شود
-    // (textContent در این حالت معمولاً خالی است)
     return true;
   }
 
@@ -1113,15 +1111,19 @@
 
     updatePlaceholder();
 
-    function getEditorHtml() {
-      if (isEditorEmpty(editor)) return "";
-
-      const clonedEditor = editor.cloneNode(true);
-      const inlineNodes = clonedEditor.querySelectorAll(".math-inline");
+    function normailzeMathNodes(container) {
+      const inlineNodes = container.querySelectorAll(".math-inline");
       inlineNodes.forEach((node) => {
         const latex = node.getAttribute("data-latex") || node.textContent || "";
         setMathSpanData(node, latex);
       });
+    }
+
+    function getEditorHtml() {
+      if (isEditorEmpty(editor)) return "";
+
+      const clonedEditor = editor.cloneNode(true);
+      normailzeMathNodes(clonedEditor);
 
       const tmp = document.createElement("div");
       tmp.innerHTML = clonedEditor.innerHTML;
@@ -1309,7 +1311,11 @@
       const text = cb.getData("text/plain") || "";
 
       if (html && html.includes("math-inline")) {
-        document.execCommand("insertHTML", false, html);
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+        normailzeMathNodes(temp);
+        renderMathWithPersianDigits(temp);
+        document.execCommand("insertHTML", false, temp.innerHTML);
         normalizeEditorLines(editor);
         saveSelectionWithin(editor);
         handleContentChange();
