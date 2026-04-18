@@ -65,6 +65,11 @@
       tools: [
         { label: "\\times", snippet: "\\times", title: "علامت ضرب" },
         { label: "\\div", snippet: "\\div", title: "علامت تقسیم" },
+        {
+          label: "{a}\ \ \\underline{|\ {b}}",
+          snippet: "{a}\ \ \\underline{|\ {b}}",
+          title: "تقسیم کلیدی",
+        },
         { label: "\\leq", snippet: "\\leq", title: "کوچکتر مساوی" },
         { label: "\\geq", snippet: "\\geq", title: "بزرگتر مساوی" },
         { label: "\\sim", snippet: "\\sim", title: "مشابهت" },
@@ -253,6 +258,8 @@
           title: "متن داخل فرمول",
         },
         { label: "\\boxed{x}", snippet: "\\boxed{x}", title: "کادر دور عبارت" },
+        { label: "\\square", snippet: "\\square", title: "مربع" },
+        { label: "\\square", snippet: "\\bigcirc", title: "دایره" },
       ],
     },
   ];
@@ -627,15 +634,20 @@
     modal.className = "rte-modal";
     modal.setAttribute("dir", "rtl");
 
+    // A) HTML changes: add sheet handle + mobile quickbar
     modal.innerHTML = `
       <div class="rte-modal-card">
         <div class="rte-modal-header">
-          <div class="rte-modal-title" id="latex-modal-title">افزودن فرمول</div>
+          <div class="rte-modal-title" id="latex-modal-title"><i class="bi bi-superscript"></i>ویرایشگر فرمول</div>
           <button type="button" class="rte-icon-btn" id="latex-close-btn" aria-label="بستن">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
+        </div>
+
+        <div class="rte-sheet-handle" aria-hidden="true">
+          <div class="rte-sheet-grabber"></div>
         </div>
 
         <div class="rte-modal-body">
@@ -646,11 +658,6 @@
               <label for="latex-input">فرمول</label>
               <textarea id="latex-input" class="rte-textarea ltr" dir="ltr" spellcheck="false"
                 placeholder="مثلاً: \\frac{a}{b} + \\sqrt{x}"></textarea>
-
-              <div class="rte-hintbar">
-                <span>پیش‌نمایش به‌صورت خودکار به‌روزرسانی می‌شود</span>
-                <button type="button" class="rte-linklike" id="latex-clear-btn">پاک کردن</button>
-              </div>
             </div>
 
             <div class="rte-field">
@@ -673,7 +680,6 @@
     const saveBtn = modal.querySelector("#latex-save-btn");
     const cancelBtn = modal.querySelector("#latex-cancel-btn");
     const closeBtn = modal.querySelector("#latex-close-btn");
-    const clearBtn = modal.querySelector("#latex-clear-btn");
     const toolbars = modal.querySelector("#latex-toolbars");
     const preview = modal.querySelector("#latex-preview");
 
@@ -724,13 +730,52 @@
 
     renderMathInContainer(toolbars);
 
-    // === Fix #4: جلوگیری از hidden شدن منو کنار لبه‌های مدال
-    // منوها position:fixed هستند و هنگام باز شدن کنار دکمه قرار می‌گیرند
+    function insertSnippetIntoTextarea(textarea, snippet) {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? textarea.value.length;
+      const before = textarea.value.slice(0, start);
+      const after = textarea.value.slice(end);
+      textarea.value = before + snippet + after;
+      const pos = start + snippet.length;
+      textarea.setSelectionRange(pos, pos);
+    }
+
+    function updatePreview() {
+      const latex = (input.value || "").trim();
+      if (!latex) {
+        preview.innerHTML = `<span class="rte-empty">هنوز چیزی وارد نشده</span>`;
+        return;
+      }
+      preview.textContent = `$${latex}$`;
+      renderMathInContainer(preview);
+    }
+
+    // ========== Ctrl+Enter / Cmd+Enter to save ==========
+    input.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        saveBtn.click();
+      }
+    });
+
+    // D) Improved dropdown positioning on mobile (bottom full width panel)
     function positionDropdownMenu(wrap) {
       const btn = wrap.querySelector(".rte-dd-btn");
       const dd = wrap.querySelector(".rte-dd-menu");
       if (!btn || !dd) return;
 
+      // روی موبایل: منو مثل bottom-panel تمام عرض
+      if (window.matchMedia("(max-width: 900px)").matches) {
+        dd.style.position = "fixed";
+        dd.style.left = "12px";
+        dd.style.right = "12px";
+        dd.style.top = "auto";
+        dd.style.bottom = "12px";
+        dd.style.maxHeight = Math.round(window.innerHeight * 0.45) + "px";
+        return;
+      }
+
+      // دسکتاپ (همان منطق قبلی)
       const rect = btn.getBoundingClientRect();
       const gap = 8;
 
@@ -824,26 +869,6 @@
       if (wrap) positionDropdownMenu(wrap);
     });
 
-    function insertSnippetIntoTextarea(textarea, snippet) {
-      const start = textarea.selectionStart ?? textarea.value.length;
-      const end = textarea.selectionEnd ?? textarea.value.length;
-      const before = textarea.value.slice(0, start);
-      const after = textarea.value.slice(end);
-      textarea.value = before + snippet + after;
-      const pos = start + snippet.length;
-      textarea.setSelectionRange(pos, pos);
-    }
-
-    function updatePreview() {
-      const latex = (input.value || "").trim();
-      if (!latex) {
-        preview.innerHTML = `<span class="rte-empty">هنوز چیزی وارد نشده</span>`;
-        return;
-      }
-      preview.textContent = `$${latex}$`;
-      renderMathInContainer(preview);
-    }
-
     function open({ title, initialValue, mathNode = null }) {
       currentMathNode = mathNode || null;
       modal.querySelector("#latex-modal-title").textContent =
@@ -888,17 +913,90 @@
       close();
     });
 
-    clearBtn.addEventListener("click", () => {
-      input.value = "";
-      updatePreview();
-      input.focus();
-    });
-
     let previewTimeout;
     input.addEventListener("input", () => {
       clearTimeout(previewTimeout);
       previewTimeout = setTimeout(updatePreview, 160);
     });
+
+    // B) ========== Mobile Bottom Sheet swipe to close ==========
+    const card = modal.querySelector(".rte-modal-card");
+    const handle =
+      modal.querySelector(".rte-sheet-handle") ||
+      modal.querySelector(".rte-modal-header");
+
+    let dragStartY = 0;
+    let dragging = false;
+    let currentTranslateY = 0;
+
+    function isMobileSheet() {
+      return window.matchMedia("(max-width: 900px)").matches;
+    }
+
+    function setCardTranslate(y) {
+      currentTranslateY = Math.max(0, y);
+      card.style.transform = `translateY(${currentTranslateY}px)`;
+    }
+
+    function resetCardPosition() {
+      card.style.transition = "transform 160ms ease";
+      setCardTranslate(0);
+      setTimeout(() => (card.style.transition = ""), 180);
+    }
+
+    function closeWithAnimation() {
+      card.style.transition = "transform 160ms ease";
+      setCardTranslate(
+        Math.min(
+          window.innerHeight,
+          currentTranslateY + window.innerHeight * 0.6,
+        ),
+      );
+      setTimeout(() => {
+        card.style.transition = "";
+        setCardTranslate(0);
+        close();
+      }, 160);
+    }
+
+    function onTouchStart(e) {
+      if (!modal.classList.contains("is-open")) return;
+      if (!isMobileSheet()) return;
+
+      // فقط اگر از handle شروع شد (برای جلوگیری از تداخل با اسکرول داخل textarea/preview)
+      const target = e.target;
+      if (!handle.contains(target)) return;
+
+      dragging = true;
+      dragStartY = e.touches[0].clientY;
+      card.style.willChange = "transform";
+    }
+
+    function onTouchMove(e) {
+      if (!dragging) return;
+      const y = e.touches[0].clientY;
+      const dy = y - dragStartY;
+      if (dy > 0) {
+        // prevent background scroll / overscroll
+        e.preventDefault();
+        setCardTranslate(dy);
+      }
+    }
+
+    function onTouchEnd() {
+      if (!dragging) return;
+      dragging = false;
+      card.style.willChange = "";
+
+      const threshold = Math.min(180, window.innerHeight * 0.22);
+      if (currentTranslateY > threshold) closeWithAnimation();
+      else resetCardPosition();
+    }
+
+    // passive:false برای اینکه بتوانیم preventDefault کنیم
+    modal.addEventListener("touchstart", onTouchStart, { passive: true });
+    modal.addEventListener("touchmove", onTouchMove, { passive: false });
+    modal.addEventListener("touchend", onTouchEnd, { passive: true });
 
     return {
       element: modal,
@@ -906,6 +1004,7 @@
       close,
       destroy: () => {
         document.removeEventListener("click", closeDropdownIfClickedOutside);
+        // نکته: برای سادگی همان الگوی قبلی شما را نگه داشتم (عدم remove برای touch listeners)
       },
     };
   }
@@ -1009,9 +1108,9 @@
     if (features.includes("latex")) {
       html += `
         <div class="toolbar-group">
-          <button type="button" class="rte-btn latex-modal-open" title="افزودن فرمول">
-            <i class="bi bi-function"></i>
-            <span class="rte-btn-label">افزودن فرمول</span>
+          <button type="button" class="rte-btn latex-modal-open" title="فرمول">
+            <i class="bi bi-superscript"></i>
+            <span class="rte-btn-label">فرمول</span>
           </button>
         </div>`;
     }

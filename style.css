@@ -26,63 +26,11 @@ body {
   transition: font-family 0.2s ease;
 }
 
-/* ========== Buttons & Inputs ========== */
+/* ========== icons ========== */
 .bi {
   display: inline-block;
   position: relative;
   bottom: -0.125em;
-}
-
-input,
-.btn {
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  box-sizing: border-box;
-  font-size: 1rem;
-  transition: var(--transition);
-}
-input:focus {
-  border-color: var(--primary);
-  outline: none;
-}
-.btn {
-  background: var(--primary-gradient);
-  color: var(--text-inverse);
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem 1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-.btn:hover {
-  background: linear-gradient(135deg, var(--primary-light), var(--primary));
-  box-shadow: var(--shadow);
-}
-.btn-secondary {
-  background: var(--secondary-gradient);
-}
-.btn-secondary:hover {
-  background: linear-gradient(135deg, var(--secondary-light), var(--secondary));
-}
-.btn-outline {
-  background: transparent;
-  border: 1px solid var(--surface-darker);
-  color: var(--text-secondary);
-}
-
-.btn-dashed {
-  border-style: dashed;
-}
-
-.btn-outline:hover {
-  background: var(--primary-light);
-  color: var(--text-inverse);
-  border-color: var(--primary-light);
-}
-.btn:active {
-  transform: scale(0.98);
 }
 /* ========== Layout (sticky) ========== */
 .sticky-box.is-sticky {
@@ -202,6 +150,19 @@ input[type="range"]::-moz-range-track {
   border-radius: 0.5rem;
 }
 
+/*========= custom input ============= */
+.range-name-input {
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  border-bottom: 2px solid var(--border-light) !important;
+  padding: 0.2rem 0.5rem;
+}
+
+.range-name-input:focus {
+  box-shadow: none !important;
+}
+
 /* ========== Preview Image Toolbar ========== */
 [data-align] {
   min-width: 2.5rem;
@@ -245,11 +206,11 @@ input[type="range"]::-moz-range-track {
   }
 }
 
-#printable td,
+/* #printable td,
 #printable td.questions td,
 #printable th {
   border: 1px solid var(--text-primary);
-}
+} */
 #printable td.questions img {
   display: block;
 }
@@ -289,7 +250,9 @@ input[type="range"]::-moz-range-track {
   direction: ltr;
   unicode-bidi: isolate;
   font-family: inherit !important;
+  font-size: inherit !important;
 }
+
 .katex-display {
   text-align: center;
 }
@@ -338,8 +301,13 @@ input[type="range"]::-moz-range-track {
   }
 
   #printable {
-    font-size: 14px;
+    overflow-x: auto;
   }
+
+  #printable > table {
+    min-width: 663px;
+  }
+
   #printable table td {
     padding: 4px !important;
   }
@@ -347,11 +315,7 @@ input[type="range"]::-moz-range-track {
     max-width: 100%;
     height: auto;
   }
-  #addRange {
-    min-height: 56px;
-    font-size: 1.1rem;
-    gap: 0.5rem;
-  }
+
   .range-item-enter {
     transition:
       opacity 0.4s var(--spring),
@@ -362,7 +326,7 @@ input[type="range"]::-moz-range-track {
       opacity 0.3s var(--spring),
       transform 0.3s var(--spring);
   }
-  .btn,
+  /* .btn,
   .item-thumbnail,
   .range-header button {
     position: relative;
@@ -396,7 +360,6 @@ input[type="range"]::-moz-range-track {
     opacity: 0.3;
     transition: 0s;
   }
-  button,
   .btn,
   .file-input label,
   .range-header button,
@@ -420,7 +383,7 @@ input[type="range"]::-moz-range-track {
   textarea,
   [contenteditable="true"] {
     scroll-margin: 20px;
-  }
+  } */
 }
 
 /* ========== Spinner========== */
@@ -438,4 +401,233 @@ input[type="range"]::-moz-range-track {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ========== Print Template Utilities ========== */
+
+/* border toggle */
+.print-no-borders td,
+.print-no-borders th {
+  border: none !important;
+}
+.print-bordered td,
+.print-bordered th {
+  border: 1px solid var(--text-primary);
+}
+
+/* compact toggle */
+.print-compact td,
+.print-compact th {
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+/* striped toggle (question rows only; header row is row #1) */
+.print-striped tr:nth-child(2n + 2) td {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.print-header {
+  width: 100%;
+}
+
+/* ===== Header Layout ===== */
+.print-header-root {
+  width: 100%;
+  padding: 4px 2px;
+}
+
+.print-hgrid {
+  display: grid;
+  grid-template-columns: repeat(var(--print-hcols, 3), minmax(0, 1fr));
+  gap: 6px 10px;
+  align-items: start;
+}
+
+.print-hcell {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.print-htitle {
+  font-weight: 700;
+  font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.print-hsub {
+  font-size: 0.78em;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.print-name-wrap {
+  margin-top: 6px;
+  padding-top: 4px;
+}
+
+.print-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.print-name-label {
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+
+.print-name-line {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+  height: 18px;
+  line-height: 18px;
+  padding: 0 4px;
+}
+
+.print-score-row {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.print-score-break {
+  display: block;
+}
+
+.print-score-label {
+  white-space: nowrap;
+  font-size: 0.85em;
+  opacity: 0.9;
+}
+
+.print-score-box {
+  display: inline-block;
+  width: 80px;
+  height: 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+/* ===== Variants ===== */
+.print-header-classic .print-hcell {
+}
+.print-header-modern {
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  padding: 8px !important;
+}
+.print-header-boxed .print-hgrid .print-hcell {
+  padding: 4px 6px;
+  border: 1px dashed rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+}
+.print-header-centered .print-hgrid {
+  margin-top: 6px;
+}
+.print-centered-top {
+  text-align: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+}
+.print-centered-title {
+  font-weight: 800;
+  font-size: 1.05em;
+}
+.print-centered-sub {
+  font-size: 0.82em;
+  opacity: 0.85;
+}
+
+/* ===== Header Items UI (Settings Panel) ===== */
+.header-items-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--hcols, 3), minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hitem {
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
+}
+.hitem.is-enter {
+  opacity: 0;
+  transform: scale(0.98);
+}
+.hitem.is-removing {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.hitem-inner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+  padding: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.hitem.is-locked .hitem-inner {
+  opacity: 0.85;
+}
+
+.hitem-title:disabled {
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
+/* ===== Header Layout (Print) ===== */
+.print-header-root {
+  width: 100%;
+  padding: 4px 2px;
+}
+
+.print-hgrid {
+  display: grid;
+  grid-template-columns: repeat(var(--print-hcols, 3), minmax(0, 1fr));
+  gap: 6px 10px;
+  align-items: start;
+}
+
+.print-hcell {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.print-htitle {
+  font-weight: 700;
+  font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* AI Wizard micro-animations */
+.ai-enter {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.ai-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-3) var(--ease),
+    transform var(--dur-3) var(--ease);
+}
+
+.ai-exit {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--dur-2) var(--ease),
+    transform var(--dur-2) var(--ease);
 }

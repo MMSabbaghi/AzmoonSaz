@@ -5,7 +5,6 @@ function getAIPrompt({ ranges, countPerRange }) {
   const payload = (ranges || []).map((r) => ({
     rangeId: r?.rangeId ?? undefined,
     rangeName: r?.rangeName || "بدون عنوان",
-    desc: r?.desc || "",
     labels: (r?.labels || []).map((l) => ({ id: String(l.id), name: l.name })),
     samples: (r?.items || []).map(({ text, labelId }) => {
       return { html: text.html, labelId: labelId ?? undefined };
@@ -20,7 +19,6 @@ function getAIPrompt({ ranges, countPerRange }) {
     "- فقط مقادیر/داده‌ها را تغییر بده (عدد، نام، تاریخ، متغیر، گزینه‌ها، ...).",
     "- ساختار HTML را مشابه نمونه‌ها نگه دار (کلاس‌ها/استایل‌ها/اسپن‌های math-inline و ...).",
     "- آیتم‌ها تکراری نمونه‌ها نباشند.",
-    "- desc را تغییر نده (فقط آیتم‌ها را بساز).",
     "",
     "## قانون labelId",
     "- اگر labels خالی نیست: برای هر آیتم دقیقاً یک labelId از همان labels[].id انتخاب کن (هیچ id جدید نساز).",
@@ -29,21 +27,17 @@ function getAIPrompt({ ranges, countPerRange }) {
     "## فرمت خروجی (حیاتی)",
     "- خروجی باید فقط JSON معتبر باشد (بدون هیچ متن اضافه، بدون Markdown، بدون ```).",
     "- مقدار text فقط HTML باشد.",
-    "- image همیشه null، showText همیشه true.",
-    "- align اگر معلوم نبود RIGHT.",
     "",
     "ساختار خروجی دقیقاً:",
     `{
   "ranges": [
     {
-      "rangeName": "نام رنج",
+      "rangeId": "آی دی رنج بدون تغییر" ,
+      "rangeName": "نام رنج بدون تغییر",
       "items": [
         {
-          "type": "descriptive",
-          "text": { "html": "HTML", "align": "RIGHT" },
-          "image": null,
-          "showText": true,
-          "labelId": null
+          "text": { "html": "HTML"},
+          "labelId": "آی دی لیبل آیتم بدوت تغییر در صورت وجود" ,
         }
       ]
     }
@@ -189,34 +183,26 @@ function tryParseJSONLenient(raw) {
 }
 
 // ========== Normalization & Validation ==========
-function normalizeAlign(align) {
-  const a = String(align || "RIGHT").toUpperCase();
-  return a === "LEFT" || a === "CENTER" || a === "RIGHT" ? a : "RIGHT";
-}
-
-function guessAlignFromHtml(html) {
-  const s = String(html || "");
-  if (/text-align\s*:\s*left/i.test(s)) return "LEFT";
-  if (/text-align\s*:\s*center/i.test(s)) return "CENTER";
-  if (/text-align\s*:\s*right/i.test(s)) return "RIGHT";
-  return "RIGHT";
-}
-
-function normalizeAndValidate(parsed, { defaultAlign = "RIGHT" } = {}) {
+function normalizeAndValidate(parsed) {
   let rangesRaw = null;
 
   if (parsed && Array.isArray(parsed.ranges)) {
     rangesRaw = parsed.ranges;
   } else if (parsed && Array.isArray(parsed.items)) {
     rangesRaw = [
-      { rangeName: parsed.rangeName || "بدون عنوان", items: parsed.items },
+      {
+        rangeId: parsed.rangeId,
+        rangeName: parsed.rangeName || "بدون عنوان",
+        items: parsed.items,
+      },
     ];
   } else {
     return { ranges: [] };
   }
 
   const normalizedRanges = rangesRaw.map((r, idx) => {
-    const rangeName = String(r?.rangeName || `رنج ${idx + 1}`);
+    const rangeName = String(r?.rangeName || "");
+    const rangeId = String(r?.rangeId || "");
     const itemsRaw = Array.isArray(r?.items) ? r.items : [];
 
     const items = [];
@@ -229,44 +215,25 @@ function normalizeAndValidate(parsed, { defaultAlign = "RIGHT" } = {}) {
           : "descriptive";
 
       let html = "";
-      let align = defaultAlign;
 
-      if (typeof it.text === "string") {
-        html = it.text;
-        align = guessAlignFromHtml(html);
-      } else if (it.text && typeof it.text === "object") {
-        if (typeof it.text.html === "string") html = it.text.html;
-        else if (
-          it.text.html &&
-          typeof it.text.html === "object" &&
-          typeof it.text.html.html === "string"
-        ) {
-          html = it.text.html.html;
-        }
-
-        align = it.text.align ?? guessAlignFromHtml(html);
-      } else if (typeof it.html === "string") {
-        html = it.html;
-        align = guessAlignFromHtml(html);
-      } else {
-        continue;
+      if (
+        it.text &&
+        typeof it.text === "object" &&
+        typeof it.text.html === "string"
+      ) {
+        html = it.text.html;
       }
 
       if (!String(html).trim()) continue;
 
       items.push({
         type,
-        text: {
-          html: { html, type },
-          align: normalizeAlign(align),
-        },
-        image: null,
-        showText: true,
-        labelId: it.labelId === undefined ? null : it.labelId,
+        text: { html },
+        labelId: it.labelId || null,
       });
     }
 
-    return { rangeName, items };
+    return { rangeId, rangeName, items };
   });
 
   return { ranges: normalizedRanges };

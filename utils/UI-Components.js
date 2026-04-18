@@ -215,10 +215,11 @@ class Modal {
       this.overlayEl.setAttribute("data-modal-overlay", "");
       this.root.prepend(this.overlayEl);
     }
+    // هماهنگ با دیزاین سیستم: overlay
     this.overlayEl.className = [
       "absolute",
       "inset-0",
-      "bg-black/40",
+      "bg-overlay",
       "backdrop-blur-sm",
       "opacity-0",
       "transition-opacity",
@@ -238,20 +239,18 @@ class Modal {
     }
 
     // Base panel classes (desktop default). We'll switch for mobile dynamically on open/resize.
+    // هماهنگ با دیزاین سیستم: bg/text/border/radius/shadow
     this.panelEl.className = [
       "relative",
       "z-10",
       "w-full",
       "max-w-3xl",
-      "bg-white",
-      "dark:bg-zinc-900",
-      "text-zinc-900",
-      "dark:text-zinc-100",
-      "rounded-2xl",
-      "shadow-2xl",
+      "bg-surface",
+      "text-primary",
+      "rounded-custom",
+      "shadow-lg",
       "border",
-      "border-zinc-200/70",
-      "dark:border-zinc-800",
+      "border-border-light",
       "overflow-hidden",
       "max-h-[100vh]",
       "flex",
@@ -282,12 +281,12 @@ class Modal {
         "sm:px-6",
         "py-4",
         "border-b",
-        "border-zinc-200/70",
-        "dark:border-zinc-800",
+        "border-border-light",
+        "bg-surface",
       ].join(" ");
 
       const titleEl = document.createElement("h2");
-      titleEl.className = "text-base sm:text-lg font-bold";
+      titleEl.className = "text-base sm:text-lg font-bold text-primary";
       titleEl.textContent = this.options.title ?? "";
       this.headerEl.appendChild(titleEl);
 
@@ -295,20 +294,16 @@ class Modal {
         const closeBtn = document.createElement("button");
         closeBtn.type = "button";
         closeBtn.setAttribute("data-modal-close", "");
+        // هماهنگ با دیزاین سیستم (بدون دستکاری بی‌مورد): btn-ghost + رنگ‌ها/هوور
         closeBtn.className = [
           "ms-auto",
-          "inline-flex",
-          "items-center",
-          "justify-center",
+          "btn",
+          "btn-ghost",
           "h-10",
           "w-10",
-          "rounded-xl",
-          "hover:bg-zinc-100",
-          "dark:hover:bg-zinc-800",
-          "transition",
+          "p-0",
+          "rounded-custom",
           "focus:outline-none",
-          "focus:ring-2",
-          "focus:ring-indigo-500/50",
         ].join(" ");
         closeBtn.innerHTML = `<span class="text-2xl leading-none">&times;</span>`;
         closeBtn.addEventListener("click", () => this.close());
@@ -334,8 +329,8 @@ class Modal {
         "justify-center",
       ].join(" ");
       const bar = document.createElement("div");
-      bar.className =
-        "h-1.5 w-12 rounded-full bg-zinc-300/80 dark:bg-zinc-700/80";
+      // هماهنگ با دیزاین سیستم
+      bar.className = "h-1.5 w-12 rounded-circle bg-surface-darker";
       this.handleEl.appendChild(bar);
 
       // insert handle at top of panel (before header if exists)
@@ -367,11 +362,11 @@ class Modal {
         "sm:px-6",
         "py-4",
         "border-t",
-        "border-zinc-200/70",
-        "dark:border-zinc-800",
+        "border-border-light",
         "flex",
         "items-center",
         "gap-2",
+        "bg-surface",
       );
     }
 
@@ -435,11 +430,11 @@ class Modal {
         "sm:px-6",
         "py-4",
         "border-t",
-        "border-zinc-200/70",
-        "dark:border-zinc-800",
+        "border-border-light",
         "flex",
         "items-center",
         "gap-2",
+        "bg-surface",
       ].join(" ");
       this.panelEl.appendChild(this.footerEl);
     }
@@ -451,27 +446,8 @@ class Modal {
       prev = document.createElement("button");
       prev.type = "button";
       prev.setAttribute("data-wizard-prev", "");
-      prev.className = [
-        "inline-flex",
-        "items-center",
-        "justify-center",
-        "px-4",
-        "py-2.5",
-        "rounded-xl",
-        "border",
-        "border-zinc-200",
-        "dark:border-zinc-800",
-        "bg-white",
-        "dark:bg-zinc-900",
-        "hover:bg-zinc-50",
-        "dark:hover:bg-zinc-800",
-        "transition",
-        "disabled:opacity-50",
-        "disabled:cursor-not-allowed",
-        "focus:outline-none",
-        "focus:ring-2",
-        "focus:ring-indigo-500/40",
-      ].join(" ");
+      // هماهنگ با دیزاین سیستم: btn-outline
+      prev.className = ["btn", "btn-outline"].join(" ");
       prev.textContent = this.options.wizard.labels.prev;
       this.footerEl.appendChild(prev);
     }
@@ -480,24 +456,8 @@ class Modal {
       next = document.createElement("button");
       next.type = "button";
       next.setAttribute("data-wizard-next", "");
-      next.className = [
-        "ms-auto",
-        "inline-flex",
-        "items-center",
-        "justify-center",
-        "px-4",
-        "py-2.5",
-        "rounded-xl",
-        "bg-indigo-600",
-        "text-white",
-        "hover:bg-indigo-500",
-        "transition",
-        "disabled:opacity-50",
-        "disabled:cursor-not-allowed",
-        "focus:outline-none",
-        "focus:ring-2",
-        "focus:ring-indigo-500/40",
-      ].join(" ");
+      // هماهنگ با دیزاین سیستم: btn-primary
+      next.className = ["ms-auto", "btn", "btn-primary"].join(" ");
       next.textContent = this.options.wizard.labels.next;
       this.footerEl.appendChild(next);
     }
@@ -1069,7 +1029,7 @@ class Dropdown {
         </button>
       </div>
 
-      <div class="p-2 [-webkit-overflow-scrolling:touch]" data-dd-body></div>
+      <div class="p-2 [-webkit-overflow-scrolling:touch] max-h-[300px] overflow-y-auto" data-dd-body></div>
     `;
 
     wrap.appendChild(backdrop);
@@ -1130,16 +1090,6 @@ class Accordion {
     document.head.appendChild(style);
   }
 
-  /**
-   * @param {object} opts
-   * @param {string} opts.title
-   * @param {string} [opts.iconClass]
-   * @param {boolean} [opts.open=false]
-   * @param {string} [opts.badgeText=""]
-   * @param {HTMLElement | string} opts.content
-   * @param {string} [opts.className=""]
-   * @param {Function} [opts.onToggle]
-   */
   constructor(opts) {
     Accordion.ensureStyles();
     this.opts = {
@@ -1316,8 +1266,6 @@ class Tabs {
     this._headerLeft = document.createElement("div");
     this._headerRight = document.createElement("div");
 
-    // شما می‌توانید با کلاس‌های Tailwind/… کنترل کنید
-    // این‌ها صرفاً wrapper هستند
     this._headerLeft.className =
       "tabs-header-left flex items-center gap-2 min-w-0";
     this._headerRight.className = "tabs-header-right flex items-center gap-2";
@@ -1344,8 +1292,6 @@ class Tabs {
 
     // نوار دکمه‌های تب
     this.nav = document.createElement("div");
-    // کلاس nav را از بیرون با headerClass/… کنترل کنید؛
-    // این container برای دکمه‌های تب است.
     this.nav.className = "tabs-nav inline-flex min-w-0";
 
     // پنل‌ها
@@ -1369,7 +1315,7 @@ class Tabs {
     // رندر سطح اول
     this._renderLevel(this._currentTabs, { animate: false });
 
-    // حالت اولیه: هیچ تب فعال نیست (اگر initial داده شده باشد، فعال می‌شود)
+    // حالت اولیه
     if (this.activeId != null) {
       this.setActive(this.activeId, { fromInit: true });
     } else {
@@ -1384,13 +1330,11 @@ class Tabs {
     const node = this._nodes.get(id);
     if (!node) return;
 
-    // اگر این node دارای children باشد، وارد سطح زیرین شو
     if (Array.isArray(node.children) && node.children.length) {
       this.enter(id);
       return;
     }
 
-    // Leaf: پنل نمایش داده شود
     this.activeId = id;
     this._syncButtonsState();
     this._showPanelOf(id);
@@ -1404,24 +1348,19 @@ class Tabs {
     const node = this._nodes.get(id);
     if (!node || !node.children || !node.children.length) return;
 
-    // ذخیره وضعیت قبلی برای بازگشت
     this._stack.push({
       tabs: this._currentTabs,
       activeIdBefore: this.activeId,
     });
 
-    // رفتن به سطح child
     this._currentTabs = node.children;
 
-    // انیمیشن خروج/ورود برای nav
     this._renderLevel(this._currentTabs, { animate: true });
 
     this._updateBackVisibility();
 
-    // طبق درخواست: وقتی وارد زیرتب‌ها می‌شویم، اولین زیرتب فعال شود
     const first = this._currentTabs[0];
     if (first) {
-      // اگر خودش children داشت، به‌صورت بازگشتی وارد می‌شود تا به leaf برسد
       this.setActive(first.id);
     } else {
       this.activeId = null;
@@ -1436,8 +1375,6 @@ class Tabs {
     const prev = this._stack.pop();
     this._currentTabs = prev.tabs;
 
-    // در بازگشت، activeId را null می‌کنیم تا «هیچ پنلی» نمایش داده نشود
-    // (می‌توانید اگر دوست داشتید به prev.activeIdBefore برگردانید)
     this.activeId = null;
 
     this._renderLevel(this._currentTabs, { animate: true, reverse: true });
@@ -1450,14 +1387,11 @@ class Tabs {
   /* ---------- Internal: render / state ---------- */
 
   _renderLevel(tabs, { animate = true, reverse = false } = {}) {
-    // پاک‌سازی دکمه‌ها
     this._btns.clear();
 
     const doRender = () => {
       this.nav.innerHTML = "";
 
-      // دکمه‌ها در یک wrapper با استایل دلخواه شما
-      // (اگر می‌خواهید همان استایل قبلی حفظ شود، کلاس‌ها را از بیرون بدهید)
       const wrapper = document.createElement("div");
       wrapper.className = "tabs-btn-wrap flex gap-1 min-w-0";
 
@@ -1469,11 +1403,10 @@ class Tabs {
 
         btn.innerHTML = `
           ${t.iconClass ? `<i class="${t.iconClass}"></i>` : ""}
-          <span class="truncate">${t.title ?? ""}</span>
+          <span class="truncate" style="overflow: visible;">${t.title ?? ""}</span>
         `;
 
         btn.addEventListener("click", () => {
-          // اگر children دارد، وارد سطح بعدی شو
           if (t.children && t.children.length) this.enter(t.id);
           else this.setActive(t.id);
         });
@@ -1484,7 +1417,6 @@ class Tabs {
 
       this.nav.appendChild(wrapper);
 
-      // بعد از رندر، وضعیت active/inactive اعمال شود
       this._syncButtonsState();
     };
 
@@ -1493,7 +1425,6 @@ class Tabs {
       return;
     }
 
-    // animation: slide-out سپس render سپس slide-in
     const outClass = reverse ? "tabs-anim-out-right" : "tabs-anim-out-left";
     const inClass = reverse ? "tabs-anim-in-right" : "tabs-anim-in-left";
 
@@ -1524,7 +1455,6 @@ class Tabs {
   }
 
   _syncButtonsState() {
-    // فقط دکمه‌های سطح فعلی را به active/inactive ست می‌کنیم
     this._currentTabs.forEach((t) => {
       const entry = this._btns.get(t.id);
       if (!entry) return;
@@ -1540,7 +1470,6 @@ class Tabs {
   }
 
   _showPanelOf(id) {
-    // همه پنل‌ها hidden؛ فقط پنل فعال نمایش داده شود
     this._hideAllPanels();
 
     const panel = this._panels.get(id);
@@ -1565,7 +1494,6 @@ class Tabs {
       arr.forEach((n) => {
         this._nodes.set(n.id, n);
 
-        // mount panel if exists
         if (n.panelEl) {
           const panel = n.panelEl;
           panel.dataset.tabPanel = n.id;
