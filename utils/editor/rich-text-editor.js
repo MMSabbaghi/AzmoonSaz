@@ -259,7 +259,8 @@
         },
         { label: "\\boxed{x}", snippet: "\\boxed{x}", title: "کادر دور عبارت" },
         { label: "\\square", snippet: "\\square", title: "مربع" },
-        { label: "\\square", snippet: "\\bigcirc", title: "دایره" },
+        { label: "\\bigcirc", snippet: "\\bigcirc", title: "دایره" },
+        { label: "\\cancel{4}", snippet: "\\cancel{}", title: "خط خوردن" },
       ],
     },
   ];

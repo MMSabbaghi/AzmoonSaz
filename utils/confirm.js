@@ -25,9 +25,10 @@
       outline: none;
     }
 
-    .confirm-box h3 {
-      margin: 0 0 12px;
+    .confirm-message {
+      margin: 0 0 16px;
       color: var(--text-primary);
+      font-size: 15px;
       line-height: 1.6;
     }
 
@@ -122,7 +123,7 @@
   overlay.setAttribute("aria-modal", "true");
   overlay.innerHTML = `
     <div class="confirm-box" tabindex="-1" aria-labelledby="confirm-text">
-      <h3 id="confirm-text">آیا اطمینان دارید؟</h3>
+      <div id="confirm-text" class="confirm-message">آیا اطمینان دارید؟</div>
 
       <div class="confirm-input-container" id="confirm-input-container" style="display: none;">
         <label class="confirm-input-label" id="confirm-input-label" for="confirm-input" style="display:none;"></label>
@@ -198,6 +199,7 @@
 
   function showConfirm({
     msg,
+    html,
     on_confirm,
     on_cancel,
     confirmText: customConfirmText = "تأیید",
@@ -231,10 +233,12 @@
 
     lastActiveElement = document.activeElement;
 
-    overlay.querySelector("#confirm-text").innerHTML = msg;
+    // Use `html` if provided, otherwise fall back to `msg` (both can contain HTML)
+    const messageContent = html !== undefined ? html : msg || "";
+    overlay.querySelector("#confirm-text").innerHTML = messageContent;
 
     confirmText.textContent = customConfirmText;
-    cancelText.textContent = customCustomCancelText = customCancelText;
+    cancelText.textContent = customCancelText;
 
     if (customConfirmIcon) confirmIcon.className = `bi ${customConfirmIcon}`;
     if (customCancelIcon) cancelIcon.className = `bi ${customCancelIcon}`;

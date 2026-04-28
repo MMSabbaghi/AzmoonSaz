@@ -188,6 +188,96 @@ async function pasteFromClipboard({ onImage, onText, onNone } = {}) {
   return onNone?.();
 }
 
+function buildClipboardPayloadForRange(rangeId) {
+  const range = findRangeById(rangeId);
+  if (!range) return null;
+
+  ensureRangeLabels(range);
+  normalizeRangePartSettings(range);
+
+  return {
+    type: "quizapp-range-v1",
+    range: {
+      rangeName: range.rangeName || "",
+      count: range.count || 1,
+      score: range.score ?? 1,
+      desc: range.desc || "",
+      partSettings: range.partSettings
+        ? JSON.parse(JSON.stringify(range.partSettings))
+        : null,
+      labels: Array.isArray(range.labels)
+        ? range.labels.map((l) => ({ id: l.id, name: l.name }))
+        : [],
+      items: Array.isArray(range.items)
+        ? range.items.map((it) => ({
+            text: it.text ? { ...it.text } : null,
+            image: it.image ? { ...it.image } : null,
+            labelId: it.labelId || null,
+          }))
+        : [],
+    },
+  };
+}
+
+function replaceRangeFromClipboardPayload(rangeId, payload) {
+  const target = findRangeById(rangeId);
+  const incoming = payload?.range;
+  if (!target || !incoming) return false;
+
+  target.rangeName = incoming.rangeName || "";
+  target.count = incoming.count || 1;
+  target.score = incoming.score ?? 1;
+  target.desc = incoming.desc || "";
+
+  target.partSettings = incoming.partSettings
+    ? JSON.parse(JSON.stringify(incoming.partSettings))
+    : null;
+  normalizeRangePartSettings(target);
+
+  target.labels = Array.isArray(incoming.labels)
+    ? incoming.labels.map((l) => ({ id: l.id, name: l.name || "بدون نام" }))
+    : [];
+  ensureRangeLabels(target);
+
+  const newItems = (Array.isArray(incoming.items) ? incoming.items : []).map(
+    (it) => createItemFromData(it),
+  );
+
+  newItems.forEach((it) => normalizeItemLabelForRange(target, it));
+  target.items = newItems;
+
+  const rangeDiv = document.getElementById(rangeId);
+  if (rangeDiv) {
+    const nameInp = rangeDiv.querySelector(".range-name-input");
+    if (nameInp) nameInp.value = target.rangeName || "";
+
+    renderRangeItems(rangeDiv, rangeId);
+    updateRangeBadges(rangeId, rangeDiv);
+  }
+
+  scheduleLivePreview();
+  return true;
+}
+
+function pasteIntoRangeSmart(rangeId, txt) {
+  let parsed = null;
+  try {
+    parsed = JSON.parse(txt);
+  } catch {
+    addItemsFromJSONToRange(rangeId, txt);
+    return;
+  }
+
+  if (parsed?.type === "quizapp-range-v1" && parsed?.range) {
+    const ok = replaceRangeFromClipboardPayload(rangeId, parsed);
+    if (ok) showToast("رنج با موفقیت جایگزین شد.");
+    else showToast("جایگزینی رنج ناموفق بود.", "error");
+    return;
+  }
+
+  addItemsFromJSONToRange(rangeId, txt);
+}
+
 /* =========================
    Items / Labels helpers
 ========================= */
@@ -478,6 +568,7 @@ const initialPrintSetting = {
     compact: false,
     threeColScoreLeft: false,
     showScore: true,
+    randomizeRanges: false,
   },
   header: {
     columns: 2,
@@ -488,6 +579,15 @@ const initialPrintSetting = {
   },
 };
 
+const initialExamInteractiveSettings = {
+  title: "آزمون",
+  startTime: null,
+  duration: 45,
+  randomize: false,
+  preExamMessage: "",
+  questionAlert: "",
+};
+
 const rawState = {
   ranges: [],
   names: [],
@@ -496,6 +596,7 @@ const rawState = {
   fontSize: "16px",
   modal: { isOpen: false, rangeId: null, itemId: null, tempItem: null },
   print: { ...initialPrintSetting },
+  examInteractive: { ...initialExamInteractiveSettings },
   selectedClassId: null,
 };
 
@@ -1458,7 +1559,7 @@ function getMobileRangeHTML(rangeData) {
             </button>
             <div class="dropdown-menu hidden min-w-[170px] absolute top-full left-0 bg-surface border border-border-light rounded-custom p-2 shadow-lg z-50 flex-col gap-1">
               <button data-action="copy-range" class="copy-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom transition-all w-full text-right">
-                <i class="bi bi-copy text-muted"></i> کپی
+                <i class="bi bi-copy text-muted"></i> رونوشت
               </button>
               <button data-action="paste-range" class="paste-range flex items-center gap-2 px-4 py-2.5 text-sm text-secondary hover:bg-surface-dark rounded-custom w-full text-right">
                 <i class="bi bi-clipboard-plus text-muted"></i> چسباندن
@@ -1570,7 +1671,7 @@ function getDesktopRangeHTML(rangeData) {
           </div>
 
           <div class="flex items-center rounded-2xl border border-border-light/60 bg-surface-darker p-1">
-            <button data-action="copy-range" data-tooltip="کپی آیتم ها"
+            <button data-action="copy-range" data-tooltip="رونوشت"
                     class="copy-range inline-flex items-center justify-center w-10 h-10 rounded-xl text-muted hover:text-primary hover:bg-surface-dark transition">
               <i class="bi bi-copy"></i>
             </button>
@@ -1674,10 +1775,7 @@ function setupRangeActionsDelegation(rangeElement, rangeId) {
       }
 
       case "copy-range": {
-        const items = findRangeById(rangeId)?.items || [];
-        if (!items.length)
-          return showToast("آیتمی برای کپی وجود ندارد.", "error");
-        const payload = buildClipboardPayloadForItems(rangeId, items);
+        const payload = buildClipboardPayloadForRange(rangeId);
         copyToClipboard(JSON.stringify(payload));
         return;
       }
@@ -1898,6 +1996,10 @@ function createPrintSettingsUI() {
         <div class="min-w-0 settings-area"></div>
 
         <div class="flex gap-2 md:justify-end actions-area mb-auto">
+        <button class="export-html-btn btn btn-outline px-3 py-2 h-10 whitespace-nowrap">
+          <i class="bi bi-filetype-html"></i>
+آزمون تعاملی
+        </button>
           <button class="print-btn max-md:w-full btn btn-secondary px-3 py-2 h-10 whitespace-nowrap">
             <i class="bi bi-printer"></i>
             چاپ
@@ -2115,6 +2217,14 @@ function createPrintSettingsUI() {
              data-switch data-switch-size="md"
              data-switch-checked="${appState.print?.sheet?.showScore !== false ? "true" : "false"}"></div>
       </div>
+
+ <div class="inline-flex items-center justify-between gap-3 border border-border-light rounded-custom px-3 py-2 bg-surface">
+    <span class="text-sm text-primary">ترتیب تصادفی سوالات</span>
+    <div class="sheet-randomize-switch"
+         data-switch data-switch-size="md"
+         data-switch-checked="${appState.print?.sheet?.randomizeRanges ? "true" : "false"}"></div>
+  </div>
+
     </div>
 
   </div>
@@ -2237,11 +2347,6 @@ function createPrintSettingsUI() {
   const goClassesBtn = container.querySelector(".go-classes-btn");
   const nameSwitchContainer = container.querySelector(".student-name-switch");
 
-  const namesTxtActions = container.querySelector(".names-txt-actions");
-  const namesImportBtn = container.querySelector(".names-import-btn");
-  const namesExportBtn = container.querySelector(".names-export-btn");
-  const namesTxtInput = container.querySelector(".names-txt-input");
-
   const fontSelect = container.querySelector(".font-selector");
   const fontSizeSelect = container.querySelector(".font-size-selector");
 
@@ -2251,6 +2356,9 @@ function createPrintSettingsUI() {
   const sheetStripedSwitch = container.querySelector(".sheet-striped-switch");
   const sheetCompactSwitch = container.querySelector(".sheet-compact-switch");
   const sheetThreeColSwitch = container.querySelector(".sheet-threecol-switch");
+  const sheetRandomizeSwitch = container.querySelector(
+    ".sheet-randomize-switch",
+  );
   const sheetShowScoreSwitch = container.querySelector(
     ".sheet-showscore-switch",
   );
@@ -2276,6 +2384,7 @@ function createPrintSettingsUI() {
   if (sheetCompactSwitch) Switch.ensure(sheetCompactSwitch);
   if (sheetThreeColSwitch) Switch.ensure(sheetThreeColSwitch);
   if (sheetShowScoreSwitch) Switch.ensure(sheetShowScoreSwitch);
+  if (sheetRandomizeSwitch) Switch.ensure(sheetRandomizeSwitch);
 
   const setNamesModeUI = (enabled, { silent = false } = {}) => {
     const namesExist = hasRealNames();
@@ -2290,8 +2399,6 @@ function createPrintSettingsUI() {
 
     const wasHidden = namesArea?.classList.contains("hidden");
     if (namesArea) namesArea.classList.toggle("hidden", !enabled);
-
-    if (namesTxtActions) namesTxtActions.classList.toggle("hidden", !enabled);
 
     if (enabled && wasHidden && namesArea) enterPane(namesArea);
 
@@ -2308,79 +2415,6 @@ function createPrintSettingsUI() {
     if (!countInput) return;
     countInput.value = appState.namesCount || 0;
   };
-
-  function normalizeNamesFromText(txt) {
-    const lines = String(txt || "")
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n")
-      .split("\n")
-      .map((x) => x.trim())
-      .filter(Boolean);
-
-    // حذف تکراری‌ها با حفظ ترتیب
-    const seen = new Set();
-    const unique = [];
-    for (const n of lines) {
-      const key = n.toLocaleLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      unique.push(n);
-    }
-    return unique;
-  }
-
-  function downloadTextFile(filename, text) {
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  async function importNamesFromTxtFile(file) {
-    if (!file) return;
-
-    const isTxt = file.type === "text/plain" || /\.txt$/i.test(file.name || "");
-
-    if (!isTxt) {
-      showToast("فقط فایل txt قابل ورود است.", "error");
-      return;
-    }
-
-    const text = await file.text();
-    const names = normalizeNamesFromText(text);
-
-    if (!names.length) {
-      showToast("فایل خالی است یا نام معتبری پیدا نشد.", "error");
-      return;
-    }
-
-    const hasExisting = (appState.names || []).some((x) => String(x).trim());
-    const apply = () => {
-      appState.names = names;
-
-      if (textarea) textarea.value = names.join("\n");
-
-      if (appState.print.header.showStudentName) {
-        appState.namesCount = names.length;
-        syncCountInputValue();
-        if (countInput) countInput.disabled = true;
-      }
-
-      scheduleLivePreview();
-      showToast("اسامی با موفقیت وارد شدند.");
-    };
-
-    if (hasExisting) {
-      showConfirm({
-        msg: "اسامی فعلی جایگزین شوند؟",
-        on_confirm: apply,
-      });
-    } else {
-      apply();
-    }
-  }
 
   function setClassSelectLoading(loading) {
     if (!classSelect) return;
@@ -2455,7 +2489,7 @@ function createPrintSettingsUI() {
   // header UI sync
   headerColumns.value = String(appState.print.header.columns || 2);
 
-  // ------- header items renderer (مثل قبل) -------
+  // ------- header items renderer-------
   const ensureBlockId = (b) => {
     if (!b.id)
       b.id = crypto.randomUUID?.() || String(Date.now() + Math.random());
@@ -2652,23 +2686,6 @@ function createPrintSettingsUI() {
     }
   });
 
-  namesImportBtn?.addEventListener("click", () => {
-    if (!appState.print.header.showStudentName) {
-      showToast("ابتدا «نمایش نام» را فعال کنید.", "error");
-      return;
-    }
-    namesTxtInput?.click();
-  });
-
-  namesTxtInput?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    try {
-      await importNamesFromTxtFile(file);
-    } finally {
-      e.target.value = "";
-    }
-  });
-
   classSelect?.addEventListener("change", (e) => {
     const id = e.target.value || "";
     if (!id) {
@@ -2681,36 +2698,6 @@ function createPrintSettingsUI() {
   goClassesBtn?.addEventListener("click", async () => {
     showClassesScreen();
     await renderClassesListUI();
-  });
-
-  namesExportBtn?.addEventListener("click", () => {
-    if (!appState.print.header.showStudentName) {
-      showToast("ابتدا «نمایش نام» را فعال کنید.", "error");
-      return;
-    }
-
-    const names = (appState.names || [])
-      .map((x) => String(x).trim())
-      .filter(Boolean);
-    if (!names.length) {
-      showToast("اسامی خالی است و خروجی گرفته نمی‌شود.", "error");
-      return;
-    }
-
-    showConfirm({
-      msg: "نام فایل را وارد کنید:",
-      on_confirm: (fileName) => {
-        if (!fileName || fileName.trim() === "") {
-          showToast("یک نام معتبر وارد کنید.", "error");
-          return;
-        }
-        downloadTextFile(`${fileName}.txt`, names.join("\n"));
-        showToast("فایل اسامی ذخیره شد !.");
-      },
-      input: { placeholder: "مثال: کلاس دانش", required: true },
-      confirmText: "ذخیره",
-      cancelText: "انصراف",
-    });
   });
 
   fontSelect.addEventListener("change", (e) => {
@@ -2758,6 +2745,8 @@ function createPrintSettingsUI() {
       sheetThreeColSwitch.setChecked(!!appState.print.sheet.threeColScoreLeft);
     if (sheetShowScoreSwitch?.setChecked)
       sheetShowScoreSwitch.setChecked(!!appState.print.sheet.showScore);
+    if (sheetRandomizeSwitch?.setChecked)
+      sheetRandomizeSwitch.setChecked(!!appState.print.sheet.randomizeRanges);
   };
 
   syncSheetSwitches();
@@ -2792,6 +2781,12 @@ function createPrintSettingsUI() {
     scheduleLivePreview();
   });
 
+  sheetRandomizeSwitch?.addEventListener("switch:change", (e) => {
+    const { checked } = e.detail || {};
+    appState.print.sheet.randomizeRanges = !!checked;
+    scheduleLivePreview();
+  });
+
   headerColumns.addEventListener("change", (e) => {
     appState.print.header.columns = parseInt(e.target.value || "2", 10);
     renderHeaderItems();
@@ -2812,6 +2807,10 @@ function createPrintSettingsUI() {
 
   container.querySelector(".print-btn").addEventListener("click", async () => {
     await renderAllSheetsAndPrint();
+  });
+
+  container.querySelector(".export-html-btn").addEventListener("click", () => {
+    openExamInteractiveModal();
   });
 
   // ---------- initial apply ----------
@@ -2921,7 +2920,7 @@ async function handlePasteImageInModal(showError = true) {
 async function handlePasteInsideRange(rangeId) {
   await pasteFromClipboard({
     onImage: (src) => addItemToRange(rangeId, createImageItem({ src })),
-    onText: (txt) => addItemsFromJSONToRange(rangeId, txt),
+    onText: (txt) => pasteIntoRangeSmart(rangeId, txt),
   });
 }
 
@@ -2995,7 +2994,7 @@ const PRINT_TEMPLATES = {
     title: "نوار بالایی",
     renderSheet: ({ headerHtml, rowsHtml, tableClasses }) => `
       <div class="border border-slate-900/70 overflow-hidden" style="border-radius:14px;">
-        <div style="background:linear-gradient(90deg, rgba(99,102,241,.18), rgba(16,185,129,.14));" class="p-2">
+        <div style="background:#f6f7fb;" class="p-2">
           ${headerHtml}
         </div>
         <div class="p-2">
@@ -3320,16 +3319,20 @@ function createQuestionRowHtmlMulti(qNum, range, opts = {}) {
   `;
 }
 
-async function buildQuizData(studentList, ranges) {
+async function buildQuizData(studentList, ranges, shuffleRanges = false) {
   const finalData = Object.fromEntries(studentList.map((s) => [s.key, []]));
 
   const YIELD_EVERY = 10;
   let ops = 0;
 
-  for (const r of ranges) {
-    const items = Array.isArray(r.items) ? r.items : [];
+  for (const s of studentList) {
+    const shuffledRanges = shuffleRanges
+      ? [...ranges].sort(() => Math.random() - 0.5)
+      : ranges;
 
-    for (const s of studentList) {
+    for (const r of shuffledRanges) {
+      const items = Array.isArray(r.items) ? r.items : [];
+
       const maxCount = getRangeMaxRenderableCount(r);
       const safeCount = maxCount > 0 ? Math.min(+r.count || 0, maxCount) : 0;
 
@@ -3412,7 +3415,11 @@ async function buildQuizHtml(validRanges) {
 
   let quizData;
   try {
-    quizData = await buildQuizData(studentList, validRanges);
+    quizData = await buildQuizData(
+      studentList,
+      validRanges,
+      appState.print?.sheet?.randomizeRanges,
+    );
   } catch (err) {
     showToast(err.message, "error");
     return null;
@@ -3438,6 +3445,901 @@ function hideQuizHtml() {
     <img src="images/no_data.jpg" alt="no_data" style="max-height: 380px;">
   </div>
   `;
+}
+
+// ------------------ generateStudentQuizSection ------------------
+function generateStudentQuizSection(quizRanges) {
+  let html = "";
+  quizRanges.forEach((range, rIdx) => {
+    const items = range.items || [];
+    if (items.length === 0) return;
+
+    const questionNumber = rIdx + 1;
+    let headerHtml = `<div class="question-number">سوال ${toPersianDigits(questionNumber)}`;
+    if (range.score) {
+      headerHtml += ` <span class="score-badge">(نمره ${toPersianDigits(range.score)})</span>`;
+    }
+    headerHtml += `</div>`;
+
+    if (range.desc) {
+      headerHtml += `<div class="range-desc">${sanitizeText(range.desc)}</div>`;
+    }
+
+    let questionsHtml = "";
+    items.forEach((item) => {
+      questionsHtml += `<div class="part-question">${renderItemForQuiz(item)}</div>`;
+    });
+
+    html += `
+      <div class="question-panel" data-range="${rIdx}">
+        ${headerHtml}
+        <div class="questions-list">${questionsHtml}</div>
+      </div>
+    `;
+  });
+  return html;
+}
+
+// ========== Modal ==========
+const examSettingsModal = new Modal("#modal-exam-settings", {
+  title: "تنظیمات آزمون تعاملی",
+  closeOnOverlayClick: false,
+});
+
+function openExamInteractiveModal() {
+  const s = appState.examInteractive;
+  document.getElementById("examTitleInput").value = s.title || "آزمون";
+
+  const dpContainer = document.querySelector(
+    "#modal-exam-settings .date-picker-container",
+  );
+  if (dpContainer) {
+    const picker = JalaliDatePicker.ensure(dpContainer, {
+      minYearOffset: -20,
+      maxYearOffset: 0,
+      persianDigits: true,
+    });
+    if (s.startTime) {
+      const { year, month, day, hour, min } = s.startTime;
+      picker.setDateFromGregorian(
+        new Date(year, month, day, hour || 0, min || 0),
+      );
+    }
+  }
+
+  document.getElementById("examDurationInput").value = s.duration ?? 45;
+
+  const randSwitch = document.getElementById("examRandomizeSwitch");
+  if (randSwitch) {
+    Switch.ensure(randSwitch);
+    randSwitch.setChecked(!!s.randomize, { silent: true });
+  }
+
+  document.getElementById("examPreExamMessage").value = s.preExamMessage || "";
+  document.getElementById("examQuestionAlert").value = s.questionAlert || "";
+
+  examSettingsModal.open();
+}
+
+document
+  .getElementById("generateExamBtn")
+  ?.addEventListener("click", async () => {
+    const dpContainer = document.querySelector(
+      "#modal-exam-settings .date-picker-container",
+    );
+    const picker = JalaliDatePicker.ensure(dpContainer);
+    const startDate = picker.getDate();
+    if (!startDate) {
+      showToast("لطفاً تاریخ و زمان معتبر انتخاب کنید.", "error");
+      return;
+    }
+
+    const durationVal = document
+      .getElementById("examDurationInput")
+      .value.trim();
+    const duration = parseInt(durationVal, 10);
+
+    const now = Date.now();
+    const examStartMs = startDate.getTime();
+    const examEndMs = examStartMs + duration * 60000;
+    if (examEndMs <= now) {
+      showToast("زمان پایان آزمون باید بعد از زمان فعلی باشد.", "error");
+      return;
+    }
+
+    const s = appState.examInteractive;
+
+    s.startTime = {
+      year: startDate.getFullYear(),
+      month: startDate.getMonth(),
+      day: startDate.getDate(),
+      hour: startDate.getHours(),
+      min: startDate.getMinutes(),
+    };
+
+    s.duration = duration;
+    s.title = document.getElementById("examTitleInput").value.trim() || "آزمون";
+    s.randomize =
+      document
+        .getElementById("examRandomizeSwitch")
+        ?.getAttribute("data-switch-checked") === "true";
+    s.preExamMessage = document.getElementById("examPreExamMessage").value;
+    s.questionAlert = document.getElementById("examQuestionAlert").value;
+
+    examSettingsModal.close();
+
+    await generateInteractiveExamFile();
+  });
+
+async function generateInteractiveExamFile() {
+  const validRanges = validateQuizInputs();
+  if (!validRanges) return;
+
+  const studentList = getStudentList();
+  if (!studentList.length) {
+    showToast("هیچ دانش‌آموزی تعریف نشده است.", "error");
+    return;
+  }
+
+  showLoadingOverlay("در حال ساخت فایل آزمون...");
+  await nextFrame();
+
+  try {
+    const [katexCss, katexJs, autoRenderJs] = await Promise.all([
+      fetch("./utils/katex/katex.min.css").then((r) => r.text()),
+      fetch("./utils/katex/katex.min.js").then((r) => r.text()),
+      fetch("./utils/katex/auto-render.min.js").then((r) => r.text()),
+    ]);
+
+    const quizData = await buildQuizData(
+      studentList,
+      validRanges,
+      appState.examInteractive.randomize,
+    );
+    const studentSections = {};
+    studentList.forEach((s) => {
+      studentSections[s.key] = generateStudentQuizSection(
+        quizData[s.key] || [],
+      );
+    });
+
+    const s = appState.examInteractive;
+    const startTime = new Date(
+      s.startTime.year,
+      s.startTime.month,
+      s.startTime.day,
+      s.startTime.hour,
+      s.startTime.min,
+    );
+
+    const endTime = new Date(startTime.getTime() + s.duration * 60000);
+    const startTimeDisplay = startTime.toLocaleString("fa-IR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    const fullHtml = buildInteractiveExamPage({
+      studentNames: studentList.map((st) => st.displayName || st.key),
+      studentSections,
+      startTime,
+      endTime,
+      startTimeDisplay,
+      examTitle: s.title,
+      examDuration: s.duration,
+      katexCss,
+      katexJs,
+      autoRenderJs,
+      randomize: s.randomize,
+      preExamMessage: s.preExamMessage,
+      questionAlert: s.questionAlert,
+    });
+
+    const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${s.title}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    showToast("فایل آزمون آماده شد.");
+  } catch (err) {
+    console.error(err);
+    showToast("خطا در ساخت فایل.", "error");
+  } finally {
+    hideLoadingOverlay();
+  }
+}
+
+// ------------------ buildInteractiveExamPage  ------------------
+function buildInteractiveExamPage({
+  studentNames,
+  studentSections,
+  startTime,
+  endTime,
+  startTimeDisplay,
+  examTitle,
+  examDuration,
+  katexCss,
+  katexJs,
+  autoRenderJs,
+  randomize = false,
+  preExamMessage = "",
+  questionAlert = "",
+}) {
+  const defaultPreMsg = "";
+  const finalPreMsg = preExamMessage.trim() || defaultPreMsg;
+
+  const defaultAlert = "";
+  const finalAlert = questionAlert.trim() || defaultAlert;
+
+  const namesJson = JSON.stringify(studentNames);
+  const sectionsJson = JSON.stringify(studentSections);
+  const startTimeIso = startTime.toISOString();
+  const endTimeIso = endTime.toISOString();
+
+  return `<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>${sanitizeText(examTitle)}</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+  <style>
+    /* همان استایل‌های قبلی بدون تغییر */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Vazirmatn', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 8px;
+      direction: rtl;
+    }
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 16px);
+    }
+    .screen { display: none; flex-direction: column; flex: 1; }
+    .screen.active { display: flex; }
+    
+    .header {
+      background: linear-gradient(135deg, #1e88e5, #1565c0);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.3em;
+    }
+
+    .login-content {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .login-content .note {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 20px;
+      text-align: right;
+      line-height: 1.8;
+      font-size: 0.9em;
+    }
+    .login-content select {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      background: #fafafa;
+      font-family: inherit;
+      font-size: 1.1em;
+      margin-bottom: 16px;
+    }
+    .btn {
+      padding: 14px 28px;
+      border-radius: 12px;
+      border: none;
+      background: #1e88e5;
+      color: white;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 1em;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    .btn:disabled { background: #aaa; }
+    .btn:hover:not(:disabled) { background: #1565c0; }
+
+    .waiting-content {
+      flex: 1;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .countdown {
+      font-size: 2.5em;
+      font-weight: 700;
+      margin: 20px 0;
+      background: #f5f5f5;
+      padding: 15px 25px;
+      border-radius: 16px;
+    }
+    .exam-duration-info {
+      margin-top: 10px;
+      background: #e3f2fd;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      color: #1565c0;
+    }
+
+    .quiz-header {
+      background: #ffffff;
+      border-bottom: 1px solid #eee;
+      padding: 10px 16px;
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .student-name {
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .timer {
+      background: #e3f2fd;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      color: #1565c0;
+      font-size: 0.9em;
+    }
+    .progress-bar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .progress-dot {
+      width: 32px;
+      height: 28px;
+      border-radius: 8px;
+      background: #e0e0e0;
+      color: #555;
+      border: none;
+      font-family: inherit;
+      font-size: 0.85em;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .progress-dot.visited {
+      background: #1e88e5;
+      color: white;
+    }
+    .quiz-body {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    #questionsContainer {
+      position: relative;
+      flex: 1;
+      min-height: 200px;
+    }
+    .question-panel {
+      opacity: 0;
+      visibility: hidden;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      transform: translateX(20px);
+      transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+    .question-panel.active {
+      opacity: 1;
+      visibility: visible;
+      position: relative;
+      transform: translateX(0);
+    }
+    .question-number {
+      font-weight: 700;
+      font-size: 1.2em;
+      color: #1565c0;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+    }
+    .score-badge {
+      background: #e3f2fd;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      color: #0d47a1;
+      margin-right: 6px;
+    }
+    .range-desc {
+      font-weight: 700;
+      font-size: 1.1em;
+      margin-bottom: 4px;
+      color: #1e88e5;
+    }
+    .questions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .part-question { line-height: 1.7; }
+    .nav-buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      background: #fff;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      color: #333;
+    }
+    .nav-btn:disabled { opacity: 0.4; cursor: default; }
+    .finish-btn {
+      background: #0d47a1;
+      color: white;
+      border: none;
+    }
+    .progress-text {
+      text-align: center;
+      font-size: 0.9em;
+      margin: 6px 0;
+      color: #777;
+    }
+
+    /* هشدار قابل بستن */
+    .dismissible-alert {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 10px 30px 10px 10px; /* فضا برای دکمه بستن */
+      margin-bottom: 12px;
+      position: relative;
+      font-size: 0.85em;
+      color: #856404;
+    }
+    .alert-close {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      background: none;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
+      color: #856404;
+      line-height: 1;
+    }
+
+    .finished-content {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .finished-content h3 {
+      margin-bottom: 12px;
+    }
+    .finished-content .btn {
+      margin-top: 20px;
+    }
+
+     .waiting-card {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: right;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+    .waiting-card-item {
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95em;
+    }
+    .waiting-card-item i {
+      width: 24px;
+      color: #1565c0;
+    }
+
+    .katex { direction: ltr; unicode-bidi: isolate; font-family: inherit !important; }
+    .katex-display { text-align: center; }
+  </style>
+  <style>${katexCss}</style>
+</head>
+<body>
+  <div class="container">
+    <!-- صفحه انتخاب نام -->
+    <div id="loginScreen" class="screen">
+      <div class="header">${sanitizeText(examTitle)}</div>
+      <div class="login-content">
+       ${finalPreMsg ? `<div class="note">${finalPreMsg}</div>` : ``}
+        <select id="nameSelect">
+          <option value="">-- انتخاب نام --</option>
+          ${studentNames.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("")}
+        </select>
+        <button id="startBtn" class="btn">شروع آزمون</button>
+      </div>
+    </div>
+
+    <!-- صفحه انتظار -->
+    <div id="waitingScreen" class="screen">
+      <div class="header">${sanitizeText(examTitle)}</div>
+      <div class="waiting-content">
+        <div class="waiting-card">
+          <div class="waiting-card-item">
+            <span><strong>${sanitizeText(examTitle)}</strong></span>
+          </div>
+          <div class="waiting-card-item">
+            <span>زمان شروع: <strong>${startTimeDisplay}</strong></span>
+          </div>
+          <div class="waiting-card-item">
+            <span>مدت آزمون: <strong>${toPersianDigits(examDuration)} دقیقه</strong></span>
+          </div>
+        </div>
+        <div id="countdownTimer" class="countdown">--</div>
+      </div>
+    </div>
+    
+    <!-- صفحه آزمون -->
+    <div id="quizScreen" class="screen">
+      <div class="quiz-header">
+        <div class="header-top">
+          <span class="student-name"><span id="studentNameDisplay"></span></span>
+          <span class="timer">⏳ <span id="timeDisplay">--</span></span>
+        </div>
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="quiz-body">
+        <!-- هشدار قابل بستن در بالای سوالات -->
+               ${
+                 finalAlert
+                   ? `
+      <div class="dismissible-alert" id="globalAlert">
+        <button class="alert-close" id="alertCloseBtn">&times;</button>
+        ${finalAlert}
+      </div>
+                `
+                   : ``
+               }
+        <div id="questionsContainer"></div>
+        <div class="nav-buttons">
+          <button id="prevBtn" class="nav-btn">قبلی</button>
+          <button id="nextOrFinishBtn" class="nav-btn">بعدی </button>
+        </div>
+        <div class="progress-text" id="progressText"></div>
+      </div>
+    </div>
+
+    <!-- صفحه پایان / خروج موقت -->
+    <div id="finishedScreen" class="screen">
+      <div class="header">${sanitizeText(examTitle)}</div>
+      <div class="finished-content">
+        <h3 id="finishedTitle">آزمون به پایان رسید</h3>
+        <p id="finishedMessage"></p>
+        <button id="backToExamBtn" class="btn" style="display:none;">برگشت به آزمون</button>
+      </div>
+    </div>
+  </div>
+
+  <script>${katexJs}</script>
+  <script>${autoRenderJs}</script>
+  <script>
+    const EXAM_DATA = {
+      startTime: ${JSON.stringify(startTimeIso)},
+      endTime: ${JSON.stringify(endTimeIso)},
+      studentSections: ${sectionsJson},
+      studentNames: ${namesJson},
+      randomize: ${JSON.stringify(randomize)}
+    };
+
+    let currentStudent = null;
+    let timerInterval = null;
+    let countdownInterval = null;
+    let currentPanelIndex = 0;
+    let totalPanels = 0;
+    let visitedPanels = [];
+    let examParticipated = false;
+
+    const loginScreen    = document.getElementById('loginScreen');
+    const waitingScreen  = document.getElementById('waitingScreen');
+    const quizScreen     = document.getElementById('quizScreen');
+    const finishedScreen = document.getElementById('finishedScreen');
+    const nameSelect     = document.getElementById('nameSelect');
+    const startBtn       = document.getElementById('startBtn');
+    const timeDisplay    = document.getElementById('timeDisplay');
+    const questionsContainer = document.getElementById('questionsContainer');
+    const prevBtn        = document.getElementById('prevBtn');
+    const nextOrFinishBtn = document.getElementById('nextOrFinishBtn');
+    const progressText   = document.getElementById('progressText');
+    const countdownTimer = document.getElementById('countdownTimer');
+    const progressBar    = document.getElementById('progressBar');
+    const backToExamBtn  = document.getElementById('backToExamBtn');
+    const finishedTitle  = document.getElementById('finishedTitle');
+    const finishedMessage = document.getElementById('finishedMessage');
+    const globalAlert    = document.getElementById('globalAlert');
+    const alertCloseBtn  = document.getElementById('alertCloseBtn');
+
+    // ---------- اعداد فارسی ----------
+    function toPersianDigits(str) {
+      return (str + '').replace(/\\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    }
+    function convertDigitsToPersianInsideContainer(container) {
+      if (!container) return;
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (/\\d/.test(node.nodeValue)) {
+          node.nodeValue = toPersianDigits(node.nodeValue);
+        }
+      }
+    }
+    function renderMathWithPersianDigits(container) {
+      if (typeof renderMathInElement === 'undefined') return;
+      try {
+        renderMathInElement(container, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\\\(', right: '\\\\)', display: false},
+            {left: '\\\\[', right: '\\\\]', display: true}
+          ],
+          throwOnError: false
+        });
+        convertDigitsToPersianInsideContainer(container);
+      } catch (e) { console.error(e); }
+    }
+
+    // بستن هشدار
+    alertCloseBtn?.addEventListener('click', () => {
+      globalAlert.style.display = 'none';
+    });
+
+    // نوار پیشرفت
+    function renderProgress() {
+      progressBar.innerHTML = '';
+      for (let i = 0; i < totalPanels; i++) {
+        const dot = document.createElement('button');
+        dot.className = 'progress-dot' + (visitedPanels[i] ? ' visited' : '');
+        dot.textContent = toPersianDigits(i + 1);
+        dot.dataset.index = i;
+        dot.addEventListener('click', () => showPanel(parseInt(dot.dataset.index)));
+        progressBar.appendChild(dot);
+      }
+    }
+
+    function showPanel(index) {
+      const panels = questionsContainer.querySelectorAll('.question-panel');
+      if (!panels.length) return;
+      currentPanelIndex = Math.max(0, Math.min(index, panels.length - 1));
+      
+      visitedPanels[currentPanelIndex] = true;
+      renderProgress();
+
+      panels.forEach((p, i) => {
+        p.classList.toggle('active', i === currentPanelIndex);
+      });
+      
+      prevBtn.disabled = (currentPanelIndex === 0);
+      const isLast = (currentPanelIndex === panels.length - 1);
+      nextOrFinishBtn.textContent = isLast ? 'پایان آزمون' : 'بعدی';
+      nextOrFinishBtn.className = 'nav-btn' + (isLast ? ' finish-btn' : '');
+      nextOrFinishBtn.disabled = false; // اطمینان از فعال بودن
+      
+      progressText.textContent = toPersianDigits('سوال ' + (currentPanelIndex+1) + ' از ' + panels.length);
+    }
+
+    function showScreen(screen) {
+      [loginScreen, waitingScreen, quizScreen, finishedScreen].forEach(s => s.classList.remove('active'));
+      screen.classList.add('active');
+    }
+
+    function lockQuiz() {
+      clearInterval(timerInterval);
+      clearInterval(countdownInterval);
+      prevBtn.disabled = true;
+      nextOrFinishBtn.disabled = true;
+    }
+
+    function showFinishPrompt(timeUp) {
+      lockQuiz();
+      if (timeUp) {
+        finishedTitle.textContent = 'زمان آزمون به پایان رسید';
+        if (examParticipated) {
+          finishedMessage.textContent = 'پاسخ‌های خود را به معلم در ایتا ارسال کنید.';
+        } else {
+          finishedMessage.textContent = 'شما در آزمون شرکت نکردید.';
+        }
+        backToExamBtn.style.display = 'none';
+      } else {
+        finishedTitle.textContent = 'شما آزمون را زودتر به پایان رساندید';
+        finishedMessage.textContent = 'تصویر سوالات و پاسخ‌های خود را به معلم در ایتا ارسال کنید.';
+        backToExamBtn.style.display = 'block';
+      }
+      showScreen(finishedScreen);
+    }
+
+    function endExamDueToTime() {
+      clearInterval(timerInterval);
+      showFinishPrompt(true);
+    }
+
+    function finishExam() {
+      if (timerInterval) clearInterval(timerInterval);
+      showFinishPrompt(false);
+    }
+
+    // دکمه بعدی/پایان
+    nextOrFinishBtn.addEventListener('click', () => {
+      const isLast = (currentPanelIndex === totalPanels - 1);
+      if (isLast) {
+        finishExam();
+      } else {
+        showPanel(currentPanelIndex + 1);
+      }
+    });
+
+    // دکمه قبلی
+    prevBtn.addEventListener('click', () => {
+      showPanel(currentPanelIndex - 1);
+    });
+
+    // برگشت به آزمون (رفع باگ)
+    backToExamBtn.addEventListener('click', () => {
+      // فعال‌سازی مجدد دکمه‌ها
+      prevBtn.disabled = true; // مقدار اولیه، showPanel آن را به‌روزرسانی می‌کند
+      nextOrFinishBtn.disabled = false;
+      showPanel(currentPanelIndex); // وضعیت صحیح دکمه‌ها تنظیم می‌شود
+      showScreen(quizScreen);
+      startTimer();
+    });
+
+    // شروع آزمون
+    startBtn.addEventListener('click', () => {
+      const name = nameSelect.value;
+      if (!name) {
+        alert('لطفاً نام خود را انتخاب کنید.');
+        return;
+      }
+      if (!EXAM_DATA.studentSections[name]) {
+        alert('نام انتخاب‌شده معتبر نیست.');
+        return;
+      }
+      currentStudent = name;
+      examParticipated = true;
+      document.getElementById('studentNameDisplay').textContent = name;
+      startExamNow();
+    });
+
+    function startCountdown() {
+      const start = new Date(EXAM_DATA.startTime).getTime();
+      function update() {
+        const diff = Math.max(0, start - Date.now());
+        const secs = Math.floor(diff / 1000);
+        const min = Math.floor(secs / 60);
+        const sec = secs % 60;
+        countdownTimer.textContent = toPersianDigits(min) + ':' + toPersianDigits(String(sec).padStart(2,'0'));
+        if (diff <= 0) {
+          clearInterval(countdownInterval);
+          showScreen(loginScreen);
+        }
+      }
+      update();
+      countdownInterval = setInterval(update, 1000);
+    }
+
+    function startExamNow() {
+      clearInterval(countdownInterval);
+      showScreen(quizScreen);
+      questionsContainer.innerHTML = EXAM_DATA.studentSections[currentStudent] || '<p>سوالی یافت نشد.</p>';
+      renderMathWithPersianDigits(questionsContainer);
+
+      totalPanels = questionsContainer.querySelectorAll('.question-panel').length;
+      visitedPanels = new Array(totalPanels).fill(false);
+      
+      if (totalPanels > 0) {
+        showPanel(0);
+      } else {
+        progressText.textContent = 'سوالی موجود نیست';
+      }
+      renderProgress();
+      startTimer();
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      const end = new Date(EXAM_DATA.endTime).getTime();
+      function tick() {
+        const remaining = Math.max(0, end - Date.now());
+        const secs = Math.floor(remaining / 1000);
+        const min = Math.floor(secs / 60);
+        const sec = secs % 60;
+        timeDisplay.textContent = toPersianDigits(min) + ':' + toPersianDigits(String(sec).padStart(2,'0'));
+        if (remaining <= 0) {
+          endExamDueToTime();
+        }
+      }
+      tick();
+      timerInterval = setInterval(tick, 1000);
+    }
+
+    // صفحه اولیه
+    (function init() {
+      const now = Date.now();
+      const start = new Date(EXAM_DATA.startTime).getTime();
+      const end = new Date(EXAM_DATA.endTime).getTime();
+
+      if (now < start) {
+        showScreen(waitingScreen);
+        startCountdown();
+      } else if (now >= start && now < end) {
+        showScreen(loginScreen);
+      } else {
+        finishedTitle.textContent = 'زمان آزمون به پایان رسیده است';
+        finishedMessage.textContent = 'دیگر نمی‌توانید در آزمون شرکت کنید.';
+        backToExamBtn.style.display = 'none';
+        showScreen(finishedScreen);
+      }
+    })();
+  </script>
+</body>
+</html>`;
 }
 
 // ========== generate ==========
@@ -3480,7 +4382,11 @@ async function renderLivePreviewSingleSheet() {
 
   let quizData;
   try {
-    quizData = await buildQuizData([first], validRanges);
+    quizData = await buildQuizData(
+      [first],
+      validRanges,
+      appState.print?.sheet?.randomizeRanges,
+    );
   } catch (err) {
     showToast(err.message, "error");
     return;
@@ -3783,7 +4689,6 @@ function closeEditModal() {
 
 saveModalBtn.addEventListener("click", () => {
   saveModalChanges();
-  showToast("تغییرات با موفقیت ذخیره شد!");
 });
 
 // ---------- Image change ----------
@@ -4698,8 +5603,29 @@ function createEmptyProjectState() {
     fontSize: "16px",
     modal: { isOpen: false, rangeId: null, itemId: null, tempItem: null },
     print: JSON.parse(JSON.stringify(initialPrintSetting)),
+    examInteractive: JSON.parse(JSON.stringify(initialExamInteractiveSettings)),
     selectedClassId: null,
   };
+}
+
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+async function createProjectDuplicate(sourceProjectId) {
+  const src = await getProjectById(sourceProjectId);
+  if (!src) return null;
+
+  const copy = {
+    ...deepClone(src),
+    id: createRandomId("prj"),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    name: `${src.name || "پروژه"} (رونوشت)`,
+  };
+
+  await saveProject(copy);
+  return copy;
 }
 
 function createProjectRecord(name = "پروژه جدید") {
@@ -4910,6 +5836,9 @@ function importAppStateFromData(data) {
   if (data?.print && typeof data.print === "object") {
     appState.print = data.print;
   }
+  if (data?.examInteractive && typeof data.examInteractive === "object") {
+    appState.examInteractive = data.examInteractive;
+  }
 
   appState.selectedClassId = data?.selectedClassId || null;
 
@@ -4988,6 +5917,7 @@ function exportData() {
         font: appState.font,
         fontSize: appState.fontSize,
         print: appState.print,
+        examInteractive: appState.examInteractive,
         names: appState.names,
         namesCount: appState.namesCount,
         selectedClassId: appState.selectedClassId,
@@ -5384,7 +6314,7 @@ async function renderProjectsListUI({ animateInProjectId = null } = {}) {
 
       return `
         <div
-          class="project-card group relative overflow-hidden rounded-2xl border border-border-light bg-surface p-4 md:p-5
+          class="project-card group relative rounded-2xl border border-border-light bg-surface p-4 md:p-5
                  shadow-sm hover:shadow-md transition cursor-pointer select-none"
           data-project-card="1"
           data-project-id="${pid}"
@@ -5395,7 +6325,7 @@ async function renderProjectsListUI({ animateInProjectId = null } = {}) {
                  radial-gradient(520px 200px at 0% 15%, rgba(16,185,129,.10), transparent 55%);">
           </div>
 
-          <div class="relative flex  items-center justify-between gap-3">
+          <div class="relative flex items-center justify-between gap-3">
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="shrink-0 grid place-items-center w-10 h-10 rounded-2xl border border-border-light/60 bg-surface-darker max-md:hidden">
@@ -5418,24 +6348,64 @@ async function renderProjectsListUI({ animateInProjectId = null } = {}) {
               </div>
             </div>
 
-            <!-- Small icon-only actions -->
-            <div class="relative flex items-center gap-2 max-md:flex-col max-md:gap-1">
-              <button class="btn btn-outline w-10 h-10 px-0 py-0 inline-flex items-center justify-center rounded-xl"
-                      data-prj-action="export" data-id="${pid}" data-tooltip="خروجی پروژه">
-                <i class="bi bi-file-earmark-arrow-up"></i>
+            <!-- 3-dots dropdown actions -->
+            <div class="relative">
+              <button
+                class="btn btn-outline w-10 h-10 px-0 py-0 inline-flex items-center justify-center rounded-xl"
+                data-prj-menu-btn="1"
+                data-id="${pid}"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                title="عملیات"
+              >
+                <i class="bi bi-three-dots-vertical"></i>
               </button>
 
-              <button class="btn btn-outline w-10 h-10 px-0 py-0 inline-flex items-center justify-center rounded-xl"
-                      data-prj-action="rename" data-id="${pid}" data-tooltip="تغییر نام">
-                <i class="bi bi-pen"></i>
-              </button>
+              <div
+                class="hidden absolute z-20 mt-2 left-0 min-w-44 rounded-xl border border-border-light bg-surface shadow-lg overflow-hidden"
+                data-prj-menu="1"
+              >
+                <button
+                  class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-primary hover:bg-[var(--surface-darker)] transition"
+                  data-prj-action="export"
+                  data-id="${pid}"
+                  type="button"
+                >
+                  <i class="bi bi-file-earmark-arrow-up"></i>
+                  خروجی پروژه
+                </button>
 
-              <button class="btn btn-outline w-10 h-10 px-0 py-0 inline-flex items-center justify-center rounded-xl"
-                      data-prj-action="delete" data-id="${pid}" data-tooltip="حذف پروژه">
-                <i class="bi bi-trash3"></i>
-              </button>
+                <button
+                  class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-primary hover:bg-[var(--surface-darker)] transition"
+                  data-prj-action="rename"
+                  data-id="${pid}"
+                  type="button"
+                >
+                  <i class="bi bi-pen"></i>
+                  تغییر نام
+                </button>
+
+                <button
+                  class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-primary hover:bg-[var(--surface-darker)] transition"
+                  data-prj-action="duplicate"
+                  data-id="${pid}"
+                  type="button"
+                >
+                  <i class="bi bi-files"></i>
+                  رونوشت
+                </button>
+
+                <button
+                  class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-primary hover:bg-[var(--surface-darker)] transition"
+                  data-prj-action="delete"
+                  data-id="${pid}"
+                  type="button"
+                >
+                  <i class="bi bi-trash3"></i>
+                  حذف پروژه
+                </button>
+              </div>
             </div>
-
           </div>
         </div>
       `;
@@ -5449,10 +6419,66 @@ async function renderProjectsListUI({ animateInProjectId = null } = {}) {
     if (el) animateEnterEl(el, "range-item-enter", { removeAfterFrames: 1 });
   }
 
+  // helpers to open/close menus
+  const closeAllMenus = () => {
+    wrap
+      .querySelectorAll("[data-prj-menu]")
+      .forEach((m) => m.classList.add("hidden"));
+    wrap
+      .querySelectorAll("[data-prj-menu-btn]")
+      .forEach((b) => b.setAttribute("aria-expanded", "false"));
+  };
+
+  const toggleMenuForBtn = (btn) => {
+    const container = btn.parentElement; // the relative wrapper
+    const menu = container?.querySelector("[data-prj-menu]");
+    if (!menu) return;
+
+    const isOpen = !menu.classList.contains("hidden");
+    closeAllMenus();
+    if (!isOpen) {
+      menu.classList.remove("hidden");
+      btn.setAttribute("aria-expanded", "true");
+    }
+  };
+
+  // close dropdown on outside click (within wrap handler we also handle)
+  // NOTE: we attach document handler once per render via property to avoid duplicates.
+  if (!document.__projectsMenuOutsideHandlerAttached) {
+    document.__projectsMenuOutsideHandlerAttached = true;
+    document.addEventListener("click", (ev) => {
+      const list = document.getElementById("projectsList");
+      if (!list) return;
+
+      // if click is inside a menu or its button, ignore (wrap.onclick will handle toggles)
+      if (ev.target.closest?.("#projectsList [data-prj-menu]")) return;
+      if (ev.target.closest?.("#projectsList [data-prj-menu-btn]")) return;
+
+      list
+        .querySelectorAll("[data-prj-menu]")
+        .forEach((m) => m.classList.add("hidden"));
+      list
+        .querySelectorAll("[data-prj-menu-btn]")
+        .forEach((b) => b.setAttribute("aria-expanded", "false"));
+    });
+  }
+
   wrap.onclick = async (e) => {
+    // 1) three-dots button toggles dropdown
+    const menuBtn = e.target.closest("[data-prj-menu-btn]");
+    if (menuBtn) {
+      e.stopPropagation();
+      toggleMenuForBtn(menuBtn);
+      return;
+    }
+
+    // 2) dropdown item actions
     const actionBtn = e.target.closest("[data-prj-action]");
     if (actionBtn) {
       e.stopPropagation();
+
+      // close menu immediately
+      closeAllMenus();
 
       const action = actionBtn.dataset.prjAction;
       const id = actionBtn.dataset.id;
@@ -5486,6 +6512,15 @@ async function renderProjectsListUI({ animateInProjectId = null } = {}) {
         return;
       }
 
+      if (action === "duplicate") {
+        const newPrj = await createProjectDuplicate(id);
+        if (!newPrj) return showToast("پروژه پیدا نشد.", "error");
+
+        await renderProjectsListUI({ animateInProjectId: newPrj.id });
+        showToast("رونوشت پروژه ساخته شد.");
+        return;
+      }
+
       if (action === "delete") {
         const card = actionBtn.closest("[data-project-card]");
         showConfirm({
@@ -5516,12 +6551,12 @@ async function renderProjectsListUI({ animateInProjectId = null } = {}) {
       return;
     }
 
-    // click on card => open project
     const card = e.target.closest("[data-project-card]");
     if (!card) return;
     const projectId = card.dataset.projectId;
     if (!projectId) return;
 
+    closeAllMenus();
     await openProject(projectId);
   };
 }

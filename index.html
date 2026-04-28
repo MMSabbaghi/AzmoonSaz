@@ -344,7 +344,7 @@
     </div>
 
     <div data-modal-footer class="flex gap-3">
-      <button id="applyCrop" type="button" class="btn flex-1 py-3">
+      <button id="applyCrop" type="button" class="btn btn-primary flex-1 py-3">
         اعمال برش
       </button>
 
@@ -670,6 +670,85 @@
     </div>
   </div>
 
+  <!-- ========== مودال آزمون تعاملی ========== -->
+  <div id="modal-exam-settings">
+    <div data-modal-body class="p-4 md:p-5">
+      <div class="flex flex-col gap-3">
+
+        <div class="flex items-center gap-1">
+          <!-- عنوان آزمون -->
+          <div class="w-full">
+            <label class="block text-xs text-muted mb-1">عنوان آزمون</label>
+            <input id="examTitleInput" type="text"
+              class="w-full border border-border-light rounded-custom p-2 bg-surface text-primary" value="آزمون" />
+          </div>
+
+          <!-- مدت زمان -->
+          <div class="w-full">
+            <label class="block text-xs text-muted mb-1">مدت آزمون (دقیقه)</label>
+            <input id="examDurationInput" type="text" data-number-input="true" data-float="false"
+              class="w-full border border-border-light rounded-custom p-2 bg-surface text-primary" min="1" max="300"
+              value="45" />
+          </div>
+
+          <!-- سوئیچ‌ها -->
+          <div class="flex flex-col w-full">
+            <label class="block text-xs text-muted mb-1">تصادفی سازی</label>
+            <div class="flex items-center gap-2 border border-border-light rounded-custom p-2.5 bg-surface">
+              <span class="text-sm text-primary max-md:hidden">ترتیب تصادفی سوالات</span>
+              <div id="examRandomizeSwitch" data-switch data-switch-size="sm" data-switch-checked="false"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- تاریخ و ساعت شروع -->
+        <div>
+          <div class="date-picker-container flex max-md:flex-col gap-2">
+            <div class="flex gap-2 flex-wrap w-full items-center">
+              <label class="block text-xs text-muted">تاریخ شروع</label>
+              <select data-dp-year class="border rounded-custom p-2 flex-1 w-full hidden"></select>
+              <select data-dp-month class="border rounded-custom p-2 flex-1 w-full"></select>
+              <select data-dp-day class="border rounded-custom p-2 flex-1 w-full"></select>
+            </div>
+            <div class="flex gap-2 flex-wrap w-full items-center justify-between">
+              <label class="block text-xs text-muted">ساعت شروع</label>
+              <select data-dp-hour class="border rounded-custom p-2 flex-1 w-full"></select>
+              <span class="self-center">:</span>
+              <select data-dp-minute class="border rounded-custom p-2 flex-1 w-full"></select>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- پیغام قبل از شروع (اختیاری) -->
+        <div>
+          <label class="block text-xs text-muted mb-1">
+            پیغام صفحه انتظار
+          </label>
+          <textarea id="examPreExamMessage" rows="3"
+            class="w-full border border-border-light rounded-custom p-2 text-sm bg-surface text-primary"
+            placeholder="شما می‌توانید این پیغام را ویرایش کنید..."></textarea>
+        </div>
+
+        <!-- هشدار بالای سوالات (اختیاری) -->
+        <div>
+          <label class="block text-xs text-muted mb-1">متن هشدار بالای سوالات</label>
+          <textarea id="examQuestionAlert" rows="2"
+            class="w-full border border-border-light rounded-custom p-2 text-sm bg-surface text-primary"
+            placeholder="⚠️ متن سوال و پاسخ را در دفتر خود یادداشت کنید..."></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div data-modal-footer class="flex items-center gap-2 p-3 md:p-4 border-t border-border-light bg-surface">
+      <button id="generateExamBtn" type="button" class="btn btn-primary px-4 py-2 mr-auto">
+        <i class="bi bi-file-earmark-arrow-up"></i> ساخت فایل
+      </button>
+    </div>
+  </div>
+
   <button id="toTop" title="برو بالا" class="
     fixed bottom-7 right-7 z-50
     w-14 h-14 rounded-circle
@@ -726,6 +805,8 @@
       { type: "js", src: "./utils/editor/rich-text-editor.js" },
       { type: "js", src: "./utils/tooltip.js" },
       { type: "js", src: "./utils/switch.js" },
+      { type: "js", src: "./utils/datepicker/jalaali.min.js" },
+      { type: "js", src: "./utils/datepicker/JalaliDatePicker.js" },
       { type: "js", src: "./utils/ai-prompt.js" },
       { type: "js", src: "./utils/Rainfall.js" },
       { type: "js", src: "./utils/UI-Components.js" },
