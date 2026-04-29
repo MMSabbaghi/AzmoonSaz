@@ -586,6 +586,7 @@ const initialExamInteractiveSettings = {
   randomize: false,
   preExamMessage: "",
   questionAlert: "",
+  allowedExits: 5,
 };
 
 const rawState = {
@@ -3518,7 +3519,33 @@ function openExamInteractiveModal() {
   document.getElementById("examPreExamMessage").value = s.preExamMessage || "";
   document.getElementById("examQuestionAlert").value = s.questionAlert || "";
 
+  const exitLimitSwitch = document.getElementById("examExitLimitSwitch");
+  const exitLimitInput = document.getElementById("examExitLimitInput");
+  const exitLimitWrap = document.getElementById("examExitLimitInputWrap");
+
+  if (exitLimitSwitch) {
+    Switch.ensure(exitLimitSwitch);
+    exitLimitSwitch.setChecked(!!s.allowedExitsEnabled, { silent: true });
+  }
+
+  if (exitLimitInput) {
+    exitLimitInput.value = s.allowedExits ?? 5;
+    exitLimitInput.disabled = !s.allowedExitsEnabled;
+  }
+
+  if (exitLimitWrap) {
+    exitLimitWrap.style.opacity = s.allowedExitsEnabled ? "1" : "0.5";
+  }
+
   examSettingsModal.open();
+
+  if (exitLimitSwitch && exitLimitInput) {
+    exitLimitSwitch.addEventListener("switch:change", (e) => {
+      const enabled = e.detail.checked;
+      exitLimitInput.disabled = !enabled;
+      exitLimitWrap.style.opacity = enabled ? "1" : "0.5";
+    });
+  }
 }
 
 document
@@ -3565,6 +3592,13 @@ document
         ?.getAttribute("data-switch-checked") === "true";
     s.preExamMessage = document.getElementById("examPreExamMessage").value;
     s.questionAlert = document.getElementById("examQuestionAlert").value;
+    s.allowedExitsEnabled =
+      document
+        .getElementById("examExitLimitSwitch")
+        ?.getAttribute("data-switch-checked") === "true";
+    s.allowedExits = s.allowedExitsEnabled
+      ? parseInt(document.getElementById("examExitLimitInput")?.value, 10) || 5
+      : null;
 
     examSettingsModal.close();
 
@@ -3636,7 +3670,7 @@ async function generateInteractiveExamFile() {
       randomize: s.randomize,
       preExamMessage: s.preExamMessage,
       questionAlert: s.questionAlert,
-      allowedExits: 5,
+      allowedExits: s.allowedExitsEnabled ? s.allowedExits : null,
     });
 
     const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
