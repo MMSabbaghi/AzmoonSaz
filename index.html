@@ -680,7 +680,7 @@
 
         <!-- تاریخ و ساعت شروع -->
         <div>
-          <div class="date-picker-container flex max-md:flex-col gap-2">
+          <div id="examDatePickerContainer" class="flex max-md:flex-col gap-2">
             <div class="flex gap-2 flex-wrap w-full items-center">
               <label class="block text-xs text-muted">تاریخ شروع</label>
               <select data-dp-year class="border rounded-custom p-2 flex-1 w-full hidden"></select>
@@ -700,7 +700,7 @@
         <div class="grid grid-cols-2 gap-2">
           <div>
             <div class="flex items-center gap-3">
-              <label class="text-xs text-muted mb-1 truncate">محدودیت خروج از آزمون</label>
+              <label class="text-xs text-muted mb-1 truncate">محدودیت زمانی خروج</label>
               <div id="examExitLimitSwitch" data-switch data-switch-size="sm" data-switch-checked="true"></div>
             </div>
 
@@ -721,21 +721,22 @@
 
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <!-- پیغام قبل از شروع (اختیاری) -->
+          <!-- اتصال به فرم افزار -->
           <div>
-            <label class="block text-xs text-muted mb-1">
-              پیغام صفحه انتظار
-            </label>
-            <textarea id="examPreExamMessage" rows="3"
-              class="w-full border border-border-light rounded-custom p-2 text-sm bg-surface text-primary"
-              placeholder="شما می‌توانید این پیغام را ویرایش کنید..."></textarea>
+            <div class="flex items-center gap-2">
+              <label class="block text-xs text-muted mb-1">اتصال به فرم‌افزار</label>
+              <div id="examFormAfzarSwitch" data-switch data-switch-size="sm" data-switch-checked="false"></div>
+            </div>
+            <input id="examFormAfzarLink" type="text" type="text" data-number-input="false"
+              class="w-full border border-border-light rounded-custom p-2 bg-surface text-primary text-center"
+              placeholder="https://formafzar.com/form/00g45" disabled />
           </div>
 
-          <!-- هشدار بالای سوالات (اختیاری) -->
+          <!-- هشدار بالای سوالات (بدون تغییر) -->
           <div>
             <label class="block text-xs text-muted mb-1">متن هشدار بالای سوالات</label>
-            <textarea id="examQuestionAlert" rows="2"
-              class="w-full border border-border-light rounded-custom p-2 text-sm bg-surface text-primary"
+            <input id="examQuestionAlert"
+              class="w-full border border-border-light rounded-custom p-2 bg-surface text-primary text-center"
               placeholder="⚠️ متن سوال و پاسخ را در دفتر خود یادداشت کنید..."></textarea>
           </div>
         </div>

@@ -1,223 +1,91 @@
-//screenshot-prevention
+//  Screenshot Prevention
 const SCREENSHOT_PREVENTION = `(function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
     typeof define === 'function' && define.amd ? define(factory) :
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.ScreenshotPrevention = factory());
 })(this, (function () { 'use strict';
 
-    /******************************************************************************
-    Copyright (c) Microsoft Corporation.
-
-    Permission to use, copy, modify, and/or distribute this software for any
-    purpose with or without fee is hereby granted.
-
-    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-    PERFORMANCE OF THIS SOFTWARE.
-    ***************************************************************************** */
-    /* global Reflect, Promise, SuppressedError, Symbol, Iterator */
-
-
-    function __awaiter(thisArg, _arguments, P, generator) {
-        function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-        return new (P || (P = Promise))(function (resolve, reject) {
-            function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-            function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-            function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-            step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-    }
-
     typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
         var e = new Error(message);
         return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
     };
 
-    /**
-     * @package enhanced-screenshot-prevention
-     * @version 1.0.0
-     * @description Advanced screenshot, screen recording, and screen sharing prevention library
-     * @license MIT
-     */
     class EnhancedScreenshotPrevention {
         constructor(options = {}) {
-            this.defaultStyles = {
-                overlayBackground: 'rgba(255, 255, 255, 0.5)',
-                warningBackground: '#ff4444',
-                warningColor: '#ffffff',
-                warningFontFamily: 'system-ui, -apple-system, sans-serif',
-                warningBorderRadius: '8px',
-                warningBoxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            this.options = {
+                onAttempt: null,
+                preventCopy: true,
+                preventInspect: true
             };
             this.state = {
                 attemptCount: 0,
-                isBlurred: false,
-                recoveryTimer: null,
                 lastVisibilityChange: 0,
                 mousePosition: { x: 0, y: 0 }
             };
-            this.options = {
-                blurIntensity: '20px',
-                warningMessage: 'Screenshot and screen recording are not allowed.',
-                preventCopy: true,
-                preventInspect: true,
-                recoveryDelay: 2000,
-                debug: false,
-                onAttempt: this.defaultAttemptHandler.bind(this),
-                customStyles: {}
-            };
-            this.elements = {
-                overlay: document.createElement('div'),
-                warning: document.createElement('div'),
-                style: document.createElement('style')
-            };
+            this._listeners = [];
+
             if (EnhancedScreenshotPrevention.instance) {
                 return EnhancedScreenshotPrevention.instance;
             }
             this.validateEnvironment();
             this.initializeOptions(options);
-            this.initializeElements();
+            this.setup();
             EnhancedScreenshotPrevention.instance = this;
-            this.initialize();
             return this;
         }
+
         validateEnvironment() {
             if (typeof window === 'undefined') {
                 throw new Error('EnhancedScreenshotPrevention requires a browser environment');
             }
         }
+
         initializeOptions(options) {
             Object.assign(this.options, options);
-            if (options.customStyles) {
-                Object.assign(this.defaultStyles, options.customStyles);
-            }
         }
-        initializeElements() {
-            this.elements.overlay = this.createOverlay();
-            this.elements.warning = this.createWarning();
-            this.elements.style = this.createProtectiveStyles();
-        }
-        initialize() {
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => this.setup());
-            }
-            else {
-                this.setup();
-            }
-        }
+
         setup() {
-            const fragment = document.createDocumentFragment();
-            fragment.appendChild(this.elements.overlay);
-            fragment.appendChild(this.elements.warning);
-            requestAnimationFrame(() => {
-                document.body.appendChild(fragment);
-                document.head.appendChild(this.elements.style);
-                this.setupEventListeners();
-                this.setupMediaProtection();
-                if (this.options.preventInspect) {
-                    this.setupDevToolsDetection();
-                }
-            });
-        }
-        createOverlay() {
-            const overlay = document.createElement('div');
-            overlay.setAttribute('data-screenshot-prevention', 'overlay');
-            overlay.style.cssText = \`
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            backdrop-filter: blur(\${this.options.blurIntensity});
-            -webkit-backdrop-filter: blur(\${this.options.blurIntensity});
-            background: \${this.defaultStyles.overlayBackground};
-            z-index: 2147483647;
-            display: none;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        \`;
-            return overlay;
-        }
-        createWarning() {
-            const warning = document.createElement('div');
-            warning.setAttribute('data-screenshot-prevention', 'warning');
-            warning.style.cssText = \`
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: \${this.defaultStyles.warningBackground};
-            color: \${this.defaultStyles.warningColor};
-            padding: 20px;
-            border-radius: \${this.defaultStyles.warningBorderRadius};
-            box-shadow: \${this.defaultStyles.warningBoxShadow};
-            z-index: 2147483648;
-            text-align: center;
-            display: none;
-            pointer-events: none;
-        \`;
-            warning.textContent = this.options.warningMessage;
-            return warning;
-        }
-        createProtectiveStyles() {
-            const style = document.createElement('style');
-            style.textContent = \`
-            .screenshot-prevention-active * {
-                -webkit-user-select: none !important;
-                -moz-user-select: none !important;
-                -ms-user-select: none !important;
-                user-select: none !important;
-                -webkit-touch-callout: none !important;
+            this.setupEventListeners();
+            this.setupMediaProtection();
+            if (this.options.preventInspect) {
+                this.setupDevToolsDetection();
             }
-            
-            @media print {
-                body { display: none !important; }
-            }
-        \`;
-            return style;
         }
+
         setupEventListeners() {
             const eventOptions = { passive: true };
-            document.addEventListener('keydown', this.handleKeyboardEvent.bind(this), eventOptions);
-            document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this), eventOptions);
-            document.addEventListener('mousemove', this.handleMouseMove.bind(this), eventOptions);
+
+            const keyHandler = this.handleKeyboardEvent.bind(this);
+            document.addEventListener('keydown', keyHandler, eventOptions);
+            this._listeners.push({ target: document, type: 'keydown', handler: keyHandler });
+
+            const visHandler = this.handleVisibilityChange.bind(this);
+            document.addEventListener('visibilitychange', visHandler, eventOptions);
+            this._listeners.push({ target: document, type: 'visibilitychange', handler: visHandler });
+
+            const mouseHandler = this.handleMouseMove.bind(this);
+            document.addEventListener('mousemove', mouseHandler, eventOptions);
+            this._listeners.push({ target: document, type: 'mousemove', handler: mouseHandler });
+
             if ('visualViewport' in window && window.visualViewport) {
-                window.visualViewport.addEventListener('resize', this.debounce(this.handleViewportResize.bind(this), 100), eventOptions);
+                const vpHandler = this.debounce(this.handleViewportResize.bind(this), 100);
+                window.visualViewport.addEventListener('resize', vpHandler, eventOptions);
+                this._listeners.push({ target: window.visualViewport, type: 'resize', handler: vpHandler });
             }
-        }
-        setupMediaProtection() {
-            if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-                navigator.mediaDevices.getDisplayMedia;
-                navigator.mediaDevices.getDisplayMedia = (...args) => __awaiter(this, void 0, void 0, function* () {
-                    this.handleDetection('screenCapture', 'Screen capture attempted');
-                    throw new Error('Screen capture is not allowed');
+
+            if (this.options.preventCopy) {
+                const blockEvent = (e) => {
+                    e.preventDefault();
+                    this.handleDetection('copyAttempt', 'Copy/Cut/ContextMenu attempt');
+                    return false;
+                };
+                ['copy', 'cut', 'contextmenu'].forEach(evt => {
+                    document.addEventListener(evt, blockEvent, false);
+                    this._listeners.push({ target: document, type: evt, handler: blockEvent });
                 });
             }
-            if ('mediaSession' in navigator && navigator.mediaSession) {
-                navigator.mediaSession.setActionHandler('play', () => {
-                    this.handleDetection('mediaRecording', 'Media recording detected');
-                });
-            }
         }
-        setupDevToolsDetection() {
-            const threshold = 160;
-            let devToolsTimeout;
-            const checkDevTools = () => {
-                const windowWidth = window.outerWidth - window.innerWidth > threshold;
-                const windowHeight = window.outerHeight - window.innerHeight > threshold;
-                if (windowWidth || windowHeight) {
-                    this.handleDetection('devTools', 'Developer tools detected');
-                }
-            };
-            window.addEventListener('resize', () => {
-                window.clearTimeout(devToolsTimeout);
-                devToolsTimeout = window.setTimeout(checkDevTools, 100);
-            });
-        }
+
         handleKeyboardEvent(e) {
             const isWindowsKeyPressed = e.getModifierState('Meta') || e.getModifierState('OS');
             const isScreenshotCombo = e.key === 'PrintScreen' ||
@@ -228,6 +96,7 @@ const SCREENSHOT_PREVENTION = `(function (global, factory) {
                 this.handleDetection('keyboard', 'Screenshot shortcut detected');
             }
         }
+
         handleVisibilityChange() {
             const now = Date.now();
             const timeDiff = now - this.state.lastVisibilityChange;
@@ -236,47 +105,59 @@ const SCREENSHOT_PREVENTION = `(function (global, factory) {
             }
             this.state.lastVisibilityChange = now;
         }
+
         handleMouseMove(e) {
             this.state.mousePosition = { x: e.clientX, y: e.clientY };
         }
+
         handleViewportResize() {
-            if (!window.visualViewport)
-                return;
+            if (!window.visualViewport) return;
             const viewportWidth = window.visualViewport.width;
             const windowWidth = window.outerWidth;
             if (Math.abs(viewportWidth - windowWidth) > 50) {
                 this.handleDetection('mobile', 'Mobile screenshot detected');
             }
         }
+
         handleDetection(method, details) {
             this.state.attemptCount++;
-            if (this.state.recoveryTimer !== null) {
-                window.clearTimeout(this.state.recoveryTimer);
-            }
-            requestAnimationFrame(() => {
-                this.elements.overlay.style.display = 'block';
-                this.elements.warning.style.display = 'block';
-                document.body.classList.add('screenshot-prevention-active');
-            });
-            this.options.onAttempt({
-                count: this.state.attemptCount,
-                method,
-                timestamp: Date.now(),
-                details
-            });
-            this.state.recoveryTimer = window.setTimeout(() => {
-                requestAnimationFrame(() => {
-                    this.elements.overlay.style.display = 'none';
-                    this.elements.warning.style.display = 'none';
-                    document.body.classList.remove('screenshot-prevention-active');
+            if (this.options.onAttempt) {
+                this.options.onAttempt({
+                    count: this.state.attemptCount,
+                    method,
+                    timestamp: Date.now(),
+                    details
                 });
-            }, this.options.recoveryDelay);
-        }
-        defaultAttemptHandler(details) {
-            if (this.options.debug) {
-                console.log('[EnhancedScreenshotPrevention]', details);
             }
         }
+
+        setupMediaProtection() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+                navigator.mediaDevices.getDisplayMedia = (...args) => {
+                    this.handleDetection('screenCapture', 'Screen capture attempted');
+                    return Promise.reject(new Error('Screen capture is not allowed'));
+                };
+            }
+        }
+
+        setupDevToolsDetection() {
+            const threshold = 160;
+            let devToolsTimeout;
+            const checkDevTools = () => {
+                const windowWidth = window.outerWidth - window.innerWidth > threshold;
+                const windowHeight = window.outerHeight - window.innerHeight > threshold;
+                if (windowWidth || windowHeight) {
+                    this.handleDetection('devTools', 'Developer tools detected');
+                }
+            };
+            const resizeHandler = () => {
+                window.clearTimeout(devToolsTimeout);
+                devToolsTimeout = window.setTimeout(checkDevTools, 100);
+            };
+            window.addEventListener('resize', resizeHandler);
+            this._listeners.push({ target: window, type: 'resize', handler: resizeHandler });
+        }
+
         debounce(fn, delay) {
             let timeoutId;
             return (...args) => {
@@ -284,70 +165,35 @@ const SCREENSHOT_PREVENTION = `(function (global, factory) {
                 timeoutId = window.setTimeout(() => fn.apply(this, args), delay);
             };
         }
-        // Public API
+
+        destroy() {
+            this._listeners.forEach(({ target, type, handler }) => {
+                target.removeEventListener(type, handler);
+            });
+            this._listeners = [];
+            EnhancedScreenshotPrevention.instance = null;
+        }
+
         getAttemptCount() {
             return this.state.attemptCount;
         }
+
         reset() {
             this.state.attemptCount = 0;
-            if (this.state.recoveryTimer !== null) {
-                window.clearTimeout(this.state.recoveryTimer);
-                this.state.recoveryTimer = null;
-            }
-            requestAnimationFrame(() => {
-                this.elements.overlay.style.display = 'none';
-                this.elements.warning.style.display = 'none';
-                document.body.classList.remove('screenshot-prevention-active');
-            });
-        }
-        update(options) {
-            Object.assign(this.options, options);
-            if (options.warningMessage) {
-                this.elements.warning.textContent = options.warningMessage;
-            }
-            if (options.blurIntensity) {
-                const blurValue = \`blur(\${options.blurIntensity})\`;
-                this.elements.overlay.style.setProperty('backdrop-filter', blurValue);
-                this.elements.overlay.style.setProperty('-webkit-backdrop-filter', blurValue);
-            }
-            if (options.customStyles) {
-                Object.assign(this.defaultStyles, options.customStyles);
-                this.updateStyles();
-            }
-        }
-        updateStyles() {
-            const { overlay, warning } = this.elements;
-            overlay.style.background = this.defaultStyles.overlayBackground;
-            Object.assign(warning.style, {
-                background: this.defaultStyles.warningBackground,
-                color: this.defaultStyles.warningColor,
-                borderRadius: this.defaultStyles.warningBorderRadius,
-                boxShadow: this.defaultStyles.warningBoxShadow
-            });
-        }
-        destroy() {
-            if (this.state.recoveryTimer !== null) {
-                window.clearTimeout(this.state.recoveryTimer);
-            }
-            this.elements.overlay.remove();
-            this.elements.warning.remove();
-            this.elements.style.remove();
-            document.body.classList.remove('screenshot-prevention-active');
-            EnhancedScreenshotPrevention.instance = null;
         }
     }
+
     EnhancedScreenshotPrevention.instance = null;
-    // Export for different module systems
+
     if (typeof window !== 'undefined') {
         window.EnhancedScreenshotPrevention = EnhancedScreenshotPrevention;
     }
 
     return EnhancedScreenshotPrevention;
-
 }));
 //# sourceMappingURL=screenshot-prevention.js.map`;
 
-function buildInteractiveExamPage({
+async function buildInteractiveExamPage({
   studentNames,
   studentSections,
   startTime,
@@ -355,20 +201,22 @@ function buildInteractiveExamPage({
   startTimeDisplay,
   examTitle,
   examDuration,
-  katexCss,
-  katexJs,
-  autoRenderJs,
   randomize = false,
-  preExamMessage = "",
   questionAlert = "",
-  allowedExits = null,
+  maxExitDurationMinutes = null,
+  formAfzarId = null,
 }) {
-  const finalPreMsg = preExamMessage.trim() || "";
   const finalAlert = questionAlert.trim() || "";
   const namesJson = JSON.stringify(studentNames);
   const sectionsJson = JSON.stringify(studentSections);
   const startTimeIso = startTime.toISOString();
   const endTimeIso = endTime.toISOString();
+
+  const [katexCss, katexJs, autoRenderJs] = await Promise.all([
+    fetch("../utils/katex/katex.min.css").then((r) => r.text()),
+    fetch("../utils/katex/katex.min.js").then((r) => r.text()),
+    fetch("../utils/katex/auto-render.min.js").then((r) => r.text()),
+  ]);
 
   let html = `<!DOCTYPE html>
 <html dir="rtl" lang="fa">
@@ -376,7 +224,7 @@ function buildInteractiveExamPage({
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>${sanitizeText(examTitle)}</title>
-  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+  <link href="https://lib.arvancloud.ir/vazir-font/33.003/Farsi-Digits-Non-Latin/fonts/ttf/Vazirmatn-FD-NL-Regular.ttf" rel="stylesheet" type="text/css" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -425,17 +273,13 @@ function buildInteractiveExamPage({
       justify-content: center;
       text-align: center;
     }
-    .login-content .note {
-      background: #fef3c7;
-      border: 1px solid #f59e0b;
-      border-radius: 16px;
-      padding: 14px;
-      margin-bottom: 24px;
+    .input-label {
+      display: block;
+      width: 100%;
       text-align: right;
-      line-height: 1.8;
-      font-size: 0.9em;
-      color: #92400e;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 8px;
     }
     .login-content select {
       width: 100%;
@@ -488,16 +332,43 @@ function buildInteractiveExamPage({
       justify-content: center;
       text-align: center;
     }
-    .countdown {
-      font-size: 2.8em;
-      font-weight: 700;
-      margin: 24px 0;
-      background: #f1f5f9;
-      padding: 18px 30px;
-      border-radius: 20px;
+    .waiting-card {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+      padding: 32px 24px;
+      width: 100%;
+      box-shadow: 0 20px 30px rgba(0,0,0,0.08);
+      border: 1px solid rgba(255,255,255,0.3);
+      margin-bottom: 24px;
+    }
+    .waiting-card-item {
+      margin: 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1em;
       color: #1e293b;
+      justify-content: center;
+    }
+    .waiting-card-item strong {
+      color: #4f46e5;
+      }
+      
+      .countdown-container{
+        position: relative;
+        width: 100%;
+    }
+
+    .countdown {
+      font-size: 3em;
+      font-weight: 800;
       letter-spacing: 2px;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+      background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+      padding: 10px 36px;
+      border-radius: 24px;
+      color: #1e293b;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
     }
     .exam-duration-info {
       margin-top: 12px;
@@ -536,6 +407,8 @@ function buildInteractiveExamPage({
       color: #92400e;
       font-size: 0.9em;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      min-width: 90px;
+      text-align: center;
     }
     .progress-bar {
       display: flex;
@@ -716,52 +589,70 @@ function buildInteractiveExamPage({
       box-shadow: 0 4px 6px -1px rgba(79,70,229,0.3);
     }
 
-    .waiting-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 20px;
-      padding: 28px 24px;
-      text-align: right;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    .waiting-card-item {
-      margin: 10px 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.95em;
-      color: #334155;
-    }
-    .waiting-card-item i {
-      width: 24px;
-      color: #4f46e5;
+    .submit-answers-btn {
+      margin-top: 16px;
+      background: linear-gradient(135deg, #10b981, #059669) !important;
     }
 
-    .lock-overlay {
+    /* message overlay / box */
+    .message-overlay {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 2147483650;
+      animation: fadeIn 0.3s ease;
     }
-    .lock-message {
-      background: white;
-      border-radius: 20px;
-      padding: 32px;
-      max-width: 350px;
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .message-box {
+      background: linear-gradient(135deg, #ffffff, #f8fafc);
+      border-radius: 24px;
+      padding: 32px 24px;
+      max-width: 380px;
+      width: 90%;
       text-align: center;
+      box-shadow: 0 25px 40px rgba(0,0,0,0.3);
       font-family: 'Vazirmatn', sans-serif;
-      box-shadow: 0 20px 30px rgba(0,0,0,0.3);
+      animation: slideUp 0.3s ease;
     }
-    .lock-message h2 { color: #b91c1c; margin-bottom: 16px; }
-    .lock-message p { margin-bottom: 24px; font-size: 0.95em; color: #1e293b; }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .message-box p {
+      font-size: 1em;
+      color: #1e293b;
+      line-height: 1.8;
+      margin-bottom: 20px;
+    }
+    .message-box .btn {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1em;
+      transition: all 0.2s;
+      margin: 4px;
+    }
+    .message-box .btn:hover {
+      background: linear-gradient(135deg, #4338ca, #6d28d9);
+      transform: translateY(-1px);
+    }
 
     .katex { direction: ltr; unicode-bidi: isolate; font-family: inherit !important; }
     .katex-display { text-align: center; }
+    .ravesh-formbuilder-container { width:100%; }
   </style>
   <style>${katexCss}</style>
 </head>
@@ -770,7 +661,7 @@ function buildInteractiveExamPage({
     <div id="loginScreen" class="screen">
       <div class="header">${sanitizeText(examTitle)}</div>
       <div class="login-content">
-       ${finalPreMsg ? `<div class="note">${finalPreMsg}</div>` : ``}
+        <label class="input-label" for="nameSelect">نام خود را انتخاب کنید</label>
         <select id="nameSelect">
           <option value="">-- انتخاب نام --</option>
           ${studentNames.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("")}
@@ -793,7 +684,10 @@ function buildInteractiveExamPage({
             <span>مدت آزمون: <strong>${toPersianDigits(examDuration)} دقیقه</strong></span>
           </div>
         </div>
+        <div class="countdown-container">
+        <p class="countdown-badge"> زمان باقی مانده تا شروع آزمون: </p>
         <div id="countdownTimer" class="countdown">--</div>
+        </div>
       </div>
     </div>
     
@@ -801,7 +695,7 @@ function buildInteractiveExamPage({
       <div class="quiz-header">
         <div class="header-top">
           <span class="student-name"><span id="studentNameDisplay"></span></span>
-          <span class="timer">⏳ <span id="timeDisplay">--</span></span>
+          <span class="timer"><span id="timeDisplay">--</span></span>
         </div>
         <div class="progress-bar" id="progressBar"></div>
       </div>
@@ -821,6 +715,7 @@ function buildInteractiveExamPage({
           <button id="prevBtn" class="nav-btn">قبلی</button>
           <button id="nextOrFinishBtn" class="nav-btn">بعدی </button>
         </div>
+        <button id="submitAnswersBtn" class="btn submit-answers-btn" style="margin-top: 16px; background: linear-gradient(135deg, #10b981, #059669);"> ارسال پاسخ‌ها</button>
         <div class="progress-text" id="progressText"></div>
       </div>
     </div>
@@ -828,11 +723,19 @@ function buildInteractiveExamPage({
     <div id="finishedScreen" class="screen">
       <div class="header">${sanitizeText(examTitle)}</div>
       <div class="finished-content">
-        <h3 id="finishedTitle">آزمون به پایان رسید</h3>
+        <h3 id="finishedTitle"></h3>
         <p id="finishedMessage"></p>
-        <button id="backToExamBtn" class="btn" style="display:none;">برگشت به آزمون</button>
       </div>
     </div>
+
+    <div id="lockedScreen" class="screen">
+      <div class="header">${sanitizeText(examTitle)}</div>
+      <div class="finished-content">
+        <h3 id="lockedTitle">آزمون قفل شده است</h3>
+        <p id="lockedMessage">شما بیش از حد مجاز از صفحه خارج شده‌اید و دیگر قادر به ادامهٔ آزمون نیستید.</p>
+      </div>
+    </div>
+
   </div>
 
   <script>${katexJs}</script>
@@ -845,48 +748,80 @@ function buildInteractiveExamPage({
       studentSections: ${sectionsJson},
       studentNames: ${namesJson},
       randomize: ${JSON.stringify(randomize)},
-      allowedExits: ${allowedExits === null ? "null" : JSON.stringify(allowedExits)},
-      examTitle: ${JSON.stringify(examTitle)}
+      maxExitDurationMinutes: ${JSON.stringify(maxExitDurationMinutes)},
+      examTitle: ${JSON.stringify(examTitle)},
+      formAfzarId: ${JSON.stringify(formAfzarId)}
     };
 
-    let currentStudent = null;
-    let timerInterval = null;
-    let countdownInterval = null;
-    let currentPanelIndex = 0;
-    let totalPanels = 0;
-    let visitedPanels = [];
-    let examParticipated = false;
-    let screenshotPreventionInstance = null;
-    let exitCount = 0;
-    let isLocked = false;
-    let wakeLockSentinel = null;
-    let wasHidden = false;
+  let currentStudent = null;
+  let timerInterval = null;
+  let countdownInterval = null;
+  let currentPanelIndex = 0;
+  let totalPanels = 0;
+  let visitedPanels = [];
+  let examParticipated = false;
+  let screenshotPreventionInstance = null;
+  let longAbsenceCount = 0;
+  let isLocked = false;
+  let wakeLockSentinel = null;
+  let lastHiddenTime = null;
+  let examInProgress = false;
+  let submitModalOverlay = null;
+  let graceTimerInterval = null;
+  let graceSecondsRemaining = 300;
+  let graceActive = false;
+  let graceEndTime = null;
 
-    const loginScreen    = document.getElementById('loginScreen');
-    const waitingScreen  = document.getElementById('waitingScreen');
-    const quizScreen     = document.getElementById('quizScreen');
-    const finishedScreen = document.getElementById('finishedScreen');
-    const nameSelect     = document.getElementById('nameSelect');
-    const startBtn       = document.getElementById('startBtn');
-    const timeDisplay    = document.getElementById('timeDisplay');
-    const questionsContainer = document.getElementById('questionsContainer');
-    const prevBtn        = document.getElementById('prevBtn');
-    const nextOrFinishBtn = document.getElementById('nextOrFinishBtn');
-    const progressText   = document.getElementById('progressText');
-    const countdownTimer = document.getElementById('countdownTimer');
-    const progressBar    = document.getElementById('progressBar');
-    const backToExamBtn  = document.getElementById('backToExamBtn');
-    const finishedTitle  = document.getElementById('finishedTitle');
-    const finishedMessage = document.getElementById('finishedMessage');
-    const globalAlert    = document.getElementById('globalAlert');
-    const alertCloseBtn  = document.getElementById('alertCloseBtn');
+  const loginScreen    = document.getElementById('loginScreen');
+  const waitingScreen  = document.getElementById('waitingScreen');
+  const quizScreen     = document.getElementById('quizScreen');
+  const finishedScreen = document.getElementById('finishedScreen');
+  const nameSelect     = document.getElementById('nameSelect');
+  const startBtn       = document.getElementById('startBtn');
+  const timeDisplay    = document.getElementById('timeDisplay');
+  const questionsContainer = document.getElementById('questionsContainer');
+  const prevBtn        = document.getElementById('prevBtn');
+  const nextOrFinishBtn = document.getElementById('nextOrFinishBtn');
+  const progressText   = document.getElementById('progressText');
+  const countdownTimer = document.getElementById('countdownTimer');
+  const progressBar    = document.getElementById('progressBar');
+  const finishedTitle  = document.getElementById('finishedTitle');
+  const finishedMessage = document.getElementById('finishedMessage');
+  const globalAlert    = document.getElementById('globalAlert');
+  const alertCloseBtn  = document.getElementById('alertCloseBtn');
+  const lockedScreen   = document.getElementById('lockedScreen');
 
     function getStorageKey(type) {
       if (!currentStudent) return null;
       return 'exam_' + EXAM_DATA.examTitle + '_' + currentStudent + '_' + type;
     }
 
-    function toPersianDigits(str) {
+    function setParticipated() {
+      examParticipated = true;
+      const key = getStorageKey('participated');
+      if (key) localStorage.setItem(key, 'true');
+    }
+
+    function checkParticipated() {
+      const key = getStorageKey('participated');
+      if (key && localStorage.getItem(key) === 'true') {
+        examParticipated = true;
+      }
+    }
+
+    function clearGraceStorage() {
+      if (!currentStudent) return;
+      localStorage.removeItem(getStorageKey('graceEndTime'));
+      localStorage.removeItem(getStorageKey('graceActive'));
+      graceActive = false;
+      graceEndTime = null;
+      if (graceTimerInterval) {
+        clearInterval(graceTimerInterval);
+        graceTimerInterval = null;
+      }
+    }
+
+   function toPersianDigits(str) {
       return (str + '').replace(/\\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
     }
     function convertDigitsToPersianInsideContainer(container) {
@@ -945,9 +880,9 @@ function buildInteractiveExamPage({
       
       prevBtn.disabled = (currentPanelIndex === 0);
       const isLast = (currentPanelIndex === panels.length - 1);
-      nextOrFinishBtn.textContent = isLast ? 'پایان آزمون' : 'بعدی';
-      nextOrFinishBtn.className = 'nav-btn' + (isLast ? ' finish-btn' : '');
-      nextOrFinishBtn.disabled = false;
+      nextOrFinishBtn.textContent = 'بعدی';
+      nextOrFinishBtn.className = 'nav-btn';
+      nextOrFinishBtn.disabled = isLast;
       
       progressText.textContent = toPersianDigits('سوال ' + (currentPanelIndex+1) + ' از ' + panels.length);
     }
@@ -964,203 +899,178 @@ function buildInteractiveExamPage({
       }
     }
 
-    function lockExam() {
-      if (isLocked) return;
-      isLocked = true;
-      releaseWakeLock();
-      clearInterval(timerInterval);
-      clearInterval(countdownInterval);
-      if (screenshotPreventionInstance && typeof screenshotPreventionInstance.destroy === 'function') {
-        screenshotPreventionInstance.destroy();
-      }
-      const lockKey = getStorageKey('lock');
-      if (lockKey) localStorage.setItem(lockKey, 'true');
-      // نمایش لایه قفل
+    function showToastMessage(message, onDismiss = null) {
+      const existing = document.querySelector('.message-overlay');
+      if (existing) existing.remove();
+
       const overlay = document.createElement('div');
-      overlay.className = 'lock-overlay';
-      overlay.innerHTML = '<div class="lock-message"><h2>آزمون قفل شد</h2><p>شما بیش از حد مجاز از صفحه خارج شده‌اید و دیگر امکان ادامه آزمون وجود ندارد.</p><button class="btn" onclick="this.closest(".lock-overlay").remove()">متوجه شدم</button></div>';
+      overlay.className = 'message-overlay';
+      const box = document.createElement('div');
+      box.className = 'message-box';
+      box.innerHTML = '<p>' + message + '</p><button class="btn message-btn">متوجه شدم</button>';
+      
+      const btn = box.querySelector('.message-btn');
+      btn.addEventListener('click', () => {
+        overlay.remove();
+        if (onDismiss) onDismiss();
+      });
+
+      overlay.appendChild(box);
       document.body.appendChild(overlay);
     }
 
-    function showExitWarning(count, limit) {
+    function showConfirmMessage(message, onConfirm, onCancel) {
+      const existing = document.querySelector('.message-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.className = 'message-overlay';
+      const box = document.createElement('div');
+      box.className = 'message-box';
+      box.innerHTML = '<p>' + message + '</p>' +
+        '<button class="btn confirm-yes">بله</button> ' +
+        '<button class="btn confirm-no">خیر</button>';
+
+      const yesBtn = box.querySelector('.confirm-yes');
+      const noBtn = box.querySelector('.confirm-no');
+
+      yesBtn.addEventListener('click', () => {
+        overlay.remove();
+        if (onConfirm) onConfirm();
+      });
+      noBtn.addEventListener('click', () => {
+        overlay.remove();
+        if (onCancel) onCancel();
+      });
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+    }
+
+    function lockExam() {
       if (isLocked) return;
-      const msg = limit === null || limit === undefined
-        ? 'شما ' + toPersianDigits(count) + ' بار از صفحه خارج شده‌اید. (بدون محدودیت)'
-        : 'شما ' + toPersianDigits(count) + ' بار از صفحه خارج شده‌اید. تعداد مجاز: ' + toPersianDigits(limit);
-      
-      if (screenshotPreventionInstance && screenshotPreventionInstance.update) {
-        screenshotPreventionInstance.update({ warningMessage: msg });
-        screenshotPreventionInstance.handleDetection('exit', 'exit count warning');
-      } else {
-        // Fallback: یک هشدار ساده
-        alert(msg);
-      }
+      examInProgress = false;
+      showLockedScreen();
     }
 
-    function checkAndApplyLock() {
-      if (!currentStudent) return;
-      const lockKey = getStorageKey('lock');
-      if (lockKey && localStorage.getItem(lockKey) === 'true') {
-        lockExam();
-        return true;
-      }
-      return false;
-    }
-
-    function updateExitCount(newCount) {
-      exitCount = newCount;
-      const countKey = getStorageKey('exitCount');
-      if (countKey) localStorage.setItem(countKey, exitCount);
-    }
-
+    
     function handleVisibilityChange() {
-      if (document.hidden) {
-        wasHidden = true;
-      } else {
-        if (wasHidden) {
-          wasHidden = false;
-          if (isLocked) return;
-          updateExitCount(exitCount + 1);
-          const allowed = EXAM_DATA.allowedExits;
-          showExitWarning(exitCount, allowed);
-          if (allowed !== null && exitCount >= allowed) {
-            lockExam();
+      if (submitModalOverlay && submitModalOverlay.style.display !== 'none') {
+        lastHiddenTime = null;
+        return;
+        }
+      
+        if (EXAM_DATA.maxExitDurationMinutes && document.hidden) {
+          lastHiddenTime = Date.now();
+          } else {
+          if (lastHiddenTime) {
+          const hiddenDuration = Date.now() - lastHiddenTime;
+          const MAX_ABSENCE_MS = (EXAM_DATA.maxExitDurationMinutes) * 60 * 1000;
+          if (hiddenDuration > MAX_ABSENCE_MS) {
+            longAbsenceCount++;
+            const msg = 'شما بیش از ' + toPersianDigits(EXAM_DATA.maxExitDurationMinutes) +
+                        ' دقیقه از صفحه خارج شدید.';
+            if (longAbsenceCount >= 2) {
+              showToastMessage(msg + ' آزمون قفل شد.', () => lockExam());
+            } else {
+              showToastMessage(msg + ' در صورت تکرار، آزمون قفل خواهد شد.');
+            }
           }
+          lastHiddenTime = null;
         }
       }
     }
 
-    function lockQuiz() {
+    function showLockedScreen() {
+      if (isLocked) return;
+      isLocked = true;
       clearInterval(timerInterval);
       clearInterval(countdownInterval);
-      prevBtn.disabled = true;
-      nextOrFinishBtn.disabled = true;
-      if (screenshotPreventionInstance && typeof screenshotPreventionInstance.destroy === 'function') {
-        screenshotPreventionInstance.destroy();
-      }
-    }
-
-    function showFinishPrompt(timeUp) {
-      lockQuiz();
       releaseWakeLock();
-      if (timeUp) {
-        finishedTitle.textContent = 'زمان آزمون به پایان رسید';
-        if (examParticipated) {
-          finishedMessage.textContent = 'پاسخ‌های خود را به معلم در ایتا ارسال کنید.';
-        } else {
-          finishedMessage.textContent = 'شما در آزمون شرکت نکردید.';
-        }
-        backToExamBtn.style.display = 'none';
-      } else {
-        finishedTitle.textContent = 'شما آزمون را زودتر به پایان رساندید';
-        finishedMessage.textContent = 'تصویر سوالات و پاسخ‌های خود را به معلم در ایتا ارسال کنید.';
-        backToExamBtn.style.display = 'block';
+      if (screenshotPreventionInstance) {
+        screenshotPreventionInstance.destroy();
+        screenshotPreventionInstance = null;
       }
-      showScreen(finishedScreen);
+      localStorage.setItem('exam_' + EXAM_DATA.examTitle + '_globalLock', 'true');
+      showScreen(lockedScreen);
     }
-
-    function endExamDueToTime() {
-      clearInterval(timerInterval);
-      showFinishPrompt(true);
-    }
-
-    function finishExam() {
-      if (timerInterval) clearInterval(timerInterval);
-      showFinishPrompt(false);
-    }
-
-    nextOrFinishBtn.addEventListener('click', () => {
-      const isLast = (currentPanelIndex === totalPanels - 1);
-      if (isLast) {
-        finishExam();
-      } else {
-        showPanel(currentPanelIndex + 1);
-      }
-    });
-
-    prevBtn.addEventListener('click', () => {
-      showPanel(currentPanelIndex - 1);
-    });
-
-    backToExamBtn.addEventListener('click', () => {
-      if (checkAndApplyLock()) return;
-      prevBtn.disabled = true;
-      nextOrFinishBtn.disabled = false;
-      showPanel(currentPanelIndex);
-      showScreen(quizScreen);
-      startTimer();
-      activateScreenshotPrevention();
-    });
 
     startBtn.addEventListener('click', () => {
       const name = nameSelect.value;
       if (!name) {
-        alert('لطفاً نام خود را انتخاب کنید.');
+        showToastMessage('لطفاً نام خود را انتخاب کنید.');
         return;
       }
       if (!EXAM_DATA.studentSections[name]) {
-        alert('نام انتخاب‌شده معتبر نیست.');
+        showToastMessage('نام انتخاب‌شده معتبر نیست.');
         return;
       }
       currentStudent = name;
-      examParticipated = true;
+      checkParticipated();
+
+      const graceActiveKey = getStorageKey('graceActive');
+      const graceEndKey = getStorageKey('graceEndTime');
+      if (graceActiveKey && localStorage.getItem(graceActiveKey) === 'true') {
+        const savedGraceEnd = parseInt(localStorage.getItem(graceEndKey));
+        if (savedGraceEnd && Date.now() < savedGraceEnd) {
+          showSubmitModal();
+          startGraceTimerInModal(savedGraceEnd);
+          return;
+        } else {
+          clearGraceStorage();
+          showSimpleEndScreen('مهلت ارسال پاسخ به پایان رسید');
+          return;
+        }
+      }
+
       document.getElementById('studentNameDisplay').textContent = name;
 
-      // بررسی قفل شدن از پیش
-      if (checkAndApplyLock()) {
+      const finishKey = getStorageKey('finished');
+      if (finishKey && localStorage.getItem(finishKey) === 'true') {
+        showToastMessage('شما پیشتر آزمون را به پایان رسانده‌اید و امکان ادامه وجود ندارد.');
         return;
       }
 
-      // بازیابی تعداد خروج قبلی
-      const countKey = getStorageKey('exitCount');
-      exitCount = countKey ? parseInt(localStorage.getItem(countKey) || '0') : 0;
+      if (checkAndApplyLock()) return;
 
-      // هشدار اولیه
-      const allowed = EXAM_DATA.allowedExits;
-      const limitMsg = allowed === null ? 'نامحدود' : toPersianDigits(allowed);
-      alert('شما حق خروج از صفحه را ندارید. تعداد دفعات مجاز: ' + limitMsg + '\\n(خروج از صفحه و بازگشت، یک تخلف محسوب می‌شود)');
+      function proceedAfterPreMessage() {
+        startExamNow();
+      }
 
-      startExamNow();
+      examParticipated = true;
+      setParticipated();
+
+      proceedAfterPreMessage();
     });
 
-function startCountdown() {
-  const start = new Date(EXAM_DATA.startTime).getTime();
-  function update() {
-    const diff = Math.max(0, start - Date.now());
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-    function _format(t){
-     return toPersianDigits(String(t).padStart(2, '0'))
-     }
-
-    const displayString = _format(hours) + ":"+ _format(minutes) + ":" + _format(seconds);
-
-    countdownTimer.textContent = displayString;
-
-    if (diff <= 0) {
-      clearInterval(countdownInterval);
-      showScreen(loginScreen);
+    function startCountdown() {
+      const start = new Date(EXAM_DATA.startTime).getTime();
+      function update() {
+        const diff = Math.max(0, start - Date.now());
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        function _format(t){ return toPersianDigits(String(t).padStart(2, '0')); }
+        countdownTimer.textContent = _format(hours) + ":" + _format(minutes) + ":" + _format(seconds);
+        if (diff <= 0) {
+          clearInterval(countdownInterval);
+          showScreen(loginScreen);
+        }
+      }
+      update();
+      countdownInterval = setInterval(update, 1000);
     }
-  }
-  update();
-  countdownInterval = setInterval(update, 1000);
-}
 
     function activateScreenshotPrevention() {
       if (typeof EnhancedScreenshotPrevention === 'undefined') return;
       try {
-        if (screenshotPreventionInstance && typeof screenshotPreventionInstance.destroy === 'function') {
+        if (screenshotPreventionInstance) {
           screenshotPreventionInstance.destroy();
         }
         screenshotPreventionInstance = new EnhancedScreenshotPrevention({
-          blurIntensity: '12px',
-          warningMessage: 'اسکرین‌شات و خروج از صفحه مجاز نیست.',
           preventCopy: true,
           preventInspect: true,
-          recoveryDelay: 3000,
-          debug: false,
+          onAttempt: function(details) {}
         });
       } catch (e) {
         console.warn('خطا در فعال‌سازی محافظ اسکرین‌شات:', e);
@@ -1176,8 +1086,22 @@ function startCountdown() {
     }
 
     function startExamNow() {
+      if (graceTimerInterval) {
+         clearInterval(graceTimerInterval);
+         graceTimerInterval = null;
+      }
+
+      clearGraceStorage();
+      if (submitModalOverlay) {
+        submitModalOverlay.style.display = 'none';
+        const timerEl = document.getElementById('graceCountdownEl');
+        if (timerEl) timerEl.style.display = 'none';
+      }
+
+      examInProgress = true;
       clearInterval(countdownInterval);
       showScreen(quizScreen);
+
       questionsContainer.innerHTML = EXAM_DATA.studentSections[currentStudent] || '<p>سوالی یافت نشد.</p>';
       renderMathWithPersianDigits(questionsContainer);
 
@@ -1193,7 +1117,6 @@ function startCountdown() {
       startTimer();
       activateScreenshotPrevention();
       requestWakeLock();
-      // شروع گوش دادن به تغییر visibility برای خروج
       document.addEventListener('visibilitychange', handleVisibilityChange);
     }
 
@@ -1214,7 +1137,202 @@ function startCountdown() {
       timerInterval = setInterval(tick, 1000);
     }
 
-    (function init() {
+    function checkAndApplyLock() {
+      if (!currentStudent) return false;
+      const lockKey = getStorageKey('lock');
+      if (lockKey && localStorage.getItem(lockKey) === 'true') {
+        lockExam();
+        return true;
+      }
+      return false;
+    }
+
+    function lockQuiz() {
+      clearInterval(timerInterval);
+      clearInterval(countdownInterval);
+      prevBtn.disabled = true;
+      nextOrFinishBtn.disabled = true;
+      if (screenshotPreventionInstance) {
+        screenshotPreventionInstance.destroy();
+        screenshotPreventionInstance = null;
+      }
+    }
+
+    function endExamDueToTime() {
+      examInProgress = false;
+      clearInterval(timerInterval);
+      showFinishPrompt();
+    }
+
+    prevBtn.addEventListener('click', () => {
+      showPanel(currentPanelIndex - 1);
+    });
+
+    nextOrFinishBtn.addEventListener('click', () => {
+      if (currentPanelIndex < totalPanels - 1) {
+        showPanel(currentPanelIndex + 1);
+      }
+    });
+
+    const submitAnswersBtn = document.getElementById('submitAnswersBtn');
+    if (submitAnswersBtn) {
+      submitAnswersBtn.addEventListener('click', showSubmitModal);
+    }
+
+    function showSubmitModal() {
+      if (submitModalOverlay) {
+        submitModalOverlay.style.display = 'flex';
+        if (graceActive) {
+          const closeBtn = submitModalOverlay.querySelector('.close-submit-modal');
+          if (closeBtn) closeBtn.style.display = 'none';
+        }
+        return;
+      }
+
+      const overlay = document.createElement('div');
+      overlay.className = 'message-overlay';
+      overlay.style.zIndex = '20';
+
+      const box = document.createElement('div');
+      box.className = 'message-box';
+      box.style.maxWidth = '500px';
+      box.style.width = '90%';
+      box.style.overflowY= 'scroll';
+      box.style.height= '95vh';
+
+      let innerHtml = '';
+      if (EXAM_DATA.formAfzarId) {
+        innerHtml = \`
+          <button class="btn close-submit-modal" style="margin-top: 20px;">بازگشت به آزمون</button>
+          <div id="dynamicFormContainer"></div>
+        \`;
+      } else {
+        innerHtml = \`
+          <p style="font-size:1.1rem;">📌 لطفاً پاسخ‌های خود را تا پیش از اتمام زمان آزمون برای معلم خود در <strong>ایتا</strong> ارسال کنید.</p>
+          <button class="btn close-submit-modal" style="margin-top: 20px;">متوجه شدم</button>
+        \`;
+      }
+      box.innerHTML = innerHtml;
+
+      if (EXAM_DATA.formAfzarId) {
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://formafzar.com/pages/formbuilder/ravesh-formbuilder.js';
+        script.setAttribute('form-url', \`https://formafzar.com/form/\${EXAM_DATA.formAfzarId}\`);
+        script.setAttribute('form-style', 'inline');
+        script.setAttribute('form-theme', '');
+        box.querySelector('#dynamicFormContainer').appendChild(script);
+      }
+
+      const closeBtn = box.querySelector('.close-submit-modal');
+      closeBtn.addEventListener('click', () => {
+          overlay.style.display = 'none';
+      });
+
+      if (graceActive) {
+         closeBtn.style.display = 'none';
+      }
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      submitModalOverlay = overlay;
+    }
+
+    function startGraceTimerInModal(graceEnd) {
+      if (!submitModalOverlay) return;
+      const box = submitModalOverlay.querySelector('.message-box');
+      if (!box) return;
+
+      graceActive = true;
+      graceEndTime = graceEnd;
+
+      const closeBtn = box.querySelector('.close-submit-modal');
+      if (closeBtn) closeBtn.style.display = 'none';
+
+      let timerDiv = document.getElementById('graceCountdownEl');
+      if (!timerDiv) {
+        timerDiv = document.createElement('div');
+        timerDiv.id = 'graceCountdownEl';
+        timerDiv.style.cssText = 'font-size:1.5em; font-weight:700; margin:12px 0; color:#b91c1c;';
+        box.insertBefore(timerDiv, box.firstChild);
+      }
+      timerDiv.style.display = 'block';
+
+      function updateTimer() {
+        const remaining = Math.max(0, graceEnd - Date.now());
+        if (remaining <= 0) {
+          clearInterval(graceTimerInterval);
+          graceTimerInterval = null;
+          clearGraceStorage();
+          if (submitModalOverlay) submitModalOverlay.style.display = 'none';
+          showSimpleEndScreen('مهلت ارسال پاسخ به پایان رسید');
+        } else {
+          const m = Math.floor(remaining / 60000);
+          const s = Math.floor((remaining % 60000) / 1000);
+          timerDiv.textContent = '⏳ مهلت ارسال فرم: ' +
+            toPersianDigits(String(m).padStart(2,'0')) + ':' +
+            toPersianDigits(String(s).padStart(2,'0'));
+        }
+      }
+
+      updateTimer();
+      if (graceTimerInterval) clearInterval(graceTimerInterval);
+      graceTimerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function showSimpleEndScreen(title) {
+      finishedTitle.textContent = title;
+      finishedMessage.textContent = '';
+      const formafzarContainer = document.getElementById('formafzarContainer');
+      if (formafzarContainer) formafzarContainer.style.setProperty('display', 'none', 'important');
+      showScreen(finishedScreen);
+    }
+
+    function showFinishPrompt() {
+      lockQuiz();
+      releaseWakeLock();
+
+      if (examParticipated) {
+        const end = new Date(EXAM_DATA.endTime).getTime();
+        const graceEnd = end + 5 * 60 * 1000;
+        const now = Date.now();
+
+        if (now < graceEnd) {
+          if (currentStudent) {
+            localStorage.setItem(getStorageKey('graceEndTime'), graceEnd);
+            localStorage.setItem(getStorageKey('graceActive'), 'true');
+          }
+          showSubmitModal();
+          startGraceTimerInModal(graceEnd);
+          const box = submitModalOverlay?.querySelector('.message-box');
+          if (box) {
+            const msgDiv = document.createElement('div');
+            msgDiv.style.cssText = 'font-size:1.1rem; margin-bottom:12px; color:#b91c1c;';
+            msgDiv.textContent = 'زمان آزمون تمام شد. ۵ دقیقه برای ارسال آزمون زمان دارید.';
+            if (!box.querySelector('.time-up-message')) {
+              msgDiv.classList.add('time-up-message');
+              box.insertBefore(msgDiv, box.firstChild);
+            }
+          }
+        } else {
+          clearGraceStorage();
+          showSimpleEndScreen('مهلت ارسال پاسخ به پایان رسید');
+        }
+      } else {
+        showSimpleEndScreen('آزمون به پایان رسید');
+      }
+    }
+
+    function startApplication() {
+      if (examInProgress && quizScreen.classList.contains('active')) {
+        return;
+      }
+
+      if (localStorage.getItem('exam_' + EXAM_DATA.examTitle + '_globalLock') === 'true') {
+        showLockedScreen();
+        return;
+      }
+
       const now = Date.now();
       const start = new Date(EXAM_DATA.startTime).getTime();
       const end = new Date(EXAM_DATA.endTime).getTime();
@@ -1227,10 +1345,22 @@ function startCountdown() {
       } else {
         finishedTitle.textContent = 'زمان آزمون به پایان رسیده است';
         finishedMessage.textContent = 'دیگر نمی‌توانید در آزمون شرکت کنید.';
-        backToExamBtn.style.display = 'none';
         showScreen(finishedScreen);
       }
-    })();
+    }
+
+    startApplication();
+
+    function handleBeforeUnload(e) {
+  if (examInProgress) {
+    e.preventDefault();
+    e.returnValue = ''; 
+    return '';
+  }
+}
+  
+window.addEventListener('beforeunload', handleBeforeUnload);
+
   </script>
 </body>
 </html>`;

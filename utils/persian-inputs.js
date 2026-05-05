@@ -4,9 +4,34 @@
   }
 
   function toEnglishDigits(str) {
-    return str
-      .replace(/[۰-۹]/g, (d) => "0123456789"["۰۱۲۳۴۵۶۷۸۹".indexOf(d)])
-      .replace(/\//g, "."); // تبدیل / به .
+    return str.replace(/[۰-۹]/g, (d) => "0123456789"["۰۱۲۳۴۵۶۷۸۹".indexOf(d)]);
+  }
+
+  function sanitize(input, value) {
+    let cleaned = toPersianDigits(String(value));
+    const isNumberInput = input.dataset.numberInput === "true";
+    const isFloatAllowed = input.dataset.float !== "false";
+
+    if (isNumberInput) {
+      cleaned = cleaned.replace(/[-]/g, "");
+
+      if (isFloatAllowed) {
+        cleaned = cleaned.replace(/[^\d۰-۹\.\/]/g, "");
+        const firstSep = cleaned.search(/[\.\/]/);
+        if (firstSep !== -1) {
+          const before = cleaned.substring(0, firstSep);
+          const after = cleaned.substring(firstSep + 1).replace(/[\.\/]/g, "");
+          cleaned = before + "." + after;
+        } else {
+          cleaned = cleaned.replace(/\//g, ".");
+        }
+      } else {
+        cleaned = cleaned.replace(/[^\d۰-۹]/g, "");
+        cleaned = cleaned.replace(/^۰+/, "");
+      }
+    }
+
+    return cleaned;
   }
 
   function enhanceInput(input) {
@@ -15,54 +40,48 @@
 
     const originalDescriptor = Object.getOwnPropertyDescriptor(
       HTMLInputElement.prototype,
-      "value"
+      "value",
     );
 
     Object.defineProperty(input, "value", {
       get: function () {
-        const val = originalDescriptor.get.call(this);
-        return toEnglishDigits(val);
+        let val = originalDescriptor.get.call(this);
+        val = toEnglishDigits(val);
+        if (this.dataset.numberInput === "true") {
+          val = val.replace(/\//g, ".");
+        }
+        return val;
       },
       set: function (v) {
-        const newVal = toPersianDigits(String(v));
-        originalDescriptor.set.call(this, newVal);
+        const cleaned = sanitize(this, v);
+        originalDescriptor.set.call(this, cleaned);
       },
       configurable: true,
       enumerable: true,
     });
 
-    // 🔧 تبدیل مقدار اولیه (در صورت وجود)
     const initialValue = originalDescriptor.get.call(input);
-    if (initialValue) {
-      originalDescriptor.set.call(input, toPersianDigits(initialValue));
+    if (initialValue != null) {
+      const cleaned = sanitize(input, initialValue);
+      if (cleaned !== initialValue) {
+        originalDescriptor.set.call(input, cleaned);
+      }
     }
 
-    input.addEventListener("input", () => {
-      const original = originalDescriptor.get.call(input);
-      let cleaned = toPersianDigits(original);
+    input.addEventListener("input", function () {
+      const original = originalDescriptor.get.call(this);
+      const cleaned = sanitize(this, original);
 
-      cleaned = cleaned.replace(/[-]/g, "");
+      if (cleaned !== original) {
+        const selectionStart = this.selectionStart;
+        const selectionEnd = this.selectionEnd;
 
-      const isNumberInput = input.dataset.numberInput === "true";
-      const isFloatAllowed = input.dataset.float !== "false";
+        const before = original.substring(0, selectionStart);
+        const cleanedBefore = sanitize(this, before);
+        const offset = cleanedBefore.length - before.length;
 
-      if (isNumberInput) {
-        if (isFloatAllowed) {
-          cleaned = cleaned.replace(/[^\d۰-۹\.\/]/g, "");
-        } else {
-          cleaned = cleaned.replace(/[^\d۰-۹]/g, "");
-          cleaned = cleaned.replace(/^۰+/, "");
-        }
-      }
-
-      const selectionStart = input.selectionStart;
-      const selectionEnd = input.selectionEnd;
-
-      originalDescriptor.set.call(input, cleaned);
-
-      const offset = cleaned.length - original.length;
-      if (input.type !== "checkbox") {
-        input.setSelectionRange(selectionStart + offset, selectionEnd + offset);
+        originalDescriptor.set.call(this, cleaned);
+        this.setSelectionRange(selectionStart + offset, selectionEnd + offset);
       }
     });
   }

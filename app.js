@@ -584,9 +584,11 @@ const initialExamInteractiveSettings = {
   startTime: null,
   duration: 45,
   randomize: false,
-  preExamMessage: "",
   questionAlert: "",
   allowedExits: 5,
+  allowedExitsEnabled: true,
+  formAfzarId: null,
+  formAfzarEnabled: false,
 };
 
 const rawState = {
@@ -3122,7 +3124,7 @@ function renderHeaderCommon({ name, header, variant }) {
   `;
 }
 
-function createStudentTableHtml(studentQuiz, name) {
+function createStudentTableHtml(studentQuiz, name, withControls = false) {
   const tpl = getActivePrintTemplate();
 
   const sheet = appState.print?.sheet || {};
@@ -3141,7 +3143,6 @@ function createStudentTableHtml(studentQuiz, name) {
   if (compact) tableBase.push("text-[0.9em]");
 
   const trStripedClass = striped ? "even:bg-slate-50" : "";
-
   const cellBorderClass = bordered ? "border border-slate-900/70" : "border-0";
   const cellPadClass = compact ? "px-2 py-0.5" : "px-2 py-1.5";
 
@@ -3153,13 +3154,18 @@ function createStudentTableHtml(studentQuiz, name) {
 
   const rowsHtml = (studentQuiz || [])
     .map((range) =>
-      createQuestionRowHtmlMulti(qNum++, range, {
-        trStripedClass,
-        cellBorderClass,
-        cellPadClass,
-        threeColScoreLeft,
-        showScore,
-      }),
+      createQuestionRowHtmlMulti(
+        qNum++,
+        range,
+        {
+          trStripedClass,
+          cellBorderClass,
+          cellPadClass,
+          threeColScoreLeft,
+          showScore,
+        },
+        withControls,
+      ),
     )
     .join("");
 
@@ -3267,7 +3273,12 @@ function renderRangeAsMultiPart(range) {
   return `<div style="${gridStyle}">${partsHtml}</div>`;
 }
 
-function createQuestionRowHtmlMulti(qNum, range, opts = {}) {
+function createQuestionRowHtmlMulti(
+  qNum,
+  range,
+  opts = {},
+  withControls = false,
+) {
   const {
     trStripedClass = "",
     cellBorderClass = "border-0",
@@ -3277,12 +3288,31 @@ function createQuestionRowHtmlMulti(qNum, range, opts = {}) {
   } = opts;
 
   const scoreVal = toPersianDigits(+range.score || 0);
+  const rangeId = range.rangeId || "";
+
+  let controlsHtml = "";
+  if (withControls && rangeId) {
+    controlsHtml = `
+      <div class="absolute -right-2 top-1/2 -translate-y-1/2 bg-white flex flex-col items-center">
+        <button class="text-muted hover:text-primary transition" 
+                onclick="openRangeSettingsModalFromPreview('${rangeId}')"
+                data-tooltip="تنظیمات مبحث">
+          <i class="bi bi-gear text-sm"></i>
+        </button>
+        </div>
+    `;
+  }
 
   if (threeColScoreLeft) {
     return `
       <tr class="${trStripedClass}">
-        <td class="w-12 text-center font-bold align-top ${cellBorderClass} ${cellPadClass}">
-          ${toPersianDigits(qNum)}
+        <td class="relative w-12 text-center font-bold align-top ${cellBorderClass} ${cellPadClass}">
+          <div class="flex flex-col items-center justify-center gap-1 flex-wrap">
+          <div class= "cursor-pointer" onclick="scrollToRange('${rangeId}')" data-tooltip="رفتن به سوال">
+            ${toPersianDigits(qNum)}
+          </div>
+            ${controlsHtml}
+          </div>
         </td>
 
         <td class="${cellBorderClass} ${cellPadClass}">
@@ -3294,7 +3324,7 @@ function createQuestionRowHtmlMulti(qNum, range, opts = {}) {
           showScore
             ? `<td class="w-12 text-center font-bold align-top ${cellBorderClass} ${cellPadClass}">
                  ${scoreVal}
-               </td>`
+                </td>`
             : `<td class="w-14 ${cellBorderClass} ${cellPadClass}"></td>`
         }
       </tr>
@@ -3303,8 +3333,13 @@ function createQuestionRowHtmlMulti(qNum, range, opts = {}) {
 
   return `
     <tr class="${trStripedClass}">
-      <td class="w-10 text-center font-bold align-top ${cellBorderClass} ${cellPadClass}">
-        ${toPersianDigits(qNum)}
+      <td class="relative w-10 text-center font-bold align-top ${cellBorderClass} ${cellPadClass}">
+        <div class="flex flex-col items-center justify-center gap-1 flex-wrap">
+          <div class= "cursor-pointer" onclick="scrollToRange('${rangeId}')" data-tooltip="رفتن به سوال">
+            ${toPersianDigits(qNum)}
+          </div>
+          ${controlsHtml}
+        </div>
         ${
           showScore && +range.score > 0
             ? `<span class="font-normal text-xs">(${toPersianDigits(range.score)}نمره)</span>`
@@ -3341,6 +3376,7 @@ async function buildQuizData(studentList, ranges, shuffleRanges = false) {
         safeCount > 0 ? pickRandomItemsUniqueLabels(items, safeCount) : [];
 
       finalData[s.key].push({
+        rangeId: r.id,
         rangeName: r.rangeName,
         items: picked || [],
         score: r.score,
@@ -3458,7 +3494,7 @@ function generateStudentQuizSection(quizRanges) {
     const questionNumber = rIdx + 1;
     let headerHtml = `<div class="question-number">سوال ${toPersianDigits(questionNumber)}`;
     if (range.score) {
-      headerHtml += ` <span class="score-badge">(نمره ${toPersianDigits(range.score)})</span>`;
+      headerHtml += ` <span class="score-badge">(${toPersianDigits(range.score)} نمره)</span>`;
     }
     headerHtml += `</div>`;
 
@@ -3487,54 +3523,74 @@ const examSettingsModal = new Modal("#modal-exam-settings", {
   closeOnOverlayClick: false,
 });
 
+const exitLimitSwitch = document.getElementById("examExitLimitSwitch");
+const exitLimitInput = document.getElementById("examExitLimitInput");
+const exitLimitWrap = document.getElementById("examExitLimitInputWrap");
+const examTitleInput = document.getElementById("examTitleInput");
+const examDurationInput = document.getElementById("examDurationInput");
+const examRandomizeSwitch = document.getElementById("examRandomizeSwitch");
+const examPreExamMessage = document.getElementById("examPreExamMessage");
+const examQuestionAlert = document.getElementById("examQuestionAlert");
+const formAfzarSwitch = document.getElementById("examFormAfzarSwitch");
+const formAfzarLink = document.getElementById("examFormAfzarLink");
+const examDatePickerContainer = document.getElementById(
+  "examDatePickerContainer",
+);
+const examDatePicker = JalaliDatePicker.ensure(examDatePickerContainer, {
+  minYearOffset: -20,
+  maxYearOffset: 0,
+  persianDigits: true,
+});
+
 function openExamInteractiveModal() {
   const s = appState.examInteractive;
-  document.getElementById("examTitleInput").value = s.title || "آزمون";
+  examTitleInput.value = s.title || "آزمون";
 
-  const dpContainer = document.querySelector(
-    "#modal-exam-settings .date-picker-container",
-  );
-  if (dpContainer) {
-    const picker = JalaliDatePicker.ensure(dpContainer, {
-      minYearOffset: -20,
-      maxYearOffset: 0,
-      persianDigits: true,
-    });
-    if (s.startTime) {
-      const { year, month, day, hour, min } = s.startTime;
-      picker.setDateFromGregorian(
-        new Date(year, month, day, hour || 0, min || 0),
-      );
-    }
+  if (s.startTime) {
+    const { year, month, day, hour, min } = s.startTime;
+    examDatePicker.setDateFromGregorian(
+      new Date(year, month, day, hour || 0, min || 0),
+    );
   }
 
-  document.getElementById("examDurationInput").value = s.duration ?? 45;
+  examDurationInput.value = s.duration ?? 45;
 
-  const randSwitch = document.getElementById("examRandomizeSwitch");
-  if (randSwitch) {
-    Switch.ensure(randSwitch);
-    randSwitch.setChecked(!!s.randomize, { silent: true });
+  if (examRandomizeSwitch) {
+    Switch.ensure(examRandomizeSwitch);
+    examRandomizeSwitch.setChecked(!!s.randomize, { silent: true });
   }
 
-  document.getElementById("examPreExamMessage").value = s.preExamMessage || "";
-  document.getElementById("examQuestionAlert").value = s.questionAlert || "";
-
-  const exitLimitSwitch = document.getElementById("examExitLimitSwitch");
-  const exitLimitInput = document.getElementById("examExitLimitInput");
-  const exitLimitWrap = document.getElementById("examExitLimitInputWrap");
+  examQuestionAlert.value = s.questionAlert || "";
 
   if (exitLimitSwitch) {
     Switch.ensure(exitLimitSwitch);
     exitLimitSwitch.setChecked(!!s.allowedExitsEnabled, { silent: true });
   }
-
   if (exitLimitInput) {
     exitLimitInput.value = s.allowedExits ?? 5;
     exitLimitInput.disabled = !s.allowedExitsEnabled;
   }
-
   if (exitLimitWrap) {
     exitLimitWrap.style.opacity = s.allowedExitsEnabled ? "1" : "0.5";
+  }
+
+  // ----- form afzar -----
+  if (formAfzarSwitch && formAfzarLink) {
+    const enabled = !!s.formAfzarEnabled;
+    if (!formAfzarSwitch._switchInstance) {
+      Switch.ensure(formAfzarSwitch);
+    }
+    formAfzarSwitch.setChecked(enabled, { silent: true });
+    formAfzarLink.disabled = !enabled;
+    formAfzarLink.value = s.formAfzarId
+      ? `https://formafzar.com/form/${s.formAfzarId}`
+      : "";
+
+    Switch.ensure(formAfzarSwitch);
+    formAfzarSwitch.addEventListener("switch:change", (e) => {
+      const checked = e.detail.checked;
+      formAfzarLink.disabled = !checked;
+    });
   }
 
   examSettingsModal.open();
@@ -3551,20 +3607,13 @@ function openExamInteractiveModal() {
 document
   .getElementById("generateExamBtn")
   ?.addEventListener("click", async () => {
-    const dpContainer = document.querySelector(
-      "#modal-exam-settings .date-picker-container",
-    );
-    const picker = JalaliDatePicker.ensure(dpContainer);
-    const startDate = picker.getDate();
+    const startDate = examDatePicker.getDate();
     if (!startDate) {
       showToast("لطفاً تاریخ و زمان معتبر انتخاب کنید.", "error");
       return;
     }
 
-    const durationVal = document
-      .getElementById("examDurationInput")
-      .value.trim();
-    const duration = parseInt(durationVal, 10);
+    const duration = parseInt(examDurationInput.value, 10);
 
     const now = Date.now();
     const examStartMs = startDate.getTime();
@@ -3584,24 +3633,29 @@ document
       min: startDate.getMinutes(),
     };
 
+    s.randomize = examRandomizeSwitch.isChecked();
+    s.allowedExitsEnabled = exitLimitSwitch.isChecked();
+
     s.duration = duration;
-    s.title = document.getElementById("examTitleInput").value.trim() || "آزمون";
-    s.randomize =
-      document
-        .getElementById("examRandomizeSwitch")
-        ?.getAttribute("data-switch-checked") === "true";
-    s.preExamMessage = document.getElementById("examPreExamMessage").value;
-    s.questionAlert = document.getElementById("examQuestionAlert").value;
-    s.allowedExitsEnabled =
-      document
-        .getElementById("examExitLimitSwitch")
-        ?.getAttribute("data-switch-checked") === "true";
+    s.title = examTitleInput.value.trim() || "آزمون";
+    s.questionAlert = examQuestionAlert.value;
     s.allowedExits = s.allowedExitsEnabled
-      ? parseInt(document.getElementById("examExitLimitInput")?.value, 10) || 5
+      ? parseInt(exitLimitInput?.value, 10) || 5
       : null;
 
-    examSettingsModal.close();
+    // formafzar
+    s.formAfzarEnabled = formAfzarSwitch ? formAfzarSwitch.isChecked() : false;
+    if (s.formAfzarEnabled && formAfzarLink) {
+      const url = formAfzarLink.value.trim();
+      console.log(url);
 
+      const match = url.match(/formafzar\.com\/form\/([a-zA-Z0-9]+)/);
+      s.formAfzarId = match ? match[1] : null;
+    } else {
+      s.formAfzarId = null;
+    }
+
+    examSettingsModal.close();
     await generateInteractiveExamFile();
   });
 
@@ -3619,12 +3673,6 @@ async function generateInteractiveExamFile() {
   await nextFrame();
 
   try {
-    const [katexCss, katexJs, autoRenderJs] = await Promise.all([
-      fetch("./utils/katex/katex.min.css").then((r) => r.text()),
-      fetch("./utils/katex/katex.min.js").then((r) => r.text()),
-      fetch("./utils/katex/auto-render.min.js").then((r) => r.text()),
-    ]);
-
     const quizData = await buildQuizData(
       studentList,
       validRanges,
@@ -3656,7 +3704,7 @@ async function generateInteractiveExamFile() {
       hour12: false,
     });
 
-    const fullHtml = buildInteractiveExamPage({
+    const fullHtml = await buildInteractiveExamPage({
       studentNames: studentList.map((st) => st.displayName || st.key),
       studentSections,
       startTime,
@@ -3664,13 +3712,10 @@ async function generateInteractiveExamFile() {
       startTimeDisplay,
       examTitle: s.title,
       examDuration: s.duration,
-      katexCss,
-      katexJs,
-      autoRenderJs,
       randomize: s.randomize,
-      preExamMessage: s.preExamMessage,
       questionAlert: s.questionAlert,
-      allowedExits: s.allowedExitsEnabled ? s.allowedExits : null,
+      maxExitDurationMinutes: s.allowedExitsEnabled ? s.allowedExits : null,
+      formAfzarId: s.formAfzarId || null,
     });
 
     const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
@@ -3742,7 +3787,7 @@ async function renderLivePreviewSingleSheet() {
   const html = `
     <table class="w-full"><tbody>
       <tr><td class="questions">
-        ${createStudentTableHtml(quizData[first.key], first.displayName)}
+        ${createStudentTableHtml(quizData[first.key], first.displayName, true)} 
       </td></tr>
     </tbody></table>
   `;
@@ -3795,6 +3840,34 @@ function hideLoadingOverlay() {
 
 function nextFrame() {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+// ========== Helper functions for preview controls ==========
+function openRangeSettingsModalFromPreview(rangeId) {
+  if (!rangeId) {
+    showToast("شناسه رنج پیدا نشد.", "error");
+    return;
+  }
+  openRangeSettingsModal(rangeId);
+}
+
+function scrollToRange(rangeId) {
+  if (!rangeId) return;
+  const el = document.getElementById(rangeId);
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add(
+      "ring-2",
+      "ring-primary",
+      "ring-offset-2",
+      "rounded-custom",
+    );
+    setTimeout(() => {
+      el.classList.remove("ring-2", "ring-primary", "ring-offset-2");
+    }, 2000);
+  } else {
+    showToast("مبحث مورد نظر یافت نشد.", "error");
+  }
 }
 
 // ========== Edit modal ==========
