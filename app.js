@@ -587,8 +587,8 @@ const initialExamInteractiveSettings = {
   questionAlert: "",
   allowedExits: 5,
   allowedExitsEnabled: true,
-  formAfzarId: null,
-  formAfzarEnabled: false,
+  digiFormId: null,
+  digiFormEnabled: false,
 };
 
 const rawState = {
@@ -3531,8 +3531,8 @@ const examDurationInput = document.getElementById("examDurationInput");
 const examRandomizeSwitch = document.getElementById("examRandomizeSwitch");
 const examPreExamMessage = document.getElementById("examPreExamMessage");
 const examQuestionAlert = document.getElementById("examQuestionAlert");
-const formAfzarSwitch = document.getElementById("examFormAfzarSwitch");
-const formAfzarLink = document.getElementById("examFormAfzarLink");
+const digiFormSwitch = document.getElementById("examdigiFormSwitch");
+const digiFormLink = document.getElementById("examdigiFormLink");
 const examDatePickerContainer = document.getElementById(
   "examDatePickerContainer",
 );
@@ -3575,21 +3575,21 @@ function openExamInteractiveModal() {
   }
 
   // ----- form afzar -----
-  if (formAfzarSwitch && formAfzarLink) {
-    const enabled = !!s.formAfzarEnabled;
-    if (!formAfzarSwitch._switchInstance) {
-      Switch.ensure(formAfzarSwitch);
+  if (digiFormSwitch && digiFormLink) {
+    const enabled = !!s.digiFormEnabled;
+    if (!digiFormSwitch._switchInstance) {
+      Switch.ensure(digiFormSwitch);
     }
-    formAfzarSwitch.setChecked(enabled, { silent: true });
-    formAfzarLink.disabled = !enabled;
-    formAfzarLink.value = s.formAfzarId
-      ? `https://formafzar.com/form/${s.formAfzarId}`
+    digiFormSwitch.setChecked(enabled, { silent: true });
+    digiFormLink.disabled = !enabled;
+    digiFormLink.value = s.digiFormId
+      ? `https://digiform.ir/${s.digiFormId}`
       : "";
 
-    Switch.ensure(formAfzarSwitch);
-    formAfzarSwitch.addEventListener("switch:change", (e) => {
+    Switch.ensure(digiFormSwitch);
+    digiFormSwitch.addEventListener("switch:change", (e) => {
       const checked = e.detail.checked;
-      formAfzarLink.disabled = !checked;
+      digiFormLink.disabled = !checked;
     });
   }
 
@@ -3643,16 +3643,14 @@ document
       ? parseInt(exitLimitInput?.value, 10) || 5
       : null;
 
-    // formafzar
-    s.formAfzarEnabled = formAfzarSwitch ? formAfzarSwitch.isChecked() : false;
-    if (s.formAfzarEnabled && formAfzarLink) {
-      const url = formAfzarLink.value.trim();
-      console.log(url);
-
-      const match = url.match(/formafzar\.com\/form\/([a-zA-Z0-9]+)/);
-      s.formAfzarId = match ? match[1] : null;
+    // digiForm
+    s.digiFormEnabled = digiFormSwitch ? digiFormSwitch.isChecked() : false;
+    if (s.digiFormEnabled && digiFormLink) {
+      const url = digiFormLink.value.trim();
+      const match = url.match(/digiform\.ir\/([^/?#]+)/);
+      s.digiFormId = match ? match[1] : null;
     } else {
-      s.formAfzarId = null;
+      s.digiFormId = null;
     }
 
     examSettingsModal.close();
@@ -3715,7 +3713,7 @@ async function generateInteractiveExamFile() {
       randomize: s.randomize,
       questionAlert: s.questionAlert,
       maxExitDurationMinutes: s.allowedExitsEnabled ? s.allowedExits : null,
-      formAfzarId: s.formAfzarId || null,
+      digiFormId: s.digiFormEnabled ? s.digiFormId : null,
     });
 
     const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
