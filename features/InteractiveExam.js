@@ -652,7 +652,7 @@ async function buildInteractiveExamPage({
 
     .katex { direction: ltr; unicode-bidi: isolate; font-family: inherit !important; }
     .katex-display { text-align: center; }
-    #dynamicFormContainer { width:100%; }
+    #dynamicFormContainer { height:100%; }
   </style>
   <style>${katexCss}</style>
 </head>
