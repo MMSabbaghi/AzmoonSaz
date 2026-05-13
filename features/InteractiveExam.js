@@ -204,7 +204,7 @@ async function buildInteractiveExamPage({
   randomize = false,
   questionAlert = "",
   maxExitDurationMinutes = null,
-  digiFormId = null,
+  formAfzarId = null,
 }) {
   const finalAlert = questionAlert.trim() || "";
   const namesJson = JSON.stringify(studentNames);
@@ -652,7 +652,7 @@ async function buildInteractiveExamPage({
 
     .katex { direction: ltr; unicode-bidi: isolate; font-family: inherit !important; }
     .katex-display { text-align: center; }
-    #dynamicFormContainer { height:100%; }
+    .ravesh-formbuilder-container { width:100%; }
   </style>
   <style>${katexCss}</style>
 </head>
@@ -750,7 +750,7 @@ async function buildInteractiveExamPage({
       randomize: ${JSON.stringify(randomize)},
       maxExitDurationMinutes: ${JSON.stringify(maxExitDurationMinutes)},
       examTitle: ${JSON.stringify(examTitle)},
-      digiFormId: ${JSON.stringify(digiFormId)}
+      formAfzarId: ${JSON.stringify(formAfzarId)}
     };
 
   let currentStudent = null;
@@ -1201,7 +1201,7 @@ async function buildInteractiveExamPage({
       box.style.height= '95vh';
 
       let innerHtml = '';
-      if (EXAM_DATA.digiFormId) {
+      if (EXAM_DATA.formAfzarId) {
         innerHtml = \`
           <button class="btn close-submit-modal" style="margin-top: 20px;">بازگشت به آزمون</button>
           <div id="dynamicFormContainer"></div>
@@ -1214,15 +1214,14 @@ async function buildInteractiveExamPage({
       }
       box.innerHTML = innerHtml;
 
-      if (EXAM_DATA.digiFormId) {
-const iframe = document.createElement('iframe');
-iframe.setAttribute('id', \`IFRAME_\${EXAM_DATA.digiFormId}\`);
-iframe.setAttribute('title', 'فرم آپلود پاسخ ها');
-iframe.setAttribute('style', 'border: none;height:100%;width:100%');
-iframe.setAttribute('width', '100%');
-iframe.setAttribute('height', '1000');
-iframe.setAttribute('src', \`https://iframe.digiform.ir/\${EXAM_DATA.digiFormId}?theme=white\`);
-box.querySelector('#dynamicFormContainer').appendChild(iframe);
+      if (EXAM_DATA.formAfzarId) {
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://formafzar.com/pages/formbuilder/ravesh-formbuilder.js';
+        script.setAttribute('form-url', \`https://formafzar.com/form/\${EXAM_DATA.formAfzarId}\`);
+        script.setAttribute('form-style', 'inline');
+        script.setAttribute('form-theme', '');
+        box.querySelector('#dynamicFormContainer').appendChild(script);
       }
 
       const closeBtn = box.querySelector('.close-submit-modal');
